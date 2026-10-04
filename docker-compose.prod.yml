@@ -1,0 +1,21 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      API_INTERNAL_URL: http://api:3000
+      ORIGIN: ${APP_URL}
+      PUBLIC_SENTRY_DSN: ${PUBLIC_SENTRY_DSN:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    restart: unless-stopped

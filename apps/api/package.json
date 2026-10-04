@@ -1,0 +1,17 @@
+{
+  "name": "@app/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "test": "bun test",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "@sentry/bun": "^11.4.0",
+    "hono": "^4.13.12",
+    "youtubei.js": "18.1.0",
+    "zod": "^4.6.5"
+  }
+}

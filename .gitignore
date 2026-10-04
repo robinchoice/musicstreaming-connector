@@ -1,0 +1,16 @@
+.gradle/
+.kotlin/
+**/build/
+.enjoy-logs/
+.DS_Store
+**/xcuserdata/
+*.xcuserstate
+local.properties
+.env
+node_modules/
+.svelte-kit/
+.env.*
+!.env.*.example
+.dart_tool/
+.flutter-plugins-dependencies
+coverage/

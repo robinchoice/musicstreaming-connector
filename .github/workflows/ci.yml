@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+  deploy:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      COOLIFY_UUID: ${{ secrets.COOLIFY_UUID }}
+    steps:
+      - name: Deploy to Coolify
+        run: |
+          if [ -z "$COOLIFY_TOKEN" ] || [ -z "$COOLIFY_UUID" ]; then exit 0; fi
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            "https://coolify.pleasance.org/api/v1/deploy?uuid=$COOLIFY_UUID"
