@@ -84,10 +84,31 @@ jobs:
           cache: true
 
       - name: ASC-API-Key ablegen
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }}
         run: |
+          umask 077
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.ASC_KEY_P8 }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8
-          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8
+          printf '%s' "$ASC_KEY_P8" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createPrivateKey, sign } from 'node:crypto';
+          const key = createPrivateKey(readFileSync(`${process.env.HOME}/.appstoreconnect/private_keys/AuthKey_${process.env.ASC_KEY_ID}.p8`));
+          const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const unsigned = `${encode({ alg: 'ES256', kid: process.env.ASC_KEY_ID, typ: 'JWT' })}.${encode({ iss: process.env.ASC_ISSUER_ID, iat: now, exp: now + 300, aud: 'appstoreconnect-v1' })}`;
+          const signature = sign('sha256', Buffer.from(unsigned), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+          for (const path of ['certificates?limit=1', 'profiles?limit=1', 'apps?filter[bundleId]=org.musiclink.prototype']) {
+            const response = await fetch(`https://api.appstoreconnect.apple.com/v1/${path}`, {
+              headers: { Authorization: `Bearer ${unsigned}.${signature}` },
+              signal: AbortSignal.timeout(30000),
+            });
+            console.log(`Apple ${path.split('?')[0]}: HTTP ${response.status}; server date ${response.headers.get('date')}`);
+            if (!response.ok) throw new Error('Apple API authentication preflight failed');
+          }
+          NODE
 
       # Eindeutige, steigende Build-Nummer pro Lauf, TestFlight lehnt Duplikate ab.
       - name: Flutter-Build vorbereiten
