@@ -110,6 +110,28 @@ jobs:
           }
           NODE
 
+      - name: Distribution-Signierung installieren
+        env:
+          IOS_CERTIFICATE: ${{ secrets.MUSICLINK_IOS_CERTIFICATE }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.MUSICLINK_IOS_CERTIFICATE_PASSWORD }}
+          IOS_APP_PROFILE: ${{ secrets.MUSICLINK_IOS_APP_PROFILE }}
+          IOS_SHARE_PROFILE: ${{ secrets.MUSICLINK_IOS_SHARE_PROFILE }}
+        run: |
+          umask 077
+          KEYCHAIN_PATH="$RUNNER_TEMP/musiclink.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          printf '%s' "$IOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/musiclink.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/musiclink.p12" -P "$IOS_CERTIFICATE_PASSWORD" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$IOS_APP_PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-App.mobileprovision"
+          printf '%s' "$IOS_SHARE_PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-Share.mobileprovision"
+
       # Eindeutige, steigende Build-Nummer pro Lauf, TestFlight lehnt Duplikate ab.
       - name: Flutter-Build vorbereiten
         run: flutter build ios --release --no-codesign --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
@@ -122,23 +144,63 @@ jobs:
             -scheme Runner \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ vars.ASC_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ vars.ASC_ISSUER_ID }}
+            -archivePath "$RUNNER_TEMP/Runner.xcarchive"
 
-      - name: Export & Upload zu TestFlight
+      - name: App Groups im Archiv prüfen
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, plistlib, subprocess
+          app = pathlib.Path(os.environ['RUNNER_TEMP']) / 'Runner.xcarchive/Products/Applications/Runner.app'
+          for bundle in [app, app / 'PlugIns/MusicLinkShare.appex']:
+              output = subprocess.check_output(['codesign', '-d', '--entitlements', ':-', str(bundle)], stderr=subprocess.DEVNULL)
+              entitlements = plistlib.loads(output)
+              assert entitlements.get('com.apple.security.application-groups') == ['group.org.musiclink.prototype'], f'Missing App Group: {bundle.name}'
+              print(f'{bundle.name}: App Group entitlement verified')
+          PY
+
+      - name: IPA exportieren
         working-directory: apps/mobile/ios
         run: |
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ vars.ASC_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ vars.ASC_ISSUER_ID }}
+            -exportPath "$RUNNER_TEMP/export"
+
+      - name: Signierte IPA prüfen
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, plistlib, subprocess, zipfile
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          ipa, = (root / 'export').glob('*.ipa')
+          with zipfile.ZipFile(ipa) as archive:
+              archive.extractall(root / 'ipa-check')
+          app, = (root / 'ipa-check/Payload').glob('*.app')
+          for bundle, identifier in [(app, 'org.musiclink.prototype'), (app / 'PlugIns/MusicLinkShare.appex', 'org.musiclink.prototype.share')]:
+              subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
+              entitlements = plistlib.loads(subprocess.check_output(['codesign', '-d', '--entitlements', ':-', str(bundle)], stderr=subprocess.DEVNULL))
+              assert entitlements['application-identifier'] == f'T2F442364K.{identifier}'
+              assert entitlements['com.apple.security.application-groups'] == ['group.org.musiclink.prototype']
+              assert not entitlements.get('get-task-allow', False)
+              print(f'{bundle.name}: Distribution signature and App Group verified')
+          PY
+
+      - name: Upload zu TestFlight
+        run: |
+          xcrun altool --upload-app --type ios \
+            --file "$RUNNER_TEMP"/export/*.ipa \
+            --apiKey '${{ vars.ASC_KEY_ID }}' \
+            --apiIssuer '${{ vars.ASC_ISSUER_ID }}'
+
+      - name: Signierung aufräumen
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/musiclink.keychain-db" ]; then
+            security delete-keychain "$RUNNER_TEMP/musiclink.keychain-db"
+          fi
+          rm -f "$RUNNER_TEMP/musiclink.p12" \
+            "$HOME/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-App.mobileprovision" \
+            "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-Share.mobileprovision"
 
   android:
     needs: [check, android-build]
