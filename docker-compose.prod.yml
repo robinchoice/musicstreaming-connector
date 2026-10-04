@@ -1,8 +1,6 @@
 services:
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
+    image: ghcr.io/robinchoice/musiclink-web:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
       API_INTERNAL_URL: http://api:3000
       ORIGIN: ${APP_URL}
@@ -13,9 +11,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    image: ghcr.io/robinchoice/musiclink-api:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
       SENTRY_DSN: ${SENTRY_DSN:-}
     restart: unless-stopped
