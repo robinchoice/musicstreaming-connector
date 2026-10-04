@@ -20,11 +20,13 @@ import UIKit
       }
       switch call.method {
       case "getPreferences":
-        result(["target": preferences.string(forKey: "target") ?? "appleMusic", "country": preferences.string(forKey: "country") ?? "DE"])
+        result(["target": preferences.string(forKey: "target") ?? "appleMusic", "shareSetupSeen": preferences.bool(forKey: "shareSetupSeen") ? "true" : "false"])
+      case "dismissShareSetup":
+        preferences.set(true, forKey: "shareSetupSeen")
+        result(nil)
       case "setPreferences":
         guard let values = call.arguments as? [String: String] else { result(FlutterMethodNotImplemented); return }
         preferences.set(values["target"], forKey: "target")
-        preferences.set(values["country"], forKey: "country")
         result(nil)
       default: result(FlutterMethodNotImplemented)
       }

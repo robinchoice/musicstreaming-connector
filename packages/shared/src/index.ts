@@ -3,10 +3,12 @@ import { z } from 'zod';
 export const APP_NAME = 'MusicLink';
 
 export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify' } as const;
+export type Platform = keyof typeof platforms;
+export const countries = ['DE', 'AT', 'CH', 'US', 'GB'] as const;
 export const conversionInput = z.object({
   input: z.string().trim().min(1).max(4096),
   target: z.enum(['appleMusic', 'youtubeMusic', 'spotify']),
-  country: z.enum(['DE', 'AT', 'CH', 'US', 'GB']).default('DE'),
+  country: z.enum(countries).default('DE'),
 });
 export type ConversionInput = z.infer<typeof conversionInput>;
 
@@ -21,8 +23,14 @@ export const failureMessages = {
 
 export type FailureCode = keyof typeof failureMessages;
 
+export function targetsFor(input: string): Platform[] {
+  if (input.includes('music.apple.com/')) return ['youtubeMusic'];
+  if (/youtu(?:be\.com|\.be)\//.test(input)) return ['appleMusic', 'spotify'];
+  return ['appleMusic', 'youtubeMusic', 'spotify'];
+}
+
 export interface Conversion {
-  target: keyof typeof platforms;
+  target: Platform;
   source: { title: string; artist: string; url: string };
   candidates: { title: string; url: string; artworkUrl: string | null; album?: string; durationSeconds?: number }[];
 }

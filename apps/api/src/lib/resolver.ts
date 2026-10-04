@@ -1,10 +1,20 @@
-import { failureMessages, type Conversion, type FailureCode } from '@app/shared';
+import { failureMessages, type Conversion, type FailureCode, type Platform } from '@app/shared';
 import { z } from 'zod';
 
 export class ResolutionError extends Error {
-  constructor(public code: FailureCode) {
+  constructor(public code: FailureCode, public searchUrl?: string) {
     super(failureMessages[code]);
   }
+}
+
+export function searchUrl(target: Platform, source: { title: string; artist: string }, country = 'DE') {
+  const artist = source.artist.replace(/VEVO$/i, '').trim();
+  const title = source.title.replace(/[\[(][^\])]*\b(?:official|video|audio|lyrics?|remaster(?:ed)?|4k|hd)\b[^\])]*[\])]/gi, '').replace(/\s+/g, ' ').trim();
+  const query = title.toLowerCase().includes(artist.toLowerCase()) ? title : `${artist} ${title}`;
+  if (target === 'spotify') return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
+  const url = new URL(target === 'appleMusic' ? `https://music.apple.com/${country.toLowerCase()}/search` : 'https://music.youtube.com/search');
+  url.searchParams.set(target === 'appleMusic' ? 'term' : 'q', query);
+  return url.toString();
 }
 
 export function youtubeVideoId(input: string) {
@@ -90,7 +100,7 @@ export async function resolve(input: string, requestSignal?: AbortSignal, fetche
       }));
       candidates.push(...batch.filter(candidate => candidate !== null));
     }
-    if (!candidates.length) throw new ResolutionError('NO_MATCH');
+    if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl('spotify', source));
     return { source, candidates };
   } catch (error) {
     if (error instanceof ResolutionError) throw error;

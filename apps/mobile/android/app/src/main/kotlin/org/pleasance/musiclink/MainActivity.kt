@@ -14,9 +14,9 @@ class MainActivity : FlutterActivity() {
         val preferences = getSharedPreferences("musiclink", MODE_PRIVATE)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "org.musiclink.prototype/preferences").setMethodCallHandler { call, result ->
             when (call.method) {
-                "getPreferences" -> result.success(mapOf("target" to preferences.getString("target", "appleMusic"), "country" to preferences.getString("country", "DE")))
+                "getPreferences" -> result.success(mapOf("target" to preferences.getString("target", "appleMusic")))
                 "setPreferences" -> {
-                    preferences.edit().putString("target", call.argument<String>("target")).putString("country", call.argument<String>("country")).apply()
+                    preferences.edit().putString("target", call.argument<String>("target")).apply()
                     result.success(null)
                 }
                 else -> result.notImplemented()

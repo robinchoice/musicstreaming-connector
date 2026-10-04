@@ -148,14 +148,14 @@ void main() {
     await submit(tester);
     expect(find.text('Paul Kalkbrenner'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Weiterteilen'),
+      find.text('Als Apple Music-Link teilen'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       tester
           .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Weiterteilen'),
+            find.widgetWithText(FilledButton, 'Als Apple Music-Link teilen'),
           )
           .onPressed,
       isNotNull,
@@ -171,7 +171,21 @@ void main() {
     expect(find.text('Link kopiert'), findsOneWidget);
   });
 
-  testWidgets('multiple releases require explicit selection', (tester) async {
+  testWidgets('multiple releases preselect the first and offer the others', (
+    tester,
+  ) async {
+    String? copied;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
     await mount(
       tester,
       (_) async =>
@@ -179,28 +193,73 @@ void main() {
     );
     await submit(tester);
     await tester.scrollUntilVisible(
-      find.text('Weiterteilen'),
+      find.text('Als Apple Music-Link teilen'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       tester
           .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Weiterteilen'),
-          )
-          .onPressed,
-      isNull,
-    );
-    await tester.tap(find.byType(ListTile).last);
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Weiterteilen'),
+            find.widgetWithText(FilledButton, 'Als Apple Music-Link teilen'),
           )
           .onPressed,
       isNotNull,
     );
+    await tester.tap(find.text('Andere Fassungen (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ListTile).last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Link kopieren'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Link kopieren'));
+    await tester.pumpAndSettle();
+    expect(copied, 'https://music.apple.com/de/song/2');
+  });
+
+  testWidgets('a missing match offers a search link instead', (tester) async {
+    String? copied;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    await mount(
+      tester,
+      (_) async => http.Response.bytes(
+        utf8.encode(
+          jsonEncode({
+            'error': 'Kein Treffer',
+            'code': 'NO_MATCH',
+            'searchUrl': 'https://music.apple.com/de/search?term=Plätscher',
+          }),
+        ),
+        422,
+      ),
+    );
+    await submit(tester);
+    expect(find.text('Kein Treffer'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Suche auf Apple Music teilen'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Suchlink kopieren'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Suchlink kopieren'));
+    await tester.pumpAndSettle();
+    expect(copied, 'https://music.apple.com/de/search?term=Plätscher');
   });
 
   testWidgets('failed conversion can be retried', (tester) async {
@@ -311,23 +370,27 @@ void main() {
       await tester.tap(find.text('Link umwandeln'));
       await tester.pumpAndSettle();
       expect(find.text('Paul Kalkbrenner'), findsOneWidget);
+      await tester.tap(find.byTooltip('Zurück zum Musiklink'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byType(TextField),
         'https://music.apple.com/de/song/123',
       );
       await tester.pumpAndSettle();
       expect(find.text('Paul Kalkbrenner'), findsNothing);
-      expect(find.text('Weiterteilen'), findsNothing);
+      expect(find.text('Als Apple Music-Link teilen'), findsNothing);
     },
   );
 
-  testWidgets('saved preferences load before an incoming share is converted', (
+  testWidgets('saved destination and device region apply to incoming shares', (
     tester,
   ) async {
+    tester.platformDispatcher.localeTestValue = const Locale('de', 'AT');
+    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           preferences,
-          (_) async => {'target': 'youtubeMusic', 'country': 'AT'},
+          (_) async => {'target': 'youtubeMusic'},
         );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -365,38 +428,40 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('YouTube Music').last);
     await tester.pumpAndSettle();
-    expect(saved, {'target': 'youtubeMusic', 'country': 'DE'});
+    expect(saved, {'target': 'youtubeMusic'});
   });
   for (final pending in [false, true]) {
     testWidgets(
-      'resume preserves automatic destination and ${pending ? "pending request" : "results"}',
+      'resume preserves saved Spotify destination and ${pending ? "pending request" : "results"}',
       (tester) async {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(
               preferences,
-              (_) async => {'target': 'spotify', 'country': 'DE'},
+              (_) async => {'target': 'spotify'},
             );
         final response = Completer<http.Response>();
         await mount(tester, (request) {
-          expect(jsonDecode(request.body)['target'], 'youtubeMusic');
+          expect(jsonDecode(request.body)['target'], 'spotify');
           return response.future;
         });
         await tester.enterText(
           find.byType(TextField),
-          'https://music.apple.com/de/song/945575419',
+          'https://youtu.be/UijW9hGpnzc',
         );
         await tester.tap(find.text('Link umwandeln'));
         await tester.pump();
         if (!pending) {
           response.complete(
             http.Response.bytes(
-              utf8.encode(jsonEncode({...result(), 'target': 'youtubeMusic'})),
+              utf8.encode(jsonEncode({...result(), 'target': 'spotify'})),
               200,
             ),
           );
           await tester.pumpAndSettle();
         }
-        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
         tester.binding.handleAppLifecycleStateChanged(
           AppLifecycleState.resumed,
         );
@@ -404,42 +469,182 @@ void main() {
         if (pending) {
           response.complete(
             http.Response.bytes(
-              utf8.encode(jsonEncode({...result(), 'target': 'youtubeMusic'})),
+              utf8.encode(jsonEncode({...result(), 'target': 'spotify'})),
               200,
             ),
           );
         }
         await tester.pumpAndSettle();
         expect(find.text('Paul Kalkbrenner'), findsOneWidget);
-        expect(
-          find.byKey(const ValueKey('target-youtubeMusic')),
-          findsOneWidget,
-        );
+        expect(find.text('Als Spotify-Link teilen'), findsOneWidget);
       },
     );
   }
 
-  testWidgets('changing country does not persist an automatic destination', (
+  testWidgets('Apple source only offers destinations the service supports', (
     tester,
   ) async {
-    Map? saved;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(preferences, (call) async {
-          if (call.method == 'setPreferences') saved = call.arguments as Map;
-          return {'target': 'appleMusic', 'country': 'DE'};
-        });
-    await mount(
-      tester,
-      (_) async => http.Response.bytes(utf8.encode(jsonEncode(result())), 200),
-    );
+        .setMockMethodCallHandler(
+          preferences,
+          (_) async => {'target': 'spotify'},
+        );
+    await mount(tester, (request) async {
+      expect(jsonDecode(request.body)['target'], 'youtubeMusic');
+      return http.Response.bytes(
+        utf8.encode(jsonEncode({...result(), 'target': 'youtubeMusic'})),
+        200,
+      );
+    });
     await tester.enterText(
       find.byType(TextField),
       'https://music.apple.com/de/song/945575419',
     );
-    await tester.tap(find.text('Deutschland').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Österreich').last);
+    expect(find.byKey(const ValueKey('target-youtubeMusic')), findsOneWidget);
+    await tester.tap(find.text('YouTube Music').last);
     await tester.pumpAndSettle();
-    expect(saved, {'target': 'appleMusic', 'country': 'AT'});
+    expect(find.text('Spotify'), findsNothing);
+    await tester.tap(find.text('YouTube Music').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField),
+      'https://youtu.be/UijW9hGpnzc',
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('target-spotify')), findsOneWidget);
+  });
+
+  testWidgets(
+    'iOS setup can be skipped, stays dismissed, and can be reopened',
+    (tester) async {
+      var seen = false;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(preferences, (call) async {
+            if (call.method == 'dismissShareSetup') seen = true;
+            return {'shareSetupSeen': seen.toString()};
+          });
+      await mount(
+        tester,
+        (_) async => http.Response(jsonEncode(result()), 200),
+      );
+      await tester.scrollUntilVisible(find.text('Teilen-Menü einrichten'), 250);
+      expect(find.text('Teilen-Menü einrichten'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Später · direkt ausprobieren'),
+        250,
+      );
+      await tester.tap(find.text('Später · direkt ausprobieren'));
+      await tester.pumpAndSettle();
+      expect(seen, isTrue);
+      expect(find.byType(TextField), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await mount(
+        tester,
+        (_) async => http.Response(jsonEncode(result()), 200),
+      );
+      expect(find.text('Teilen-Menü einrichten'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('So richtest du es ein'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('So richtest du es ein'));
+      await tester.pumpAndSettle();
+      expect(find.text('„Mehr“ öffnen'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets(
+    'example opens the native share sheet without claiming favorite status',
+    (tester) async {
+      const share = MethodChannel('dev.fluttercommunity.plus/share');
+      Map? params;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(share, (call) async {
+            params = call.arguments as Map;
+            return '';
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(share, null),
+      );
+      await mount(
+        tester,
+        (_) async => http.Response(jsonEncode(result()), 200),
+      );
+      await tester.scrollUntilVisible(find.text('Teilen-Menü einrichten'), 250);
+      await tester.tap(find.text('Teilen-Menü einrichten'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Mit Beispiel-Song einrichten'),
+        250,
+      );
+      await tester.tap(find.text('Mit Beispiel-Song einrichten'));
+      await tester.pumpAndSettle();
+      expect(params?['uri'], 'https://music.youtube.com/watch?v=MV_3Dpw-BRY');
+      expect(params?['originWidth'], greaterThan(0));
+      expect(find.text('Weiter zur App'), findsOneWidget);
+      expect(
+        find.textContaining('Deine Favoriten verwaltest du selbst'),
+        findsOneWidget,
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets(
+    'preferred destination returns after a temporary same-service fallback',
+    (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            preferences,
+            (_) async => {'target': 'appleMusic'},
+          );
+      await mount(
+        tester,
+        (_) async => http.Response(jsonEncode(result()), 200),
+      );
+      await tester.enterText(
+        find.byType(TextField),
+        'https://music.apple.com/de/song/945575419',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('target-youtubeMusic')), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField),
+        'https://youtu.be/UijW9hGpnzc',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('target-appleMusic')), findsOneWidget);
+    },
+  );
+
+  testWidgets('changing result destination resolves again before sharing', (
+    tester,
+  ) async {
+    final destinations = <String>[];
+    await mount(tester, (request) async {
+      final target = jsonDecode(request.body)['target'] as String;
+      destinations.add(target);
+      return http.Response.bytes(
+        utf8.encode(jsonEncode({...result(), 'target': target})),
+        200,
+      );
+    });
+    await submit(tester);
+    expect(find.text('Als Apple Music-Link teilen'), findsOneWidget);
+    await tester.tap(find.byTooltip('Einstellungen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apple Music').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spotify').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einstellungen übernehmen'));
+    await tester.pumpAndSettle();
+    expect(destinations, ['appleMusic', 'spotify']);
+    expect(find.text('Als Spotify-Link teilen'), findsOneWidget);
   });
 }

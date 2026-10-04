@@ -15,7 +15,8 @@ final apiProvider = Provider.autoDispose((ref) {
 
 class ApiException implements Exception {
   final String message;
-  const ApiException(this.message);
+  final String? searchUrl;
+  const ApiException(this.message, {this.searchUrl});
   @override
   String toString() => message;
 }
@@ -52,6 +53,7 @@ class Api {
       if (response.statusCode >= 400) {
         throw ApiException(
           body['error'] as String? ?? 'Der Dienst ist gerade nicht erreichbar.',
+          searchUrl: body['searchUrl'] as String?,
         );
       }
       return Conversion.fromJson(body);

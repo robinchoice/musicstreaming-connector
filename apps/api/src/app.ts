@@ -13,7 +13,7 @@ export function createApp(resolver = resolve) {
     .onError((error, c) => {
       if (error instanceof ResolutionError) {
         const status = error.code === 'RATE_LIMITED' ? 429 : error.code === 'NETWORK' ? 502 : 422;
-        return c.json({ error: error.message, code: error.code }, status);
+        return c.json({ error: error.message, code: error.code, searchUrl: error.searchUrl }, status);
       }
       if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
       captureException(error);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { resolve, youtubeVideoId, type Fetch } from './lib/resolver';
+import { resolve, searchUrl, youtubeVideoId, type Fetch } from './lib/resolver';
 
 const first = '0O8RjwNco465s5o9Ix9IYj';
 const second = '60zaXKLFGQ4hPH7NtTcfq1';
@@ -125,4 +125,12 @@ test('bounds preview requests and preserves lookup order', async () => {
   expect(total).toBe(8);
   expect(maxActive).toBeLessThanOrEqual(3);
   expect(result.candidates.map(c => c.url)).toEqual(ids.slice(0, 8).map(id => `https://open.spotify.com/track/${id}`));
+});
+
+test.each([
+  ['appleMusic', { title: 'Savior (Official Video)', artist: 'RedHotChiliPeppersVEVO' }, 'https://music.apple.com/at/search?term=RedHotChiliPeppers+Savior'],
+  ['youtubeMusic', { title: 'Red Hot Chili Peppers - Savior [Official Audio] (4K Remaster)', artist: 'Red Hot Chili Peppers' }, 'https://music.youtube.com/search?q=Red+Hot+Chili+Peppers+-+Savior'],
+  ['spotify', { title: 'Savior (Live)', artist: 'Red Hot Chili Peppers' }, 'https://open.spotify.com/search/Red%20Hot%20Chili%20Peppers%20Savior%20(Live)'],
+] as const)('search fallback for %s drops video noise', (target, source, url) => {
+  expect(searchUrl(target, source, 'AT')).toBe(url);
 });

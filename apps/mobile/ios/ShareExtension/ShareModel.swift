@@ -24,6 +24,7 @@ struct Conversion: Decodable {
 private struct APIError: Decodable {
     let error: String
     let code: String?
+    let searchUrl: String?
 }
 
 @MainActor
@@ -31,22 +32,31 @@ final class ShareModel: ObservableObject {
     static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify"]
     private let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype")
     @Published var target = "appleMusic"
-    @Published var country = "DE"
     var targetName: String { Self.platforms[conversion?.target ?? target] ?? target }
+    var targets: [String] { Self.targets(for: input ?? "") }
+    private let country: String = {
+        let region = Locale.current.region?.identifier ?? ""
+        return ["DE", "AT", "CH", "US", "GB"].contains(region) ? region : "DE"
+    }()
 
     init() {
         if let saved = preferences?.string(forKey: "target"), Self.platforms[saved] != nil { target = saved }
-        if let saved = preferences?.string(forKey: "country"), ["DE", "AT", "CH", "US", "GB"].contains(saved) { country = saved }
     }
 
-    func settingsChanged(targetChanged: Bool = false) {
-        if targetChanged { preferences?.set(target, forKey: "target") }
-        preferences?.set(country, forKey: "country")
+    static func targets(for input: String) -> [String] {
+        if input.contains("music.apple.com/") { return ["youtubeMusic"] }
+        if input.contains("youtube.com/") || input.contains("youtu.be/") { return ["appleMusic", "spotify"] }
+        return ["appleMusic", "youtubeMusic", "spotify"]
+    }
+
+    func targetChanged() {
+        preferences?.set(target, forKey: "target")
         retry()
     }
 
     @Published private(set) var conversion: Conversion?
     @Published private(set) var error: String?
+    @Published private(set) var searchUrl: String?
     @Published private(set) var isLoading = true
     @Published private(set) var canRetry = false
     @Published var selection: String?
@@ -79,14 +89,15 @@ final class ShareModel: ObservableObject {
     func resolve(_ input: String) {
         guard !isClosed else { return }
         if self.input == nil {
-            if input.contains("music.apple.com/") && target != "youtubeMusic" { target = "youtubeMusic" }
-            else if !input.contains("music.apple.com/") && target == "youtubeMusic" { target = "appleMusic" }
+            let targets = Self.targets(for: input)
+            if !targets.contains(target) { target = targets[0] }
         }
         self.input = input
         request?.cancel()
         conversion = nil
         selection = nil
         error = nil
+        searchUrl = nil
         canRetry = false
         isLoading = true
         guard let apiURL else {
@@ -110,11 +121,12 @@ final class ShareModel: ObservableObject {
                 if response.statusCode >= 400 {
                     let failure = try JSONDecoder().decode(APIError.self, from: data)
                     self.error = failure.error
+                    self.searchUrl = failure.searchUrl
                     self.canRetry = response.statusCode == 429 || response.statusCode >= 500
                 } else {
                     let conversion = try JSONDecoder().decode(Conversion.self, from: data)
                     self.conversion = conversion
-                    if conversion.candidates.count == 1 { self.selection = conversion.candidates[0].url }
+                    self.selection = conversion.candidates.first?.url
                 }
             } catch {
                 guard let self, !self.isClosed, !Task.isCancelled else { return }

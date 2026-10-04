@@ -6,6 +6,8 @@ struct ShareView: View {
     let finish: () -> Void
     @State private var shareItem: SharedLink?
     @State private var copied = false
+    @State private var showingGuide = false
+    private let accent = Color(red: 66 / 255, green: 99 / 255, blue: 63 / 255)
 
     var body: some View {
         NavigationStack {
@@ -32,65 +34,98 @@ struct ShareView: View {
                     }
                     .padding(24)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let conversion = model.conversion {
-                    List {
-                        Section("Dein Song") {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(conversion.source.title).font(.headline)
-                                Text(conversion.source.artist).foregroundStyle(.secondary)
-                            }
-                        }
-                        Section {
-                            ForEach(conversion.candidates, id: \.url) { candidate in
-                                Button {
-                                    model.selection = candidate.url
-                                    copied = false
-                                } label: {
-                                    candidateRow(candidate)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityAddTraits(model.selection == candidate.url ? .isSelected : [])
-                            }
-                        } header: {
-                            Text("\(model.targetName) · \(conversion.candidates.count) Vorschläge")
-                        } footer: {
-                            Text("Prüfe die gewünschte Aufnahme vor dem Teilen. Bei mehreren Vorschlägen wähle den passenden Treffer.")
+                    .safeAreaInset(edge: .bottom) {
+                        if let link = model.searchUrl {
+                            actions(link, share: "Suche auf \(model.targetName) teilen", copy: "Suchlink kopieren", hint: "Teile stattdessen eine Suche nach dem Song.")
                         }
                     }
+                } else if let conversion = model.conversion,
+                          let candidate = conversion.candidates.first(where: { $0.url == model.selection }) {
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            artwork(candidate, size: 148)
+                                .padding(.top, 20)
+                            Text(candidate.title)
+                                .font(.title2.weight(.semibold))
+                                .multilineTextAlignment(.center)
+                            Text(conversion.source.artist)
+                                .foregroundStyle(.secondary)
+                            Text(model.targetName)
+                                .font(.subheadline)
+                                .foregroundStyle(accent)
+                            if let album = candidate.album {
+                                Text(album).font(.caption).foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            if let seconds = candidate.durationSeconds {
+                                Text("\(seconds / 60):\(String(format: "%02d", seconds % 60))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            if conversion.candidates.count > 1 {
+                                DisclosureGroup("Andere Fassungen (\(conversion.candidates.count - 1))") {
+                                    ForEach(conversion.candidates.filter { $0.url != candidate.url }, id: \.url) { other in
+                                        Button {
+                                            model.selection = other.url
+                                            copied = false
+                                        } label: {
+                                            candidateRow(other)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.top, 12)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(24)
+                    }
                     .safeAreaInset(edge: .bottom) {
-                        actions
+                        actions(candidate.url, share: "Als \(model.targetName)-Link teilen", copy: "Link kopieren", hint: "Prüfe die gewünschte Aufnahme vor dem Teilen.")
                     }
                 }
             }
             .safeAreaInset(edge: .top) {
-                VStack(spacing: 6) {
-                    Picker("Zieldienst", selection: Binding(get: { model.target }, set: { model.target = $0; model.settingsChanged(targetChanged: true); copied = false })) {
-                        Text("Apple Music").tag("appleMusic")
-                        Text("YouTube Music").tag("youtubeMusic")
-                        Text("Spotify").tag("spotify")
-                    }
-                    Picker("Apple-Katalog", selection: Binding(get: { model.country }, set: { model.country = $0; model.settingsChanged(); copied = false })) {
-                        Text("Deutschland").tag("DE")
-                        Text("Österreich").tag("AT")
-                        Text("Schweiz").tag("CH")
-                        Text("USA").tag("US")
-                        Text("Großbritannien").tag("GB")
+                Picker("Teilen als", selection: Binding(get: { model.target }, set: { model.target = $0; model.targetChanged(); copied = false })) {
+                    ForEach(model.targets, id: \.self) { target in
+                        Text(ShareModel.platforms[target] ?? target).tag(target)
                     }
                 }
                 .pickerStyle(.menu)
                 .disabled(model.isLoading)
                 .padding(.horizontal)
-                .background(.regularMaterial)
             }
+            .background(Color(red: 251 / 255, green: 252 / 255, blue: 247 / 255))
             .navigationTitle("MusicLink")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showingGuide = true } label: {
+                        Image(systemName: "star")
+                    }
+                    .accessibilityLabel("MusicLink griffbereit")
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Schließen", action: finish)
                 }
             }
         }
-        .tint(.indigo)
+        .tint(accent)
+        .preferredColorScheme(.light)
+        .sheet(isPresented: $showingGuide) {
+            NavigationStack {
+                Form {
+                    Text("Im Teilen-Menü: Mehr → Bearbeiten → Plus bei MusicLink. Ziehe MusicLink über den Griff nach oben und tippe auf Fertig.")
+                }
+                .navigationTitle("MusicLink griffbereit")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Fertig") { showingGuide = false }
+                    }
+                }
+            }
+            .tint(accent)
+        }
         .popover(item: $shareItem) { item in
             ActivitySheet(url: item.url) { completed in
                 shareItem = nil
@@ -101,16 +136,7 @@ struct ShareView: View {
 
     private func candidateRow(_ candidate: SongCandidate) -> some View {
         HStack(spacing: 12) {
-            AsyncImage(url: candidate.artworkUrl.flatMap(URL.init(string:))) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Image(systemName: "music.note")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.quaternary)
-            }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .accessibilityHidden(true)
+            artwork(candidate, size: 52)
             VStack(alignment: .leading, spacing: 4) {
                 Text(candidate.title)
                 if let album = candidate.album { Text(album).font(.caption).foregroundStyle(.secondary) }
@@ -119,34 +145,44 @@ struct ShareView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: model.selection == candidate.url ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(model.selection == candidate.url ? Color.indigo : Color.secondary)
-                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
         .padding(.vertical, 4)
     }
 
-    private var actions: some View {
+    private func artwork(_ candidate: SongCandidate, size: CGFloat) -> some View {
+        AsyncImage(url: candidate.artworkUrl.flatMap(URL.init(string:))) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            Image(systemName: "music.note")
+                .font(.title)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.quaternary)
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .accessibilityHidden(true)
+    }
+
+    private func actions(_ link: String, share: String, copy: String, hint: String) -> some View {
         VStack(spacing: 10) {
             Button {
-                if let selection = model.selection, let url = URL(string: selection) {
-                    shareItem = SharedLink(url: url)
-                }
+                if let url = URL(string: link) { shareItem = SharedLink(url: url) }
             } label: {
-                Label("Weiterteilen", systemImage: "square.and.arrow.up")
+                Label(share, systemImage: "square.and.arrow.up")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(model.selection == nil)
-            Button(copied ? "Link kopiert" : "Link kopieren") {
-                if let selection = model.selection {
-                    UIPasteboard.general.string = selection
-                    copied = true
-                }
+            Button(copied ? "Link kopiert ✓" : copy) {
+                UIPasteboard.general.string = link
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { finish() }
             }
-            .disabled(model.selection == nil)
+            Text(hint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .padding()
         .background(.regularMaterial)

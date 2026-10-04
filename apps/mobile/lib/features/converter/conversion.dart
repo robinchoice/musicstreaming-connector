@@ -3,6 +3,15 @@ const platforms = {
   'youtubeMusic': 'YouTube Music',
   'spotify': 'Spotify',
 };
+const countries = ['DE', 'AT', 'CH', 'US', 'GB'];
+
+List<String> targetsFor(String input) {
+  if (input.contains('music.apple.com/')) return ['youtubeMusic'];
+  if (RegExp(r'youtu(?:be\.com|\.be)/').hasMatch(input)) {
+    return ['appleMusic', 'spotify'];
+  }
+  return platforms.keys.toList();
+}
 
 class Candidate {
   final String title;

@@ -1,7 +1,7 @@
 import { type Conversion, type ConversionInput } from '@app/shared';
 import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
-import { ResolutionError, resolve as resolveSpotify, youtubeVideoId, type Fetch } from './resolver';
+import { ResolutionError, resolve as resolveSpotify, searchUrl, youtubeVideoId, type Fetch } from './resolver';
 
 const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function recording(title: string, artists: string[]) {
@@ -113,7 +113,7 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
         .map(track => ({ title: track.title, url: `https://music.youtube.com/watch?v=${track.id}`, album: track.album, durationSeconds: track.durationSeconds, artworkUrl: track.artworkUrl?.startsWith('https://') ? track.artworkUrl : null }));
     }
     candidates = [...new Map(candidates.map(candidate => [candidate.url, candidate])).values()].slice(0, 8);
-    if (!candidates.length) throw new ResolutionError('NO_MATCH');
+    if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
     return { source, target: input.target, candidates };
   } catch (error) {
     if (error instanceof ResolutionError) throw error;

@@ -45,8 +45,8 @@ test.each(['https://music.apple.com/de/album/savior/945575406', 'https://music.a
 test('rejects same source and destination before network calls', async () => {
   await expect(resolve({ input: apple, target: 'appleMusic', country: 'DE' })).rejects.toMatchObject({ code: 'UNSUPPORTED_LINK' });
 });
-test('reports no match instead of returning a search or incorrect recording', async () => {
-  await expect(resolve({ input: apple, target: 'youtubeMusic', country: 'DE' }, undefined, fetcher, async () => [])).rejects.toMatchObject({ code: 'NO_MATCH' });
+test('reports no match with a search fallback instead of an incorrect recording', async () => {
+  await expect(resolve({ input: apple, target: 'youtubeMusic', country: 'DE' }, undefined, fetcher, async () => [])).rejects.toMatchObject({ code: 'NO_MATCH', searchUrl: 'https://music.youtube.com/search?q=Red+Hot+Chili+Peppers+Savior' });
 });
 test.each([[429, 'RATE_LIMITED'], [404, 'SOURCE_UNAVAILABLE'], [500, 'NETWORK']] as const)('preserves upstream status %s', async (status, code) => {
   await expect(resolve({ input: apple, target: 'youtubeMusic', country: 'DE' }, undefined, async () => new Response('', { status }))).rejects.toMatchObject({ code });

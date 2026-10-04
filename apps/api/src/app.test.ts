@@ -30,6 +30,12 @@ test.each([['NO_MATCH', 422], ['RATE_LIMITED', 429], ['NETWORK', 502]] as const)
   expect(await response.json()).toMatchObject({ code, error: expect.any(String) });
 });
 
+test('passes the search fallback of a missing match to clients', async () => {
+  const app = createApp(async () => { throw new ResolutionError('NO_MATCH', 'https://music.youtube.com/search?q=Savior'); });
+  const response = await app.request('/api/v1/convert', post({ input: 'song', target: 'youtubeMusic' }));
+  expect(await response.json()).toMatchObject({ code: 'NO_MATCH', searchUrl: 'https://music.youtube.com/search?q=Savior' });
+});
+
 test('caps upstream traffic per process regardless of spoofed forwarding headers', async () => {
   let calls = 0;
   const app = createApp(async () => { calls++; return conversion; });

@@ -1,26 +1,27 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { platforms, type Conversion } from '@app/shared';
-  import { api } from '$lib/api';
+  import { countries, platforms, targetsFor, type Conversion, type Platform } from '@app/shared';
+  import { api, ApiError } from '$lib/api';
   import { toastError } from '$lib/toast.svelte';
 
   let input = $state('');
-  let target = $state<'appleMusic' | 'youtubeMusic' | 'spotify'>('appleMusic');
-  let country = $state('DE');
-  let savedTarget: keyof typeof platforms = 'appleMusic';
+  let target = $state<Platform>('appleMusic');
+  let country = 'DE';
+  let savedTarget: Platform = 'appleMusic';
   const duration = (seconds?: number) => seconds === undefined ? '' : `${Math.floor(seconds / 60)}:${String(Math.round(seconds) % 60).padStart(2, '0')}`;
-  function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; }
-  function save(targetChanged = false) { reset(); if (targetChanged) savedTarget = target; try { localStorage.setItem('musiclink-preferences', JSON.stringify({ target: savedTarget, country })); } catch {} }
+  function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; searchUrl = ''; }
+  function save() { reset(); savedTarget = target; try { localStorage.setItem('musiclink-preferences', JSON.stringify({ target: savedTarget })); } catch {} }
   function sourceChanged(event: Event) {
     input = (event.currentTarget as HTMLInputElement).value;
     reset();
-    if (input.includes('music.apple.com/') && target !== 'youtubeMusic') target = 'youtubeMusic';
-    else if (/youtu(?:be\.com|\.be)\//.test(input) && target === 'youtubeMusic') target = 'appleMusic';
+    const targets = targetsFor(input);
+    target = targets.includes(savedTarget) ? savedTarget : targets[0]!;
   }
   let loading = $state(false);
   let conversion = $state<Conversion | null>(null);
   let selection = $state('');
   let error = $state('');
+  let searchUrl = $state('');
   let copied = $state(false);
   let canShare = $state(false);
   let request: AbortController | undefined;
@@ -29,8 +30,9 @@
     try {
       const saved = JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}');
       if (['appleMusic', 'youtubeMusic', 'spotify'].includes(saved.target)) target = savedTarget = saved.target;
-      if (['DE', 'AT', 'CH', 'US', 'GB'].includes(saved.country)) country = saved.country;
     } catch {}
+    const region = navigator.language.split('-')[1]?.toUpperCase();
+    if (countries.some(code => code === region)) country = region!;
   });
   onDestroy(() => request?.abort());
 
@@ -44,28 +46,36 @@
     conversion = null;
     selection = '';
     copied = false;
+    searchUrl = '';
     try {
       const result = await api.post<Conversion>('/convert', { input, target, country }, current.signal);
       if (current.signal.aborted) return;
       conversion = result;
-      if (result.candidates.length === 1) selection = result.candidates[0]!.url;
+      selection = result.candidates[0]!.url;
     } catch (e) {
-      if (!current.signal.aborted) error = e instanceof Error ? e.message : 'Die Anfrage ist fehlgeschlagen.';
+      if (current.signal.aborted) return;
+      error = e instanceof Error ? e.message : 'Die Anfrage ist fehlgeschlagen.';
+      searchUrl = e instanceof ApiError ? e.searchUrl ?? '' : '';
     } finally {
       if (!current.signal.aborted) loading = false;
     }
   }
 
-  async function copy() {
-    try { await navigator.clipboard.writeText(selection); copied = true; }
+  async function copy(url: string) {
+    try { await navigator.clipboard.writeText(url); copied = true; }
     catch { toastError('Kopieren nicht möglich. Öffne den Musiklink und kopiere ihn dort.'); }
   }
 
-  async function share() {
-    try { await navigator.share({ url: selection }); }
+  async function share(url: string) {
+    try { await navigator.share({ url }); }
     catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich. Kopiere stattdessen den Link.'); }
   }
 </script>
+
+{#snippet track(candidate: Conversion['candidates'][number], target: Platform)}
+  {#if candidate.artworkUrl}<img src={candidate.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="artwork" aria-hidden="true">♪</span>{/if}
+  <span class="track"><strong>{candidate.title}</strong><small>{candidate.album ?? platforms[target]} {duration(candidate.durationSeconds)}</small></span>
+{/snippet}
 
 <div class="shell">
   <header><a href="/" class="brand"><span class="brand-icon" aria-hidden="true">↗</span> MusicLink</a><span class="header-note">Gute Musik kennt keine Plattform.</span><span class="badge">OHNE ANMELDUNG</span></header>
@@ -81,27 +91,29 @@
       <form onsubmit={convert}>
         <label for="song">Welchen Song möchtest du teilen?</label>
         <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="YouTube-Music- oder Apple-Music-Link" autocomplete="off" spellcheck="false" disabled={loading} /><button class="primary" type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
-        <div class="settings"><label>Zieldienst <select bind:value={target} onchange={() => save(true)} disabled={loading}><option value="appleMusic">Apple Music</option><option value="youtubeMusic">YouTube Music</option><option value="spotify">Spotify</option></select></label><label>Apple-Katalog <select bind:value={country} onchange={() => save()} disabled={loading}><option value="DE">Deutschland</option><option value="AT">Österreich</option><option value="CH">Schweiz</option><option value="US">USA</option><option value="GB">Großbritannien</option></select></label></div>
+        <div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>
         <p class="hint">Ein einzelner Song reicht. Tracking-Parameter entfernen wir für dich.</p>
       </form>
 
       <div aria-live="polite" aria-busy={loading}>
         {#if loading}<div class="status"><span class="spinner"></span><strong>Wir suchen deine Aufnahme auf {platforms[target]}.</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
         {:else if error}<div class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong><p>{error}</p></div>
+          {#if searchUrl}<p class="hint">Teile stattdessen eine Suche nach dem Song.</p><div class="actions"><button class="primary" onclick={() => copy(searchUrl)}>{copied ? 'Suchlink kopiert ✓' : 'Suchlink kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(searchUrl)}>Weiterteilen ↗</button>{/if}<a href={searchUrl} target="_blank" rel="noreferrer">Auf {platforms[target]} suchen ↗</a></div>{/if}
         {:else if conversion}
+          {@const selected = conversion.candidates.find(candidate => candidate.url === selection)!}
           <div class="results">
             <div class="source"><span class="eyebrow">DEIN SONG</span><h2>{conversion.source.title}</h2><p>{conversion.source.artist}</p></div>
-            <fieldset><legend>{conversion.candidates.length === 1 ? `Dein Vorschlag auf ${platforms[conversion.target]}` : `${conversion.candidates.length} Vorschläge auf ${platforms[conversion.target]}`}</legend>
-              {#each conversion.candidates as candidate}
-                <label class="candidate" class:selected={selection === candidate.url}>
-                  <input type="radio" name="candidate" value={candidate.url} bind:group={selection} onchange={() => copied = false} />
-                  {#if candidate.artworkUrl}<img src={candidate.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="artwork" aria-hidden="true">♪</span>{/if}
-                  <span class="track"><strong>{candidate.title}</strong><small>{candidate.album ?? platforms[conversion.target]} {duration(candidate.durationSeconds)}</small></span><span class="check" aria-hidden="true">{selection === candidate.url ? '●' : '○'}</span>
-                </label>
-              {/each}
-            </fieldset>
+            <p class="legend">Dein Vorschlag auf {platforms[conversion.target]}</p>
+            <div class="candidate selected">{@render track(selected, conversion.target)}</div>
+            {#if conversion.candidates.length > 1}
+              <details><summary>Andere Fassungen ({conversion.candidates.length - 1})</summary>
+                {#each conversion.candidates.filter(candidate => candidate.url !== selection) as candidate}
+                  <button type="button" class="candidate other" onclick={() => { selection = candidate.url; copied = false; }}>{@render track(candidate, conversion.target)}</button>
+                {/each}
+              </details>
+            {/if}
             <p class="hint">Prüfe die gewünschte Aufnahme vor dem Teilen.</p>
-            <div class="actions"><button class="primary" disabled={!selection} onclick={copy}>{copied ? 'Link kopiert ✓' : 'Link kopieren'}</button>{#if canShare}<button class="secondary" disabled={!selection} onclick={share}>Weiterteilen ↗</button>{/if}{#if selection}<a href={selection} target="_blank" rel="noreferrer">Auf {platforms[conversion.target]} prüfen ↗</a>{/if}</div>
+            <div class="actions"><button class="primary" onclick={() => copy(selection)}>{copied ? 'Link kopiert ✓' : 'Link kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(selection)}>Weiterteilen ↗</button>{/if}<a href={selection} target="_blank" rel="noreferrer">Auf {platforms[conversion.target]} prüfen ↗</a></div>
           </div>
         {/if}
       </div>
@@ -165,17 +177,17 @@
   .results { margin-top:28px; border-top:1px solid var(--border); padding-top:24px; }
   .source h2 { font-size:20px; margin:8px 0 2px; }
   .source p { color:var(--muted); margin:0 0 24px; font-size:14px; }
-  fieldset { border:0; padding:0; margin:0; }
-  legend { font-size:12px; font-weight:650; padding:0 0 10px; }
-  .candidate { display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; cursor:pointer; }
+  .legend { font-size:12px; font-weight:650; margin:0 0 10px; }
+  .candidate { display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; }
   .candidate.selected { border-color:#9ab977; background:#f6faef; }
-  .candidate input { position:absolute; opacity:0; width:1px; height:1px; }
-  .candidate:focus-within { outline:2px solid #639638; outline-offset:2px; }
+  .candidate.other { width:100%; background:white; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+  .candidate.other:hover { background:#f6faef; }
+  details { margin-top:4px; }
+  summary { font-size:12px; font-weight:650; color:var(--muted); cursor:pointer; padding:6px 0 10px; }
   .candidate img, .artwork { width:46px; height:46px; object-fit:cover; border-radius:6px; }
   .artwork { display:grid; place-items:center; background:#e7eddd; font-size:26px; }
   .track { display:flex; flex:1; flex-direction:column; font-size:14px; }
   .track small { color:var(--muted); font-size:11px; }
-  .check { color:#6c894e; }
   .actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:20px; }
   .actions a { font-size:12px; margin-left:auto; }
   @media(max-width:650px) { .shell { padding:0 20px; } header { padding:20px 0; } .header-note { display:none; } .badge { font-size:8px; } .intro { padding:42px 0 25px; } h1 { letter-spacing:-1.2px; } .intro p { font-size:14px; } .desktop { display:none; } .converter { padding:20px; } .input-row { flex-direction:column; } .route { gap:12px; font-size:12px; } .steps { gap:18px; padding:28px 0; } .steps h2 { font-size:12px; } .steps p { font-size:11px; } aside { padding:15px; margin-bottom:32px; } footer { flex-direction:column; gap:12px; } }

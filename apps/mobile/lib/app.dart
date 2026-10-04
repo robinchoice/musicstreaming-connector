@@ -11,8 +11,20 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: appName,
     theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF657D46)),
-      scaffoldBackgroundColor: const Color(0xFFF5F5F0),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF42633F),
+        primary: const Color(0xFF42633F),
+        surface: const Color(0xFFFBFCF7),
+      ),
+      scaffoldBackgroundColor: const Color(0xFFFBFCF7),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
       useMaterial3: true,
     ),
     routerConfig: ref.watch(routerProvider),
