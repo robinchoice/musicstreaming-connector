@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export const APP_NAME = 'MusicLink';
+export const APP_BAND = { from: 3.85, to: 4.55 };
+export { bandColor, bandGradient, DEEP, GLOW } from './band';
 
 export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify' } as const;
 export type Platform = keyof typeof platforms;
