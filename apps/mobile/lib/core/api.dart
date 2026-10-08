@@ -17,7 +17,10 @@ final apiProvider = Provider.autoDispose((ref) {
 final recentErrors = <String>[];
 
 void _noteError(String path, Object status) {
-  recentErrors.insert(0, 'POST /api/v1$path → $status');
+  recentErrors.insert(
+    0,
+    '${path == '/song' ? 'GET' : 'POST'} /api/v1$path → $status',
+  );
   if (recentErrors.length > 5) recentErrors.removeLast();
 }
 
@@ -74,6 +77,46 @@ class Api {
       );
     } on http.ClientException {
       _noteError('/convert', 'offline');
+      throw const ApiException(
+        'Keine Verbindung zum Server. Versuche es erneut.',
+      );
+    } on FormatException {
+      throw const ApiException(
+        'Der Dienst hat eine ungültige Antwort gesendet.',
+      );
+    } on TypeError {
+      throw const ApiException(
+        'Der Dienst hat eine ungültige Antwort gesendet.',
+      );
+    }
+  }
+
+  Future<Song> song(String input, {String country = 'DE'}) async {
+    try {
+      final response = await client
+          .get(
+            Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/song')
+                .replace(queryParameters: {'input': input, 'country': country}),
+            headers: {'accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 25));
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      if (response.statusCode >= 400) {
+        _noteError('/song', response.statusCode);
+        throw ApiException(
+          body['error'] as String? ?? 'Der Dienst ist gerade nicht erreichbar.',
+        );
+      }
+      return Song.fromJson(body);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(
+        'Die Suche dauert zu lange. Versuche es erneut.',
+      );
+    } on http.ClientException {
+      _noteError('/song', 'offline');
       throw const ApiException(
         'Keine Verbindung zum Server. Versuche es erneut.',
       );

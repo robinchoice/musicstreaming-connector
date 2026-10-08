@@ -21,6 +21,33 @@ struct Conversion: Decodable {
     let candidates: [SongCandidate]
 }
 
+struct SongLink: Decodable {
+    let url: String
+    let found: Bool
+}
+
+struct Song: Decodable {
+    let source: SourceTrack
+    let sharePath: String
+    let links: [String: SongLink]
+}
+
+// Written by the app (Flutter) as JSON into the app group, see lib/features/friends/social.dart
+struct Friend: Codable, Hashable {
+    let name: String
+    let platform: String
+}
+
+struct FriendGroup: Codable, Hashable {
+    let name: String
+    let members: [String]
+}
+
+private struct Social: Decodable {
+    let friends: [Friend]?
+    let groups: [FriendGroup]?
+}
+
 private struct APIError: Decodable {
     let error: String
     let code: String?
@@ -39,8 +66,88 @@ final class ShareModel: ObservableObject {
         return ["DE", "AT", "CH", "US", "GB"].contains(region) ? region : "DE"
     }()
 
+    let friends: [Friend]
+    let groups: [FriendGroup]
+    @Published private(set) var chosen: [String] = []
+    @Published private(set) var message: String?
+    @Published private(set) var isLoadingMessage = false
+    @Published private(set) var messageFailed = false
+    private var song: Song?
+    private var songRequest: Task<Void, Never>?
+
     init() {
         if let saved = preferences?.string(forKey: "target"), Self.platforms[saved] != nil { target = saved }
+        let social = preferences?.string(forKey: "social")
+            .flatMap { try? JSONDecoder().decode(Social.self, from: Data($0.utf8)) }
+        friends = (social?.friends ?? []).filter { Self.platforms[$0.platform] != nil }
+        groups = social?.groups ?? []
+    }
+
+    func toggle(_ name: String) {
+        choose(chosen.contains(name) ? chosen.filter { $0 != name } : chosen + [name])
+    }
+
+    func isGroupChosen(_ group: FriendGroup) -> Bool {
+        Set(group.members) == Set(chosen) && !chosen.isEmpty
+    }
+
+    func toggle(group: FriendGroup) {
+        choose(isGroupChosen(group) ? [] : group.members.filter { member in friends.contains { $0.name == member } })
+    }
+
+    private func choose(_ names: [String]) {
+        chosen = names
+        message = nil
+        messageFailed = false
+        guard !names.isEmpty else { return }
+        if song != nil { buildMessage(); return }
+        guard let apiURL, let input, songRequest == nil else { return }
+        isLoadingMessage = true
+        let country = self.country
+        songRequest = Task { [weak self] in
+            var components = URLComponents(url: apiURL.appendingPathComponent("api/v1/song"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "input", value: input), URLQueryItem(name: "country", value: country)]
+            var song: Song?
+            if let url = components?.url {
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 25
+                if let result = try? await URLSession.shared.data(for: request),
+                   (result.1 as? HTTPURLResponse)?.statusCode == 200 {
+                    song = try? JSONDecoder().decode(Song.self, from: result.0)
+                }
+            }
+            guard let self, !self.isClosed, !Task.isCancelled else { return }
+            self.songRequest = nil
+            self.isLoadingMessage = false
+            self.song = song
+            if song == nil {
+                self.chosen = []
+                self.messageFailed = true
+            }
+            self.buildMessage()
+        }
+    }
+
+    // One link if everyone uses the same service, otherwise one line per service plus the share page
+    private func buildMessage() {
+        guard let song, let apiURL else { return }
+        let picked = friends.filter { chosen.contains($0.name) }
+        guard !picked.isEmpty else { message = nil; return }
+        let head = "🎵 \(song.source.title) – \(song.source.artist)"
+        var services: [String] = []
+        for friend in picked where !services.contains(friend.platform) { services.append(friend.platform) }
+        if services.count == 1 {
+            message = "\(head)\n\(song.links[services[0]]?.url ?? "")"
+            return
+        }
+        var lines = [head]
+        for service in services {
+            let names = picked.filter { $0.platform == service }.map(\.name).joined(separator: ", ")
+            lines.append("\(Self.platforms[service] ?? service) (\(names)): \(song.links[service]?.url ?? "")")
+        }
+        let origin = apiURL.absoluteString.hasSuffix("/") ? String(apiURL.absoluteString.dropLast()) : apiURL.absoluteString
+        lines.append("Andere: \(origin)\(song.sharePath)")
+        message = lines.joined(separator: "\n")
     }
 
     static func targets(for input: String) -> [String] {
@@ -96,6 +203,12 @@ final class ShareModel: ObservableObject {
         }
         self.input = input
         request?.cancel()
+        songRequest?.cancel()
+        songRequest = nil
+        song = nil
+        chosen = []
+        message = nil
+        isLoadingMessage = false
         conversion = nil
         selection = nil
         error = nil
@@ -151,9 +264,11 @@ final class ShareModel: ObservableObject {
     func close() {
         isClosed = true
         request?.cancel()
+        songRequest?.cancel()
     }
 
     deinit {
         request?.cancel()
+        songRequest?.cancel()
     }
 }

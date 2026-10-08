@@ -21,6 +21,13 @@ import UIKit
       switch call.method {
       case "getPreferences":
         result(["target": preferences.string(forKey: "target") ?? "appleMusic", "shareSetupSeen": preferences.bool(forKey: "shareSetupSeen") ? "true" : "false"])
+      // Friends, groups and the own invite as one JSON string, shared with the share extension
+      case "getSocial":
+        result(preferences.string(forKey: "social"))
+      case "setSocial":
+        guard let value = call.arguments as? String else { result(FlutterMethodNotImplemented); return }
+        preferences.set(value, forKey: "social")
+        result(nil)
       case "dismissShareSetup":
         preferences.set(true, forKey: "shareSetupSeen")
         result(nil)

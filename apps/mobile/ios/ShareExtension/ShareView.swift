@@ -4,7 +4,7 @@ import UIKit
 struct ShareView: View {
     @ObservedObject var model: ShareModel
     let finish: () -> Void
-    @State private var shareItem: SharedLink?
+    @State private var shareItem: SharedItem?
     @State private var copied = false
     @State private var showingGuide = false
     private let accent = Color(red: 66 / 255, green: 99 / 255, blue: 63 / 255)
@@ -75,12 +75,26 @@ struct ShareView: View {
                                 }
                                 .padding(.top, 12)
                             }
+                            if model.friends.isEmpty {
+                                Text("Tipp: In der MusicLink-App speicherst du Freunde mit ihrem Dienst und teilst an mehrere auf einmal.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.top, 12)
+                            } else {
+                                friendsSection
+                                    .padding(.top, 12)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(24)
                     }
                     .safeAreaInset(edge: .bottom) {
-                        actions(candidate.url, share: "Als \(model.targetName)-Link teilen", copy: "Link kopieren", hint: "Prüfe die gewünschte Aufnahme vor dem Teilen.")
+                        if model.chosen.isEmpty {
+                            actions(candidate.url, share: "Als \(model.targetName)-Link teilen", copy: "Link kopieren", hint: "Prüfe die gewünschte Aufnahme vor dem Teilen.")
+                        } else if let message = model.message {
+                            actions(message, share: "An \(model.chosen.joined(separator: ", ")) teilen", copy: "Nachricht kopieren", hint: "Jeder tippt auf die Zeile mit seinem Dienst.", isText: true)
+                        }
                     }
                 }
             }
@@ -127,11 +141,91 @@ struct ShareView: View {
             .tint(accent)
         }
         .popover(item: $shareItem) { item in
-            ActivitySheet(url: item.url) { completed in
+            ActivitySheet(items: item.items) { completed in
                 shareItem = nil
                 if completed { finish() }
             }
         }
+    }
+
+    private static func serviceColor(_ platform: String) -> Color {
+        switch platform {
+        case "appleMusic": return Color(red: 250 / 255, green: 45 / 255, blue: 72 / 255)
+        case "youtubeMusic": return Color(red: 1, green: 0, blue: 51 / 255)
+        case "spotify": return Color(red: 29 / 255, green: 185 / 255, blue: 84 / 255)
+        default: return Color(red: 162 / 255, green: 56 / 255, blue: 1)
+        }
+    }
+
+    // Tap friends to pick them, tap a group to pick all its members
+    private var friendsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Für wen?")
+                .font(.subheadline.weight(.semibold))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(model.friends, id: \.self) { friend in
+                        let chosen = model.chosen.contains(friend.name)
+                        Button {
+                            model.toggle(friend.name)
+                            copied = false
+                        } label: {
+                            VStack(spacing: 4) {
+                                ZStack(alignment: .bottomTrailing) {
+                                    Circle()
+                                        .fill(accent.opacity(0.15))
+                                        .frame(width: 50, height: 50)
+                                        .overlay(Text(String(friend.name.prefix(1)).uppercased()).font(.headline).foregroundStyle(accent))
+                                        .overlay(Circle().stroke(chosen ? accent : Color.clear, lineWidth: 2.5))
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Self.serviceColor(friend.platform))
+                                        .frame(width: 16, height: 16)
+                                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 2))
+                                }
+                                Text(friend.name)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                            }
+                            .frame(width: 60)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(friend.name), \(ShareModel.platforms[friend.platform] ?? friend.platform)")
+                        .accessibilityAddTraits(chosen ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            if !model.groups.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(model.groups, id: \.self) { group in
+                            Button(group.name) {
+                                model.toggle(group: group)
+                                copied = false
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(model.isGroupChosen(group) ? accent : Color.secondary)
+                        }
+                    }
+                }
+            }
+            if model.isLoadingMessage {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else if let message = model.message {
+                Text(message)
+                    .font(.footnote)
+                    .textSelection(.enabled)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+            } else if model.messageFailed {
+                Text("Die Links für deine Freunde konnten nicht geladen werden. Versuche es erneut.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func candidateRow(_ candidate: SongCandidate) -> some View {
@@ -164,17 +258,21 @@ struct ShareView: View {
         .accessibilityHidden(true)
     }
 
-    private func actions(_ link: String, share: String, copy: String, hint: String) -> some View {
+    private func actions(_ link: String, share: String, copy: String, hint: String, isText: Bool = false) -> some View {
         VStack(spacing: 10) {
             Button {
-                if let url = URL(string: link) { shareItem = SharedLink(url: url) }
+                if isText {
+                    shareItem = SharedItem(items: [link])
+                } else if let url = URL(string: link) {
+                    shareItem = SharedItem(items: [url])
+                }
             } label: {
                 Label(share, systemImage: "square.and.arrow.up")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            Button(copied ? "Link kopiert ✓" : copy) {
+            Button(copied ? (isText ? "Nachricht kopiert ✓" : "Link kopiert ✓") : copy) {
                 UIPasteboard.general.string = link
                 copied = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { finish() }
@@ -189,17 +287,17 @@ struct ShareView: View {
     }
 }
 
-private struct SharedLink: Identifiable {
+private struct SharedItem: Identifiable {
     let id = UUID()
-    let url: URL
+    let items: [Any]
 }
 
 private struct ActivitySheet: UIViewControllerRepresentable {
-    let url: URL
+    let items: [Any]
     let completion: (Bool) -> Void
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
         controller.completionWithItemsHandler = { _, completed, _, _ in
             DispatchQueue.main.async { completion(completed) }
         }

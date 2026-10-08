@@ -15,6 +15,11 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "org.musiclink.prototype/preferences").setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPreferences" -> result.success(mapOf("target" to preferences.getString("target", "appleMusic")))
+                "getSocial" -> result.success(preferences.getString("social", null))
+                "setSocial" -> {
+                    preferences.edit().putString("social", call.arguments as String).apply()
+                    result.success(null)
+                }
                 "setPreferences" -> {
                     preferences.edit().putString("target", call.argument<String>("target")).apply()
                     result.success(null)

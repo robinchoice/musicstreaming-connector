@@ -53,3 +53,22 @@ class Conversion {
           .map((item) => Candidate.fromJson(item as Map<String, dynamic>))
           .toList();
 }
+
+/// The best link on every service, for sharing with friends.
+class Song {
+  final String title;
+  final String artist;
+  final String? artworkUrl;
+  final String sharePath;
+  final Map<String, String> links;
+  Song.fromJson(Map<String, dynamic> json)
+    : title = (json['source'] as Map<String, dynamic>)['title'] as String,
+      artist = (json['source'] as Map<String, dynamic>)['artist'] as String,
+      artworkUrl =
+          (json['source'] as Map<String, dynamic>)['artworkUrl'] as String?,
+      sharePath = json['sharePath'] as String,
+      links = {
+        for (final entry in (json['links'] as Map<String, dynamic>).entries)
+          entry.key: (entry.value as Map<String, dynamic>)['url'] as String,
+      };
+}

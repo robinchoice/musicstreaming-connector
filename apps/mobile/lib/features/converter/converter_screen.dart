@@ -6,6 +6,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/api.dart';
 import '../feedback/feedback_sheet.dart';
+import '../friends/friends_bar.dart';
+import '../friends/friends_screen.dart';
+import '../friends/social.dart';
 import 'conversion.dart';
 import 'share_setup.dart';
 
@@ -36,6 +39,10 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
   bool _loading = false;
   bool _copied = false;
   int _requestId = 0;
+  Set<String> _friends = {};
+  Song? _song;
+  String? _message;
+  bool _messageLoading = false;
 
   String get _country {
     final region =
@@ -107,7 +114,47 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
       _error = null;
       _searchUrl = null;
       _loading = false;
+      _friends = {};
+      _song = null;
+      _message = null;
+      _messageLoading = false;
     });
+  }
+
+  Future<void> _friendsChanged(Set<String> selected) async {
+    final id = _requestId;
+    setState(() {
+      _friends = selected;
+      _copied = false;
+      _message = null;
+    });
+    if (selected.isEmpty) return;
+    if (_song == null) {
+      setState(() => _messageLoading = true);
+      try {
+        final song = await ref
+            .read(apiProvider)
+            .song(_input.text.trim(), country: _country);
+        if (!mounted || id != _requestId) return;
+        _song = song;
+      } on ApiException catch (error) {
+        if (mounted && id == _requestId) _notice(error.message);
+      } finally {
+        if (mounted && id == _requestId) {
+          setState(() => _messageLoading = false);
+        }
+      }
+    }
+    final song = _song;
+    if (song == null || !mounted || id != _requestId) return;
+    final friends = ref
+        .read(socialProvider)
+        .friends
+        .where((friend) => _friends.contains(friend.name))
+        .toList();
+    setState(
+      () => _message = friends.isEmpty ? null : friendsMessage(song, friends),
+    );
   }
 
   String _destinationForInput(String input) {
@@ -170,6 +217,16 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                 ),
               ],
               const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(this.context).push(
+                    MaterialPageRoute(builder: (_) => const FriendsScreen()),
+                  );
+                },
+                icon: const Icon(Icons.group_outlined),
+                label: const Text('Freunde und Einladung'),
+              ),
               TextButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
@@ -519,24 +576,75 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                                 ),
                           ],
                         ),
+                      const SizedBox(height: 20),
+                      FriendsBar(
+                        selected: _friends,
+                        onChanged: _friendsChanged,
+                        enabled: !_sharing,
+                      ),
+                      if (_messageLoading)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_message != null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: SelectableText(_message!),
+                        ),
                       const SizedBox(height: 24),
-                      Builder(
-                        builder: (context) => FilledButton.icon(
-                          onPressed: _sharing
-                              ? null
-                              : () => _share(context, selected.url),
-                          icon: const Icon(Icons.ios_share),
-                          label: Text(
-                            'Als ${platforms[conversion.target]}-Link teilen',
-                            textAlign: TextAlign.center,
+                      if (_friends.isNotEmpty) ...[
+                        Builder(
+                          builder: (context) => FilledButton.icon(
+                            onPressed: _sharing || _message == null
+                                ? null
+                                : () => _share(context, _message!),
+                            icon: const Icon(Icons.ios_share),
+                            label: Text(
+                              'An ${_friends.join(', ')} teilen',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: _sharing ? null : () => _copy(selected.url),
-                        icon: const Icon(Icons.copy),
-                        label: Text(_copied ? 'Link kopiert' : 'Link kopieren'),
-                      ),
+                        TextButton.icon(
+                          onPressed: _sharing || _message == null
+                              ? null
+                              : () => _copy(_message!),
+                          icon: const Icon(Icons.copy),
+                          label: Text(
+                            _copied
+                                ? 'Nachricht kopiert'
+                                : 'Nachricht kopieren',
+                          ),
+                        ),
+                      ] else ...[
+                        Builder(
+                          builder: (context) => FilledButton.icon(
+                            onPressed: _sharing
+                                ? null
+                                : () => _share(context, selected.url),
+                            icon: const Icon(Icons.ios_share),
+                            label: Text(
+                              'Als ${platforms[conversion.target]}-Link teilen',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _sharing
+                              ? null
+                              : () => _copy(selected.url),
+                          icon: const Icon(Icons.copy),
+                          label: Text(
+                            _copied ? 'Link kopiert' : 'Link kopieren',
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       Text(
                         'Prüfe die gewünschte Aufnahme vor dem Teilen.',
