@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config.dart';
 import 'core/router.dart';
+import 'features/feedback/feedback_button.dart';
 
 class App extends ConsumerWidget {
   const App({super.key});
@@ -28,6 +29,7 @@ class App extends ConsumerWidget {
       useMaterial3: true,
     ),
     routerConfig: ref.watch(routerProvider),
+    builder: (context, child) => FeedbackButton(child: child!),
     debugShowCheckedModeBanner: false,
   );
 }

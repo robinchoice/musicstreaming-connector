@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/db/package.json packages/db/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN bun install --frozen-lockfile
@@ -15,7 +16,8 @@ RUN cd apps/web && bun run build
 FROM oven/bun:1-slim
 WORKDIR /app
 COPY --from=build /app/apps/web/build build
-ENV NODE_ENV=production PORT=3000
+# adapter-node accepts 512 KB by default, too little for feedback screenshots
+ENV NODE_ENV=production PORT=3000 BODY_SIZE_LIMIT=8M
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
   CMD bun -e "fetch('http://localhost:3000/').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"

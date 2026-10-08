@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api.dart';
+import '../feedback/feedback_sheet.dart';
 import 'conversion.dart';
 import 'share_setup.dart';
 
@@ -168,6 +169,15 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                   label: const Text('Favoriten-Anleitung öffnen'),
                 ),
               ],
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  showFeedbackSheet(this.context, ref, FeedbackKind.idea);
+                },
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('Feedback geben'),
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),

@@ -10,6 +10,7 @@ local.properties
 node_modules/
 .svelte-kit/
 .env.*
+!.env.example
 !.env.*.example
 .dart_tool/
 .flutter-plugins-dependencies

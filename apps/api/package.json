@@ -3,15 +3,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/index.ts",
-    "test": "bun test",
+    "dev": "bun --env-file=../../.env --hot src/index.ts",
+    "test": "bun test --env-file=../../.env",
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@app/db": "workspace:*",
     "@app/shared": "workspace:*",
     "@sentry/bun": "^11.4.0",
+    "drizzle-orm": "^0.45.3",
     "hono": "^4.13.12",
+    "nodemailer": "^10.0.13",
     "youtubei.js": "18.1.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.2"
   }
 }

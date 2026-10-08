@@ -25,6 +25,34 @@ export const failureMessages = {
 
 export type FailureCode = keyof typeof failureMessages;
 
+// What web and app send along with feedback. The API adds its own version.
+export const feedbackContextSchema = z.object({
+  platform: z.enum(['web', 'ios', 'android']),
+  page: z.string().max(500),
+  device: z.string().max(300),
+  viewport: z.string().max(50),
+  // Failed API calls as "METHOD /path → status", newest first
+  errors: z.array(z.string().max(300)).max(5),
+});
+
+export type FeedbackContext = z.infer<typeof feedbackContextSchema>;
+
+// Shown to the tester as they are; zod's own messages are not
+export const feedbackErrors = {
+  tooShort: 'Schreib bitte mindestens 5 Zeichen.',
+  invalidEmail: 'Die Mail-Adresse stimmt nicht.',
+} as const;
+
+export const feedbackSchema = z.object({
+  kind: z.enum(['bug', 'idea']),
+  message: z.string().trim().min(5, feedbackErrors.tooShort).max(5000),
+  // Optional, there are no accounts. Only testers who leave it can be thanked.
+  email: z.email(feedbackErrors.invalidEmail).max(255).toLowerCase().optional(),
+  // PNG or JPEG, up to about 5 MB
+  screenshot: z.base64().max(7_000_000).optional(),
+  context: feedbackContextSchema,
+});
+
 const sources: [RegExp, Platform][] = [
   [/music\.apple\.com\//, 'appleMusic'], [/youtu(?:be\.com|\.be)\//, 'youtubeMusic'],
   [/open\.spotify\.com\//, 'spotify'], [/deezer\.com\//, 'deezer'],

@@ -13,6 +13,14 @@ final apiProvider = Provider.autoDispose((ref) {
   return Api(client, apiUrl);
 });
 
+/// The last failed calls, newest first. Feedback sends them along.
+final recentErrors = <String>[];
+
+void _noteError(String path, Object status) {
+  recentErrors.insert(0, 'POST /api/v1$path → $status');
+  if (recentErrors.length > 5) recentErrors.removeLast();
+}
+
 class ApiException implements Exception {
   final String message;
   final String? searchUrl;
@@ -51,6 +59,7 @@ class Api {
       final body =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode >= 400) {
+        _noteError('/convert', response.statusCode);
         throw ApiException(
           body['error'] as String? ?? 'Der Dienst ist gerade nicht erreichbar.',
           searchUrl: body['searchUrl'] as String?,
@@ -64,6 +73,7 @@ class Api {
         'Die Suche dauert zu lange. Versuche es erneut.',
       );
     } on http.ClientException {
+      _noteError('/convert', 'offline');
       throw const ApiException(
         'Keine Verbindung zum Server. Versuche es erneut.',
       );
@@ -74,6 +84,43 @@ class Api {
     } on TypeError {
       throw const ApiException(
         'Der Dienst hat eine ungültige Antwort gesendet.',
+      );
+    }
+  }
+
+  Future<void> sendFeedback(Map<String, dynamic> body) async {
+    try {
+      final response = await client
+          .post(
+            Uri.parse(
+              '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/feedback',
+            ),
+            headers: {
+              'content-type': 'application/json',
+              'accept': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode >= 400) {
+        String? error;
+        try {
+          error =
+              (jsonDecode(utf8.decode(response.bodyBytes))
+                      as Map<String, dynamic>)['error']
+                  as String?;
+        } on FormatException {
+          // Not from our API, e.g. a proxy page
+        }
+        throw ApiException(error ?? 'Der Dienst ist gerade nicht erreichbar.');
+      }
+    } on TimeoutException {
+      throw const ApiException(
+        'Das Senden dauert zu lange. Versuche es erneut.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'Keine Verbindung zum Server. Versuche es erneut.',
       );
     }
   }

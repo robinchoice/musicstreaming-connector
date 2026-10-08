@@ -13,5 +13,34 @@ services:
   api:
     image: ghcr.io/robinchoice/musiclink-api:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/app
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      FEEDBACK_EMAIL: ${FEEDBACK_EMAIL:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+
+  # Feedback only, the converter stores nothing
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

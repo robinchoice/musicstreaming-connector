@@ -1,12 +1,15 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import type { Database } from '@app/db';
 import { conversionInput, failureMessages } from '@app/shared';
 import { ResolutionError } from './lib/resolver';
 import { resolve } from './lib/music';
 import { captureException } from './monitoring';
+import { feedbackRoutes } from './routes/feedback';
 
-export function createApp(resolver = resolve) {
+// Without a database there is no feedback, the converter needs none.
+export function createApp(resolver = resolve, db?: Database) {
   let windowStart = Date.now();
   let requests = 0;
   return new Hono()
@@ -37,5 +40,7 @@ export function createApp(resolver = resolve) {
       c.header('Cache-Control', 'no-store');
       return c.json(await resolver(parsed.data, c.req.raw.signal));
     })
+    .use('/api/v1/feedback', bodyLimit({ maxSize: 8 * 1024 * 1024, onError: c => c.json({ error: 'Der Screenshot ist zu groß.' }, 413) }))
+    .route('/api/v1/feedback', db ? feedbackRoutes(db) : new Hono())
     .notFound(c => c.json({ error: 'Nicht gefunden' }, 404));
 }

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { APP_BAND, bandColor, bandGradient, GLOW } from '@app/shared';
+  import { browser } from '$app/environment';
+  import Feedback from '$lib/components/Feedback.svelte';
   import Toasts from '$lib/components/Toasts.svelte';
   let { children } = $props();
 </script>
@@ -7,6 +9,7 @@
 <svelte:head><title>MusicLink · Musik verbindet</title><meta name="description" content="Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung." /></svelte:head>
 <div style:--gradient={bandGradient(APP_BAND, GLOW)} style:--accent={bandColor((APP_BAND.from + APP_BAND.to) / 2, GLOW)}>
   {@render children()}
+  {#if browser}<Feedback />{/if}
   <Toasts />
 </div>
 
