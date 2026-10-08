@@ -13,7 +13,7 @@
 
   <h2>Songs umwandeln</h2>
   <p>Wenn du einen Link einfügst oder aus einer anderen App teilst, schickt MusicLink ihn an unseren Server. Der Server liest Titel und Interpret bei der jeweiligen Plattform aus und sucht den Song bei der Zielplattform (YouTube, Apple, Spotify, Deezer). Diese Abfragen stellt unser Server, deine IP-Adresse geht dabei nicht an die Plattformen. Links und Ergebnisse speichern wir nicht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
-  <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Deezer). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
+  <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
 
   <h2>Einstellungen auf deinem Gerät</h2>
   <p>Deine bevorzugte Zielplattform und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich MusicLink lokal auf deinem Gerät. Cookies setzen wir nicht.</p>
