@@ -76,3 +76,47 @@ test('featured credits may move between title and artist without conflating edit
   ]);
   expect(youtubeResult.candidates).toHaveLength(1);
 });
+
+const spotify = 'https://open.spotify.com/intl-de/track/2Foc5Q5nqNiosCNqttzHof?si=tracking';
+const deezer = 'https://www.deezer.com/de/track/67238735';
+const deezerTrack = { id: 67238735, title: 'Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)', duration: 248, readable: true, artist: { name: 'Daft Punk' }, album: { title: 'Get Lucky', cover_medium: 'https://cdn-images.dzcdn.net/cover.jpg' } };
+
+test.each([
+  [spotify, { platform: 'spotify', id: '2Foc5Q5nqNiosCNqttzHof', country: '' }],
+  [deezer, { platform: 'deezer', id: '67238735', country: '' }],
+  ['https://deezer.com/track/67238735', { platform: 'deezer', id: '67238735', country: '' }],
+] as const)('accepts %s', (input, source) => expect(songSource(input)).toEqual(source));
+test.each(['https://open.spotify.com/album/2Foc5Q5nqNiosCNqttzHof', 'https://open.spotify.com/track/short', 'https://www.deezer.com/de/playlist/123', 'https://deezer.com.evil.example/track/1'])('rejects %s', input => {
+  expect(() => songSource(input)).toThrow();
+});
+
+test('Spotify → Deezer reads the track page and matches artist, version and duration', async () => {
+  const result = await resolve({ input: spotify, target: 'deezer', country: 'DE' }, undefined, async url => {
+    if (url.hostname === 'open.spotify.com') {
+      expect(url.pathname).toBe('/track/2Foc5Q5nqNiosCNqttzHof');
+      expect(url.search).toBe('');
+      return new Response('<meta property="og:title" content="Get Lucky (Radio Edit) [feat. Pharrell Williams and Nile Rodgers]" /><meta name="music:duration" content="248" /><meta name="music:musician_description" content="Daft Punk, Pharrell Williams, Nile Rodgers" />');
+    }
+    expect(url.searchParams.get('q')).toBe('Daft Punk, Pharrell Williams, Nile Rodgers Get Lucky (Radio Edit)');
+    return Response.json({ data: [
+      deezerTrack,
+      { ...deezerTrack, id: 1, title: 'Get Lucky (Radio Edit) [feat. Pharrell Williams and Nile Rodgers]', artist: { name: 'Daft Punk, Pharrell Williams & Nile Rodgers' }, duration: 369 },
+      { ...deezerTrack, id: 2, title: 'Get Lucky (Radio Edit) [feat. Pharrell Williams and Nile Rodgers]', artist: { name: 'Daft Punk, Pharrell Williams & Nile Rodgers' }, readable: false },
+    ] });
+  });
+  expect(result.source).toMatchObject({ title: 'Get Lucky (Radio Edit) [feat. Pharrell Williams and Nile Rodgers]', artist: 'Daft Punk, Pharrell Williams, Nile Rodgers', url: 'https://open.spotify.com/track/2Foc5Q5nqNiosCNqttzHof' });
+  expect(result.candidates).toEqual([{ title: deezerTrack.title, url: 'https://www.deezer.com/track/67238735', album: 'Get Lucky', durationSeconds: 248, artworkUrl: 'https://cdn-images.dzcdn.net/cover.jpg' }]);
+});
+
+test('Deezer → Spotify looks up the source and reports unknown tracks', async () => {
+  const result = await resolve({ input: deezer, target: 'spotify', country: 'DE' }, undefined, async url => {
+    if (url.hostname === 'api.deezer.com') return Response.json({ ...deezerTrack, title: 'Savior', artist: { name: 'Red Hot Chili Peppers' } });
+    if (url.hostname === 'labs.api.listenbrainz.org') {
+      expect(url.searchParams.get('artist_name')).toBe('Red Hot Chili Peppers');
+      return Response.json([{ spotify_track_ids: ['0O8RjwNco465s5o9Ix9IYj'] }]);
+    }
+    return Response.json({ title: 'Savior', thumbnail_url: null });
+  });
+  expect(result.candidates[0]!.url).toBe('https://open.spotify.com/track/0O8RjwNco465s5o9Ix9IYj');
+  await expect(resolve({ input: deezer, target: 'spotify', country: 'DE' }, undefined, async () => Response.json({ error: { code: 800 } }))).rejects.toMatchObject({ code: 'SOURCE_UNAVAILABLE' });
+});

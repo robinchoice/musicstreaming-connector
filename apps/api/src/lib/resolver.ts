@@ -12,6 +12,7 @@ export function searchUrl(target: Platform, source: { title: string; artist: str
   const title = source.title.replace(/[\[(][^\])]*\b(?:official|video|audio|lyrics?|remaster(?:ed)?|4k|hd)\b[^\])]*[\])]/gi, '').replace(/\s+/g, ' ').trim();
   const query = title.toLowerCase().includes(artist.toLowerCase()) ? title : `${artist} ${title}`;
   if (target === 'spotify') return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
+  if (target === 'deezer') return `https://www.deezer.com/search/${encodeURIComponent(query)}`;
   const url = new URL(target === 'appleMusic' ? `https://music.apple.com/${country.toLowerCase()}/search` : 'https://music.youtube.com/search');
   url.searchParams.set(target === 'appleMusic' ? 'term' : 'q', query);
   return url.toString();
@@ -47,6 +48,33 @@ const metadataSchema = z.object({
 const lookupSchema = z.array(z.object({ spotify_track_ids: z.array(z.string()).default([]) }));
 const normalizedTitle = (title: string) => title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 export type Fetch = (url: URL, init: RequestInit) => Promise<Response>;
+type Get = (origin: string, params: Record<string, string>) => Promise<unknown>;
+
+// ListenBrainz maps artist and title to Spotify IDs; Spotify's oEmbed confirms each track still exists.
+export async function spotifyCandidates(source: { title: string; artist: string }, get: Get) {
+  const entries = lookupSchema.parse(await get('https://labs.api.listenbrainz.org/spotify-id-from-metadata/json', {
+    artist_name: source.artist, track_name: source.title, release_name: '',
+  }));
+  const ids = [...new Set(entries.flatMap(entry => entry.spotify_track_ids))]
+    .filter(id => /^[A-Za-z0-9]{22}$/.test(id)).slice(0, 8);
+  const candidates: Conversion['candidates'] = [];
+  for (let i = 0; i < ids.length; i += 3) {
+    const batch = await Promise.all(ids.slice(i, i + 3).map(async id => {
+      const url = `https://open.spotify.com/track/${id}`;
+      let metadata: z.infer<typeof metadataSchema>;
+      try {
+        metadata = metadataSchema.parse(await get('https://open.spotify.com/oembed', { url }));
+      } catch (error) {
+        if (error instanceof ResolutionError && error.code === 'SOURCE_UNAVAILABLE') return null;
+        throw error;
+      }
+      if (normalizedTitle(metadata.title) !== normalizedTitle(source.title)) return null;
+      return { title: metadata.title, url, artworkUrl: metadata.thumbnail_url?.startsWith('https://') ? metadata.thumbnail_url : null };
+    }));
+    candidates.push(...batch.filter(candidate => candidate !== null));
+  }
+  return candidates;
+}
 
 export async function resolve(input: string, requestSignal?: AbortSignal, fetcher: Fetch = fetch): Promise<Omit<Conversion, 'target'>> {
   const id = youtubeVideoId(input);
@@ -79,27 +107,7 @@ export async function resolve(input: string, requestSignal?: AbortSignal, fetche
       url: `https://music.youtube.com/watch?v=${id}`,
     };
     if (!source.title || !source.artist) throw new ResolutionError('SOURCE_UNAVAILABLE');
-    const entries = lookupSchema.parse(await get('https://labs.api.listenbrainz.org/spotify-id-from-metadata/json', {
-      artist_name: source.artist, track_name: source.title, release_name: '',
-    }));
-    const ids = [...new Set(entries.flatMap(entry => entry.spotify_track_ids))]
-      .filter(id => /^[A-Za-z0-9]{22}$/.test(id)).slice(0, 8);
-    const candidates: Conversion['candidates'] = [];
-    for (let i = 0; i < ids.length; i += 3) {
-      const batch = await Promise.all(ids.slice(i, i + 3).map(async id => {
-        const url = `https://open.spotify.com/track/${id}`;
-        let metadata: z.infer<typeof metadataSchema>;
-        try {
-          metadata = metadataSchema.parse(await get('https://open.spotify.com/oembed', { url }));
-        } catch (error) {
-          if (error instanceof ResolutionError && error.code === 'SOURCE_UNAVAILABLE') return null;
-          throw error;
-        }
-        if (normalizedTitle(metadata.title) !== normalizedTitle(source.title)) return null;
-        return { title: metadata.title, url, artworkUrl: metadata.thumbnail_url?.startsWith('https://') ? metadata.thumbnail_url : null };
-      }));
-      candidates.push(...batch.filter(candidate => candidate !== null));
-    }
+    const candidates = await spotifyCandidates(source, get);
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl('spotify', source));
     return { source, candidates };
   } catch (error) {

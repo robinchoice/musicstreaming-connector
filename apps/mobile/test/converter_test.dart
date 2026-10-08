@@ -481,13 +481,13 @@ void main() {
     );
   }
 
-  testWidgets('Apple source only offers destinations the service supports', (
+  testWidgets('a source link never offers its own service as destination', (
     tester,
   ) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           preferences,
-          (_) async => {'target': 'spotify'},
+          (_) async => {'target': 'appleMusic'},
         );
     await mount(tester, (request) async {
       expect(jsonDecode(request.body)['target'], 'youtubeMusic');
@@ -504,7 +504,8 @@ void main() {
     expect(find.byKey(const ValueKey('target-youtubeMusic')), findsOneWidget);
     await tester.tap(find.text('YouTube Music').last);
     await tester.pumpAndSettle();
-    expect(find.text('Spotify'), findsNothing);
+    expect(find.text('Apple Music'), findsNothing);
+    expect(find.text('Deezer'), findsWidgets);
     await tester.tap(find.text('YouTube Music').last);
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -512,7 +513,7 @@ void main() {
       'https://youtu.be/UijW9hGpnzc',
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('target-spotify')), findsOneWidget);
+    expect(find.byKey(const ValueKey('target-appleMusic')), findsOneWidget);
   });
 
   testWidgets(

@@ -336,7 +336,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Teile Songs zwischen YouTube Music und Apple Music — auch als Spotify-Link. Ohne Anmeldung.',
+                        'Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung.',
                       ),
                       const SizedBox(height: 28),
                       TextField(
@@ -350,7 +350,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         textInputAction: TextInputAction.go,
                         autocorrect: false,
                         decoration: const InputDecoration(
-                          labelText: 'YouTube-Music- oder Apple-Music-Link',
+                          labelText: 'Link aus YouTube Music, Apple Music, Spotify oder Deezer',
                           border: OutlineInputBorder(),
                           counterText: '',
                         ),
@@ -455,7 +455,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         ),
                       const SizedBox(height: 24),
                       Text(
-                        'Ohne gespeicherte Song-Historie. Dein Link geht an unseren Dienst. Apple und YouTube liefern Song-Metadaten; bei Spotify zusätzlich ListenBrainz.',
+                        'Ohne gespeicherte Song-Historie. Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.',
                         style: theme.textTheme.bodySmall,
                       ),
                     ]

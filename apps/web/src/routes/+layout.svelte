@@ -4,7 +4,7 @@
   let { children } = $props();
 </script>
 
-<svelte:head><title>MusicLink · Musik verbindet</title><meta name="description" content="Teile Songs zwischen YouTube Music und Apple Music. Ohne Anmeldung." /></svelte:head>
+<svelte:head><title>MusicLink · Musik verbindet</title><meta name="description" content="Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung." /></svelte:head>
 <div style:--gradient={bandGradient(APP_BAND, GLOW)} style:--accent={bandColor((APP_BAND.from + APP_BAND.to) / 2, GLOW)}>
   {@render children()}
   <Toasts />

@@ -1,12 +1,14 @@
-import { type Conversion, type ConversionInput } from '@app/shared';
+import { type Conversion, type ConversionInput, type Platform } from '@app/shared';
 import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
-import { ResolutionError, resolve as resolveSpotify, searchUrl, youtubeVideoId, type Fetch } from './resolver';
+import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, type Fetch } from './resolver';
 
 const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function recording(title: string, artists: string[]) {
   const credits = [...artists];
-  const name = title.replace(/[\[(]feat(?:uring)?\.?\s+([^\])]+)[\])]/gi, (_, featured: string) => { credits.push(featured); return ''; });
+  const name = title
+    .replace(/[\[(]feat(?:uring)?\.?\s+([^\])]+)[\])]/gi, (_, featured: string) => { credits.push(featured); return ''; })
+    .replace(/\s+-\s+feat(?:uring)?\.?\s+([^\])]+)(?=[\])])/gi, (_, featured: string) => { credits.push(featured); return ''; });
   return {
     title: normalize(name),
     artists: [...new Set(credits.flatMap(artist => artist.split(/,| & | and /i)).map(normalize).filter(Boolean))].sort().join('|'),
@@ -18,12 +20,16 @@ const appleTrack = z.object({
   collectionName: z.string().optional(), trackTimeMillis: z.number().optional(),
   artworkUrl100: z.string().optional(), isStreamable: z.boolean().optional(),
 });
+const deezerTrack = z.object({
+  id: z.number(), title: z.string(), duration: z.number().optional(), readable: z.boolean().optional(),
+  artist: z.object({ name: z.string() }), album: z.object({ title: z.string().optional(), cover_medium: z.string().optional() }).optional(),
+});
 type Track = { title: string; artist: string; url: string; durationSeconds?: number };
 type YouTubeSong = { id: string; title: string; artists: string[]; album?: string; durationSeconds?: number; artworkUrl: string | null };
 export type MusicSearch = (query: string, signal: AbortSignal) => Promise<YouTubeSong[]>;
 
 export function songSource(input: string) {
-  const songs = new Map<string, { platform: 'appleMusic' | 'youtubeMusic'; id: string; country: string }>();
+  const songs = new Map<string, { platform: Platform; id: string; country: string }>();
   for (const link of input.match(/https?:\/\/[^\s<>]+/gi) ?? []) {
     let url: URL;
     try { url = new URL(link.replace(/[.,!)\]]+$/, '')); } catch { throw new ResolutionError('INVALID_LINK'); }
@@ -35,6 +41,12 @@ export function songSource(input: string) {
     } else if (['music.youtube.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) {
       const id = youtubeVideoId(link);
       songs.set(`youtube:${id}`, { platform: 'youtubeMusic', id, country: '' });
+    } else if (url.hostname === 'open.spotify.com' || ['www.deezer.com', 'deezer.com'].includes(url.hostname)) {
+      const spotify = url.hostname === 'open.spotify.com';
+      const parts = url.pathname.split('/').filter(Boolean);
+      const id = parts.at(-2) === 'track' ? parts.at(-1) : null;
+      if (url.username || url.password || !id || !(spotify ? /^[A-Za-z0-9]{22}$/ : /^\d{1,12}$/).test(id)) throw new ResolutionError('INVALID_LINK');
+      songs.set(`${spotify ? 'spotify' : 'deezer'}:${id}`, { platform: spotify ? 'spotify' : 'deezer', id, country: '' });
     }
   }
   if (songs.size > 1) throw new ResolutionError('INVALID_LINK');
@@ -56,24 +68,27 @@ export const searchYouTube: MusicSearch = async (query, signal) => {
     }] : []);
 };
 
+// Spotify has no open metadata API; the public track page carries title, artists and duration as meta tags.
+function spotifyMeta(html: string, name: string) {
+  const value = html.match(new RegExp(`<meta (?:property|name)="${name}" content="([^"]*)"`))?.[1];
+  return value?.replace(/&(amp|quot|lt|gt|#x27|#39);/g, (_, entity: string) => ({ amp: '&', quot: '"', lt: '<', gt: '>', '#x27': "'", '#39': "'" })[entity]!);
+}
+
 export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube): Promise<Conversion> {
   const parsed = songSource(input.input);
   if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
-  if (input.target === 'spotify') {
-    if (parsed.platform !== 'youtubeMusic') throw new ResolutionError('UNSUPPORTED_LINK');
-    return { ...await resolveSpotify(input.input, requestSignal, fetcher), target: input.target };
-  }
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(requestSignal ? [requestSignal] : [])]);
-  const get = async (origin: string, params: Record<string, string>) => {
+  const request = async (origin: string, params: Record<string, string>, headers = { 'user-agent': 'MusicLink/0.3' }) => {
     const url = new URL(origin);
     url.search = new URLSearchParams(params).toString();
-    const response = await fetcher(url, { signal, redirect: 'error', headers: { 'user-agent': 'MusicLink/0.3' } });
+    const response = await fetcher(url, { signal, redirect: 'error', headers });
     if (response.status === 429) throw new ResolutionError('RATE_LIMITED');
     if (response.status === 404) throw new ResolutionError('SOURCE_UNAVAILABLE');
     if (!response.ok) throw new ResolutionError('NETWORK');
-    return response.json();
+    return response;
   };
+  const get = async (origin: string, params: Record<string, string>) => (await request(origin, params)).json();
   const tracks = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results.flatMap(item => {
     const parsed = appleTrack.safeParse(item);
     return parsed.success ? [parsed.data] : [];
@@ -83,18 +98,31 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
     if (parsed.platform === 'youtubeMusic') {
       const metadata = z.object({ title: z.string().min(1), author_name: z.string().min(1) }).parse(await get('https://www.youtube.com/oembed', { url: `https://www.youtube.com/watch?v=${parsed.id}`, format: 'json' }));
       source = { title: metadata.title.trim(), artist: metadata.author_name.replace(/ - Topic$/, '').trim(), url: `https://music.youtube.com/watch?v=${parsed.id}` };
-    } else {
+    } else if (parsed.platform === 'appleMusic') {
       const track = tracks(await get('https://itunes.apple.com/lookup', { id: parsed.id, country: parsed.country, entity: 'song' })).find(track => String(track.trackId) === parsed.id);
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
       source = { title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, durationSeconds: track.trackTimeMillis ? track.trackTimeMillis / 1000 : undefined };
+    } else if (parsed.platform === 'spotify') {
+      const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; MusicLink/0.3)' })).text();
+      const duration = Number(spotifyMeta(html, 'music:duration'));
+      source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, durationSeconds: duration > 0 ? duration : undefined };
+    } else {
+      // Deezer reports unknown tracks as an error object with status 200
+      const body = await get(`https://api.deezer.com/track/${parsed.id}`, {}) as { error?: unknown };
+      if (body.error) throw new ResolutionError('SOURCE_UNAVAILABLE');
+      const track = deezerTrack.parse(body);
+      source = { title: track.title, artist: track.artist.name, url: `https://www.deezer.com/track/${track.id}`, durationSeconds: track.duration };
     }
+    source.title = source.title.trim();
+    source.artist = source.artist.trim();
     if (!source.title || !source.artist) throw new ResolutionError('SOURCE_UNAVAILABLE');
     const original = recording(source.title, [source.artist]);
     const matches = (title: string, artists: string[], duration?: number) => {
       const candidate = recording(title, artists);
       return candidate.title === original.title && candidate.artists === original.artists &&
-        (source.durationSeconds === undefined || duration === undefined || Math.abs(source.durationSeconds - duration) <= 3);
+        (source.durationSeconds === undefined || duration === undefined || Math.abs(source.durationSeconds - duration) <= 5);
     };
+    const query = `${source.artist} ${source.title.replace(/[\[(]feat(?:uring)?\.?\s+[^\])]+[\])]/gi, '').trim()}`;
     let candidates: Conversion['candidates'];
     if (input.target === 'appleMusic') {
       candidates = tracks(await get('https://itunes.apple.com/search', { term: `${source.artist} ${original.title}`, entity: 'song', country: input.country, limit: '25' }))
@@ -107,10 +135,19 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
           if (songId) url.searchParams.set('i', songId);
           return [{ title: track.trackName, url: url.toString(), album: track.collectionName, durationSeconds: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : undefined, artworkUrl: track.artworkUrl100?.startsWith('https://') ? track.artworkUrl100 : null }];
         });
-    } else {
-      candidates = (await search(`${source.artist} ${source.title.replace(/[\[(]feat(?:uring)?\.?\s+[^\])]+[\])]/gi, '').trim()}`, signal))
+    } else if (input.target === 'youtubeMusic') {
+      candidates = (await search(query, signal))
         .filter(track => /^[A-Za-z0-9_-]{11}$/.test(track.id) && matches(track.title, track.artists, track.durationSeconds))
         .map(track => ({ title: track.title, url: `https://music.youtube.com/watch?v=${track.id}`, album: track.album, durationSeconds: track.durationSeconds, artworkUrl: track.artworkUrl?.startsWith('https://') ? track.artworkUrl : null }));
+    } else if (input.target === 'deezer') {
+      candidates = z.object({ data: z.array(z.unknown()) }).parse(await get('https://api.deezer.com/search', { q: query, limit: '25' })).data.flatMap(item => {
+        const track = deezerTrack.safeParse(item);
+        if (!track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration)) return [];
+        const cover = track.data.album?.cover_medium;
+        return [{ title: track.data.title, url: `https://www.deezer.com/track/${track.data.id}`, album: track.data.album?.title, durationSeconds: track.data.duration, artworkUrl: cover?.startsWith('https://') ? cover : null }];
+      });
+    } else {
+      candidates = await spotifyCandidates(source, get);
     }
     candidates = [...new Map(candidates.map(candidate => [candidate.url, candidate])).values()].slice(0, 8);
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));

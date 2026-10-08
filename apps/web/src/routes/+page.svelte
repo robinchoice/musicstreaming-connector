@@ -12,11 +12,14 @@
   const duration = (seconds?: number) => seconds === undefined ? '' : `${Math.floor(seconds / 60)}:${String(Math.round(seconds) % 60).padStart(2, '0')}`;
   function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; searchUrl = ''; }
   function save() { reset(); savedTarget = target; try { localStorage.setItem('musiclink-preferences', JSON.stringify({ target: savedTarget })); } catch {} }
+  function pickTarget() {
+    const targets = targetsFor(input);
+    target = targets.includes(savedTarget) ? savedTarget : targets[0]!;
+  }
   function sourceChanged(event: Event) {
     input = (event.currentTarget as HTMLInputElement).value;
     reset();
-    const targets = targetsFor(input);
-    target = targets.includes(savedTarget) ? savedTarget : targets[0]!;
+    pickTarget();
   }
   let loading = $state(false);
   let conversion = $state<Conversion | null>(null);
@@ -30,15 +33,22 @@
     canShare = typeof navigator.share === 'function';
     try {
       const saved = JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}');
-      if (['appleMusic', 'youtubeMusic', 'spotify'].includes(saved.target)) target = savedTarget = saved.target;
+      if (saved.target in platforms) target = savedTarget = saved.target;
     } catch {}
     const region = navigator.language.split('-')[1]?.toUpperCase();
     if (countries.some(code => code === region)) country = region!;
+    // Bookmarklets and shortcuts open /?q=<link> to convert right away
+    const shared = new URL(location.href).searchParams.get('q')?.trim();
+    if (shared) {
+      input = shared.slice(0, 4096);
+      pickTarget();
+      convert();
+    }
   });
   onDestroy(() => request?.abort());
 
-  async function convert(event: SubmitEvent) {
-    event.preventDefault();
+  async function convert(event?: SubmitEvent) {
+    event?.preventDefault();
     request?.abort();
     const current = new AbortController();
     request = current;
@@ -84,14 +94,14 @@
     <section class="intro">
       <div class="eyebrow">EIN SONG. MEHR VERBINDUNG.</div>
       <h1>Dein Musikgeschmack.<br /><span>Ihr Lieblingsplayer.</span></h1>
-      <p>Teile Songs aus YouTube Music oder Apple Music.<br /> Als Link für den Lieblingsplayer deiner Menschen.</p>
+      <p>Teile Songs aus YouTube Music, Apple Music, Spotify oder Deezer.<br /> Als Link für den Lieblingsplayer deiner Menschen.</p>
     </section>
 
     <section class="converter" aria-label="Musiklink umwandeln">
       <div class="route"><span>♪ Musik teilen</span><span class="arrow" aria-hidden="true">⟶</span><span>{platforms[target]}</span></div>
       <form onsubmit={convert}>
         <label for="song">Welchen Song möchtest du teilen?</label>
-        <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="YouTube-Music- oder Apple-Music-Link" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
+        <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="Link aus YouTube Music, Apple Music, Spotify oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
         <div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>
         <p class="hint">Ein einzelner Song reicht. Tracking-Parameter entfernen wir für dich.</p>
       </form>
@@ -121,7 +131,7 @@
     </section>
 
     <section class="steps" aria-label="So funktioniert’s"><div><span class="step-number">01</span><h2>Song mitbringen</h2><p>Den Link in deiner Musik-App über „Teilen“ kopieren.</p></div><div><span class="step-number">02</span><h2>Aufnahme finden</h2><p>Wir suchen den passenden Song und zeigen dir die Treffer.</p></div><div><span class="step-number">03</span><h2>Freude weitergeben</h2><p>Passenden Link kopieren und mit deinen Menschen teilen.</p></div></section>
-    <p class="privacy"><strong>Ohne Konto. Ohne gespeicherte Song-Historie.</strong><br />Dein Link geht an unseren Dienst. Apple und YouTube liefern Song-Metadaten; bei Spotify zusätzlich ListenBrainz.</p>
+    <p class="privacy"><strong>Ohne Konto. Ohne gespeicherte Song-Historie.</strong><br />Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.</p>
   </main>
   <PleasanceFooter />
 </div>

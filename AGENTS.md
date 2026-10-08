@@ -2,7 +2,7 @@
 
 ## Purpose & links
 
-- Shares songs between YouTube Music and Apple Music, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
+- Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
 - Live at https://musiclink.pleasance.org, Coolify on VPS 1, project `pleasance-musiclink`.
 - iOS: App Store Connect app `6819013473`, bundle `org.musiclink.prototype`. Signing material and TestFlight groups: `~/dev/New AI Setup/infra.md`.
 

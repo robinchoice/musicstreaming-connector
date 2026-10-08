@@ -2,15 +2,23 @@ const platforms = {
   'appleMusic': 'Apple Music',
   'youtubeMusic': 'YouTube Music',
   'spotify': 'Spotify',
+  'deezer': 'Deezer',
 };
 const countries = ['DE', 'AT', 'CH', 'US', 'GB'];
 
+const _sources = {
+  'appleMusic': r'music\.apple\.com/',
+  'youtubeMusic': r'youtu(?:be\.com|\.be)/',
+  'spotify': r'open\.spotify\.com/',
+  'deezer': r'deezer\.com/',
+};
+
 List<String> targetsFor(String input) {
-  if (input.contains('music.apple.com/')) return ['youtubeMusic'];
-  if (RegExp(r'youtu(?:be\.com|\.be)/').hasMatch(input)) {
-    return ['appleMusic', 'spotify'];
-  }
-  return platforms.keys.toList();
+  final source = _sources.entries
+      .where((entry) => RegExp(entry.value).hasMatch(input))
+      .map((entry) => entry.key)
+      .firstOrNull;
+  return platforms.keys.where((platform) => platform != source).toList();
 }
 
 class Candidate {

@@ -29,7 +29,7 @@ private struct APIError: Decodable {
 
 @MainActor
 final class ShareModel: ObservableObject {
-    static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify"]
+    static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify", "deezer": "Deezer"]
     private let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype")
     @Published var target = "appleMusic"
     var targetName: String { Self.platforms[conversion?.target ?? target] ?? target }
@@ -44,9 +44,11 @@ final class ShareModel: ObservableObject {
     }
 
     static func targets(for input: String) -> [String] {
-        if input.contains("music.apple.com/") { return ["youtubeMusic"] }
-        if input.contains("youtube.com/") || input.contains("youtu.be/") { return ["appleMusic", "spotify"] }
-        return ["appleMusic", "youtubeMusic", "spotify"]
+        let source = input.contains("music.apple.com/") ? "appleMusic"
+            : input.contains("youtube.com/") || input.contains("youtu.be/") ? "youtubeMusic"
+            : input.contains("open.spotify.com/") ? "spotify"
+            : input.contains("deezer.com/") ? "deezer" : nil
+        return ["appleMusic", "youtubeMusic", "spotify", "deezer"].filter { $0 != source }
     }
 
     func targetChanged() {
