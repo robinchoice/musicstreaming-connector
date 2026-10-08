@@ -66,5 +66,26 @@ export function targetsFor(input: string): Platform[] {
 export interface Conversion {
   target: Platform;
   source: { title: string; artist: string; url: string };
+  sharePath: string;
   candidates: { title: string; url: string; artworkUrl: string | null; album?: string; durationSeconds?: number }[];
+}
+
+export interface Song {
+  source: { platform: Platform; title: string; artist: string; url: string; artworkUrl: string | null };
+  sharePath: string;
+  // found is false when only a search on that service is left
+  links: Record<Platform, { url: string; found: boolean }>;
+}
+
+// Friends live on the device only. An invite link carries a name and a service.
+export interface Friend { name: string; platform: Platform }
+export const inviteSlugs: Record<Platform, string> = { appleMusic: 'apple', youtubeMusic: 'youtube', spotify: 'spotify', deezer: 'deezer' };
+
+// One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else
+export function friendsMessage(song: Song, friends: Friend[], origin: string): string {
+  const head = `🎵 ${song.source.title} – ${song.source.artist}`;
+  const services = [...new Set(friends.map(friend => friend.platform))];
+  if (services.length === 1) return `${head}\n${song.links[services[0]!].url}`;
+  const lines = services.map(platform => `${platforms[platform]} (${friends.filter(friend => friend.platform === platform).map(friend => friend.name).join(', ')}): ${song.links[platform].url}`);
+  return [head, ...lines, `Andere: ${origin}${song.sharePath}`].join('\n');
 }

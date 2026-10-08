@@ -1,16 +1,18 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import Friends from '$lib/components/Friends.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { countries, platforms, targetsFor, type Conversion, type Platform } from '@app/shared';
+  import { countries, friendsMessage, platforms, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
   import { api, ApiError } from '$lib/api';
-  import { toastError } from '$lib/toast.svelte';
+  import { social } from '$lib/friends.svelte';
+  import { toast, toastError } from '$lib/toast.svelte';
 
   let input = $state('');
   let target = $state<Platform>('appleMusic');
   let country = 'DE';
   let savedTarget: Platform = 'appleMusic';
   const duration = (seconds?: number) => seconds === undefined ? '' : `${Math.floor(seconds / 60)}:${String(Math.round(seconds) % 60).padStart(2, '0')}`;
-  function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; searchUrl = ''; }
+  function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; searchUrl = ''; message = ''; }
   function save() { reset(); savedTarget = target; try { localStorage.setItem('musiclink-preferences', JSON.stringify({ target: savedTarget })); } catch {} }
   function pickTarget() {
     const targets = targetsFor(input);
@@ -28,6 +30,10 @@
   let searchUrl = $state('');
   let copied = $state(false);
   let canShare = $state(false);
+  let chosen = $state<string[]>([]);
+  let message = $state('');
+  // A message is only valid for the friends it was built for
+  $effect(() => { if (chosen) message = ''; });
   let request: AbortController | undefined;
   onMount(() => {
     canShare = typeof navigator.share === 'function';
@@ -58,7 +64,14 @@
     selection = '';
     copied = false;
     searchUrl = '';
+    message = '';
     try {
+      if (chosen.length) {
+        const song = await api.get<Song>(`/song?${new URLSearchParams({ input, country })}`, current.signal);
+        if (current.signal.aborted) return;
+        message = friendsMessage(song, social.friends.filter(friend => chosen.includes(friend.name)), location.origin);
+        return;
+      }
       const result = await api.post<Conversion>('/convert', { input, target, country }, current.signal);
       if (current.signal.aborted) return;
       conversion = result;
@@ -78,7 +91,7 @@
   }
 
   async function share(url: string) {
-    try { await navigator.share({ url }); }
+    try { await navigator.share(url.startsWith('http') ? { url } : { text: url }); }
     catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich. Kopiere stattdessen den Link.'); }
   }
 </script>
@@ -98,18 +111,25 @@
     </section>
 
     <section class="converter" aria-label="Musiklink umwandeln">
-      <div class="route"><span>♪ Musik teilen</span><span class="arrow" aria-hidden="true">⟶</span><span>{platforms[target]}</span></div>
+      <div class="route"><span>♪ Musik teilen</span><span class="arrow" aria-hidden="true">⟶</span><span>{chosen.length ? chosen.join(', ') : platforms[target]}</span></div>
       <form onsubmit={convert}>
         <label for="song">Welchen Song möchtest du teilen?</label>
-        <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="Link aus YouTube Music, Apple Music, Spotify oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
-        <div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>
+        <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="Link aus YouTube Music, Apple Music, Spotify oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : chosen.length ? `An ${chosen.join(', ')} teilen` : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
+        {#if !chosen.length}<div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>{/if}
         <p class="hint">Ein einzelner Song reicht. Tracking-Parameter entfernen wir für dich.</p>
+        <Friends bind:selected={chosen} disabled={loading} />
       </form>
 
       <div aria-live="polite" aria-busy={loading}>
-        {#if loading}<div class="status"><span class="spinner"></span><strong>Wir suchen deine Aufnahme auf {platforms[target]}.</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
+        {#if loading}<div class="status"><span class="spinner"></span><strong>{chosen.length ? 'Wir suchen den Song für deine Freunde.' : `Wir suchen deine Aufnahme auf ${platforms[target]}.`}</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
         {:else if error}<div class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong><p>{error}</p></div>
           {#if searchUrl}<p class="hint">Teile stattdessen eine Suche nach dem Song.</p><div class="actions"><button class="primary" onclick={() => copy(searchUrl)}>{copied ? 'Suchlink kopiert ✓' : 'Suchlink kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(searchUrl)}>Weiterteilen ↗</button>{/if}<a href={searchUrl} target="_blank" rel="noreferrer">Auf {platforms[target]} suchen ↗</a></div>{/if}
+        {:else if message}
+          <div class="results">
+            <p class="legend">Deine Nachricht</p>
+            <pre class="message">{message}</pre>
+            <div class="actions"><button class="primary" onclick={() => copy(message)}>{copied ? 'Nachricht kopiert ✓' : 'Nachricht kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(message)}>Weiterteilen ↗</button>{/if}</div>
+          </div>
         {:else if conversion}
           {@const selected = conversion.candidates.find(candidate => candidate.url === selection)!}
           <div class="results">
@@ -125,13 +145,14 @@
             {/if}
             <p class="hint">Prüfe die gewünschte Aufnahme vor dem Teilen.</p>
             <div class="actions"><button class="primary" onclick={() => copy(selection)}>{copied ? 'Link kopiert ✓' : 'Link kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(selection)}>Weiterteilen ↗</button>{/if}<a href={selection} target="_blank" rel="noreferrer">Auf {platforms[conversion.target]} prüfen ↗</a></div>
+            <p class="everyone">Oder ein Link für alle, jeder wählt seinen Dienst: <button type="button" onclick={() => navigator.clipboard.writeText(location.origin + conversion!.sharePath).then(() => toast('Link für alle kopiert.'), () => toastError('Kopieren nicht möglich.'))}>{location.origin.replace(/^https?:\/\//, '')}{conversion.sharePath} kopieren</button></p>
           </div>
         {/if}
       </div>
     </section>
 
     <section class="steps" aria-label="So funktioniert’s"><div><span class="step-number">01</span><h2>Song mitbringen</h2><p>Den Link in deiner Musik-App über „Teilen“ kopieren.</p></div><div><span class="step-number">02</span><h2>Aufnahme finden</h2><p>Wir suchen den passenden Song und zeigen dir die Treffer.</p></div><div><span class="step-number">03</span><h2>Freude weitergeben</h2><p>Passenden Link kopieren und mit deinen Menschen teilen.</p></div></section>
-    <p class="privacy"><strong>Ohne Konto. Ohne gespeicherte Song-Historie.</strong><br />Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.</p>
+    <p class="privacy"><strong>Ohne Konto. Ohne gespeicherte Song-Historie. Deine Freunde bleiben in deinem Browser.</strong><br />Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.</p>
   </main>
   <PleasanceFooter />
 </div>
@@ -196,6 +217,9 @@
   .track small { color: var(--muted); font-size: 11px; }
   .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
   .actions a { font-size: 12px; margin-left: auto; text-underline-offset: 3px; }
+  .message { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 10px; padding: 14px; margin: 0; }
+  .everyone { font-size: 12px; color: var(--muted); margin: 18px 0 0; }
+  .everyone button { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; text-align: left; }
   @media(max-width: 650px) {
     .shell { padding: 0 22px; } header { padding: 20px 0; } .brand { font-size: 26px; } .brand-icon { width: 38px; height: 38px; } .header-note { display: none; } .badge { font-size: 9px; }
     .intro { padding: 34px 0 20px; } h1 { font-size: clamp(34px, 9.8vw, 42px); } .intro p { font-size: 13px; }

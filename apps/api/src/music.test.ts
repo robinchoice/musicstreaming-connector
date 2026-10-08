@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { resolve, songSource, type MusicSearch } from './lib/music';
+import { friendsMessage } from '@app/shared';
+import { resolve, resolveAll, sharePath, songSource, type MusicSearch } from './lib/music';
 import type { Fetch } from './lib/resolver';
 
 const youtube = 'https://music.youtube.com/watch?v=UijW9hGpnzc';
@@ -119,4 +120,39 @@ test('Deezer → Spotify looks up the source and reports unknown tracks', async 
   });
   expect(result.candidates[0]!.url).toBe('https://open.spotify.com/track/0O8RjwNco465s5o9Ix9IYj');
   await expect(resolve({ input: deezer, target: 'spotify', country: 'DE' }, undefined, async () => Response.json({ error: { code: 800 } }))).rejects.toMatchObject({ code: 'SOURCE_UNAVAILABLE' });
+});
+
+test('resolveAll finds every service once and falls back to search per service', async () => {
+  let lookups = 0;
+  const song = await resolveAll({ input: youtube, country: 'DE' }, undefined, async url => {
+    if (url.hostname === 'www.youtube.com') { lookups++; return Response.json({ title: 'Savior', author_name: 'Red Hot Chili Peppers - Topic', thumbnail_url: 'https://i.ytimg.com/vi/UijW9hGpnzc/hqdefault.jpg' }); }
+    if (url.hostname === 'itunes.apple.com') return Response.json({ results: [{ ...track, artworkUrl100: 'https://is1-ssl.mzstatic.com/image/100x100bb.jpg' }] });
+    if (url.hostname === 'labs.api.listenbrainz.org') return Response.json([]);
+    if (url.hostname === 'api.deezer.com') return new Response('', { status: 500 });
+    throw new Error(url.hostname);
+  }, async () => []);
+  expect(lookups).toBe(1);
+  expect(song.sharePath).toBe('/s/yt/UijW9hGpnzc');
+  expect(song.source).toMatchObject({ platform: 'youtubeMusic', artworkUrl: 'https://is1-ssl.mzstatic.com/image/600x600bb.jpg' });
+  expect(song.links).toEqual({
+    youtubeMusic: { url: youtube, found: true },
+    appleMusic: { url: apple, found: true },
+    spotify: { url: 'https://open.spotify.com/search/Red%20Hot%20Chili%20Peppers%20Savior', found: false },
+    deezer: { url: 'https://www.deezer.com/search/Red%20Hot%20Chili%20Peppers%20Savior', found: false },
+  });
+});
+
+test.each([
+  [youtube, '/s/yt/UijW9hGpnzc'], [apple, '/s/am/de/945575419'], [spotify, '/s/sp/2Foc5Q5nqNiosCNqttzHof'], [deezer, '/s/dz/67238735'],
+])('share path for %s', (input, path) => expect(sharePath(songSource(input))).toBe(path));
+
+test('friends message has one link for one service and one line per service otherwise', () => {
+  const song = { source: { platform: 'youtubeMusic' as const, title: 'Savior', artist: 'RHCP', url: youtube, artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
+    youtubeMusic: { url: youtube, found: true }, appleMusic: { url: apple, found: true },
+    spotify: { url: 'https://open.spotify.com/track/x', found: true }, deezer: { url: 'https://www.deezer.com/track/1', found: true },
+  } };
+  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
+    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x');
+  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
+    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc`);
 });

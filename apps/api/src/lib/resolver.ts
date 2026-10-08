@@ -76,7 +76,7 @@ export async function spotifyCandidates(source: { title: string; artist: string 
   return candidates;
 }
 
-export async function resolve(input: string, requestSignal?: AbortSignal, fetcher: Fetch = fetch): Promise<Omit<Conversion, 'target'>> {
+export async function resolve(input: string, requestSignal?: AbortSignal, fetcher: Fetch = fetch): Promise<Omit<Conversion, 'target' | 'sharePath'>> {
   const id = youtubeVideoId(input);
   const controller = new AbortController();
   const signals = [controller.signal, AbortSignal.timeout(20_000)];

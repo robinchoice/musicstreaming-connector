@@ -12,11 +12,11 @@
   <p>Website und Server laufen bei der Hetzner Online GmbH, Serverstandort ist Deutschland. Beim Aufruf fallen technisch notwendige Server-Logfiles an (IP-Adresse, Zeitpunkt, aufgerufene Adresse, Browser bzw. App-Version). Sie dienen nur dem sicheren Betrieb und werden nicht ausgewertet. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.</p>
 
   <h2>Songs umwandeln</h2>
-  <p>Wenn du einen Link einfügst oder aus einer anderen App teilst, schickt MusicLink ihn an unseren Server. Der Server liest Titel und Interpret bei der jeweiligen Plattform aus und sucht den Song bei der Zielplattform (YouTube, Apple, Spotify, Deezer). Diese Abfragen stellt unser Server, deine IP-Adresse geht dabei nicht an die Plattformen. Links und Ergebnisse speichern wir nicht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+  <p>Wenn du einen Link einfügst oder aus einer anderen App teilst, schickt MusicLink ihn an unseren Server. Der Server liest Titel und Interpret bei der jeweiligen Plattform aus und sucht den Song bei der Zielplattform (YouTube, Apple, Spotify, Deezer). Diese Abfragen stellt unser Server, deine IP-Adresse geht dabei nicht an die Plattformen. Links und Ergebnisse speichern wir nicht dauerhaft. Damit geteilte Song-Links schnell laden, behält der Server das Ergebnis bis zu 24 Stunden im Arbeitsspeicher, ohne Bezug zu dir. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
   <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
 
   <h2>Einstellungen auf deinem Gerät</h2>
-  <p>Deine bevorzugte Zielplattform und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich MusicLink lokal auf deinem Gerät. Cookies setzen wir nicht.</p>
+  <p>Deine bevorzugte Zielplattform, deine Freunde und Gruppen (Name und Musikdienst) und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich MusicLink lokal auf deinem Gerät. Freunde erreichen unseren Server nicht. Ein Einladungslink enthält nur den Namen und den Dienst, die du selbst angibst. Cookies setzen wir nicht.</p>
 
   <h2>Feedback</h2>
   <p>Über „Feedback geben“ kannst du uns Fehler und Ideen schicken. Dabei übertragen wir deine Nachricht, auf Wunsch einen Screenshot und deine E-Mail-Adresse sowie technische Angaben (Seite, Plattform, Gerät, Fenstergröße, letzte Fehlermeldungen). Die Meldung wird auf unserem Server gespeichert und per E-Mail über die Proton AG (Schweiz) an uns weitergeleitet. Für die Schweiz besteht ein Angemessenheitsbeschluss der EU-Kommission. Gegen Missbrauch zählen wir Meldungen pro IP-Adresse, dieser Zähler wird nach einer Stunde gelöscht.</p>
