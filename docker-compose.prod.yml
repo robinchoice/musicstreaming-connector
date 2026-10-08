@@ -13,7 +13,7 @@ services:
   api:
     image: ghcr.io/robinchoice/musiclink-api:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
-      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/app
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD}@postgres:5432/app
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -31,7 +31,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: app
     volumes:
       - pgdata:/var/lib/postgresql/data
