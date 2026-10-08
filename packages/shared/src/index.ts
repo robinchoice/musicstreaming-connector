@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const APP_NAME = 'MusicLink';
 export const APP_BAND = { from: 3.85, to: 4.55 };
+export const APP_TAGLINE = 'Ein Link für einen Song, der bei allen im eigenen Streamingdienst aufgeht.';
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
 
 export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const;

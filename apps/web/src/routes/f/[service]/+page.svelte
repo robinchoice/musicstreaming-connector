@@ -36,10 +36,6 @@
 
 <svelte:head>
   <title>{platform && name ? `${name} hört auf ${platforms[platform]}` : 'Einladung'} · MusicLink</title>
-  {#if platform && name}
-    <meta property="og:title" content="{name} hört auf {platforms[platform]}" />
-    <meta property="og:description" content="Speicher {name} in MusicLink, dann landen deine Songs immer direkt in {platforms[platform]}." />
-  {/if}
 </svelte:head>
 
 <div class="shell">

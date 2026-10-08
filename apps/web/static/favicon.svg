@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs><linearGradient id="rings" gradientUnits="userSpaceOnUse" x1="22" y1="78" x2="78" y2="22"><stop stop-color="#80CD84"/><stop offset=".5" stop-color="#64CC9E"/><stop offset="1" stop-color="#57C6BB"/></linearGradient></defs>
-  <rect width="100" height="100" rx="24" fill="#121117"/>
-  <g fill="none" stroke="url(#rings)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="41" cy="50" rx="14.5" ry="23.5"/><ellipse cx="59" cy="50" rx="14.5" ry="23.5"/></g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="22" y1="78" x2="78" y2="22"><stop offset="0" stop-color="#80CD84"/><stop offset="0.5" stop-color="#64CC9E"/><stop offset="1" stop-color="#57C6BB"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="#121117"/><g fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M39 34 a16 16 0 1 0 0.01 0 M61 34 a16 16 0 1 0 0.01 0"/></g></svg>

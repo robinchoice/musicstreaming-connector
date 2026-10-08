@@ -4,19 +4,9 @@
   let { data } = $props();
   const song = $derived(data.song);
   const order = Object.keys(platforms) as Platform[];
-  const found = $derived(order.filter(platform => song.links[platform].found).map(platform => platforms[platform]));
 </script>
 
-<svelte:head>
-  <title>{song.source.title} · {song.source.artist} · MusicLink</title>
-  <meta property="og:type" content="music.song" />
-  <meta property="og:site_name" content="MusicLink" />
-  <meta property="og:title" content="{song.source.title} · {song.source.artist}" />
-  <meta property="og:description" content="Anhören auf {found.join(', ')}" />
-  <meta property="og:url" content="{data.origin}{song.sharePath}" />
-  {#if song.source.artworkUrl}<meta property="og:image" content={song.source.artworkUrl} />{/if}
-  <meta name="twitter:card" content="summary" />
-</svelte:head>
+<svelte:head><title>{song.source.title} · {song.source.artist} · MusicLink</title></svelte:head>
 
 <div class="shell">
   <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> MusicLink</a><span class="badge">Ohne Anmeldung</span></header>
