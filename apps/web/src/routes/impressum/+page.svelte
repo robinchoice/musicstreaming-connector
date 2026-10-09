@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Impressum">
+<LegalPage title="Impressum" lang="de" other={{ href: '/imprint', label: 'English' }}>
   <h2>Angaben gemäß § 5 DDG</h2>
   <p>Robin Wahl<br />Pleasance<br />Bugginger Straße 37<br />79114 Freiburg</p>
 

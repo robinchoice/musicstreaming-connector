@@ -1,7 +1,7 @@
 name: musiclink
-description: "YouTube Music songs as Spotify links"
+description: "Share songs across music streaming services"
 publish_to: 'none'
-version: 0.2.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.13.4
