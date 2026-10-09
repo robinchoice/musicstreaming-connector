@@ -78,6 +78,7 @@ jobs:
       COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
       COOLIFY_UUID: ${{ secrets.COOLIFY_UUID }}
       COOLIFY_API: https://coolify.pleasance.org/api/v1
+      APP_URL: ${{ vars.API_URL || 'https://musiclink.pleasance.org' }}
     steps:
       - name: Deploy images to Coolify
         run: |
@@ -112,10 +113,23 @@ jobs:
               "$COOLIFY_API/deployments/$deployment" | jq -er '.status')
             echo "Deployment $deployment: $status"
             case "$status" in
-              finished) exit 0 ;;
+              finished) break ;;
               failed|cancelled-by-user) exit 1 ;;
             esac
             sleep 10
           done
-          echo 'Deployment timed out.' >&2
+          if [ "$status" != finished ]; then
+            echo 'Deployment timed out.' >&2
+            exit 1
+          fi
+
+          # Coolify says finished once the containers run. Done means the public URL
+          # serves this commit, which also catches a proxy route lost on recreate.
+          for _ in {1..30}; do
+            revision=$(curl --silent --max-time 10 "$APP_URL/api/health" | jq -r '.revision // empty' 2>/dev/null || true)
+            echo "Public revision: ${revision:-none}"
+            if [ "$revision" = "$GITHUB_SHA" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "$APP_URL/api/health does not serve $GITHUB_SHA" >&2
           exit 1

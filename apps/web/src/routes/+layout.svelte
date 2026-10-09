@@ -58,7 +58,7 @@
     --border: rgb(255 255 255 / 0.07);
     --text: #F2F0EA;
     --muted: #9A98A3;
-    --error: #FFB4AB;
+    --error: #F2545B;
     --ink: #17171A;
     --radius: 12px;
     --font-display: 'Bricolage Grotesque', system-ui, sans-serif;

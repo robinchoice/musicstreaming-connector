@@ -4,7 +4,7 @@
 
 - Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
 - Live at https://musiclink.pleasance.org, Coolify on VPS 1, project `pleasance-musiclink`.
-- Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
+- Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. From 1.0 on (`LIVE` in `packages/shared`) the web shows the bug only in test mode, a footer switch kept per device; „Feedback geben“ stays for everyone. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
 - iOS: App Store Connect app `6819013473`, bundle `org.musiclink.prototype`. Signing material and TestFlight groups: `~/dev/kontor/infra.md`.
 
 ## Checks
@@ -19,7 +19,7 @@ cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when ap
 
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
 - Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds the Android bundle.
-- Verify: `gh run watch`, then `curl -s https://musiclink.pleasance.org/api/health`.
+- Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
 
 ## Pitfalls
 
@@ -31,3 +31,19 @@ cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when ap
 - Friends and groups live only on the device: web in localStorage, app as one JSON string via the preferences channel (`getSocial`/`setSocial`), on iOS in the app group so the share extension reads the same list. The invite page opens the app with `musiclink://app/friend?name=…&service=…`, a plain URL scheme that needs no new signing profile. The API caches `/api/v1/song` results in memory for 24 hours; the privacy page says so.
 - Link previews: the layout sets the `og:` tags, public pages override title, description and an absolute image (song covers) with `meta` from their load (`/s/…` server load, `/f/[service]` `+page.ts`). Crawlers run no JavaScript, so `meta` only works on SSR pages. The web is German only, so there is one picture, `static/og-image-de.png`: rerun `bun run og-image` in `apps/web` and commit it when `APP_NAME`, `APP_BAND`, `APP_TAGLINE` or the tile `static/favicon.svg` (same as `img/werkzeuge/musiclink.svg` in the pleasance repo) change. WhatsApp caches previews for a long time.
 - Postgres holds feedback only. New table: change `packages/db/src/schema.ts`, `bun run --filter @app/db db:generate`; the migration runs on the next API start.
+
+## Conventions
+
+- Stateless, so MusicLink can move to another server or run replicated behind a load balancer (`infra.md`, „Skalierung“): disk and process memory hold no state that must outlive an instance or hold for all of them. Feedback and its rate limits live in Postgres, no volume besides `pgdata`. In-memory caches only if every instance may lose them, like the 24-hour song cache.
+- No background jobs or timers (`setTimeout`, `setInterval`) in the API process. If one is needed, it runs as its own `worker` role like in starter.
+- Every role has a health check in its image: API `/api/health`, web `/health` (process only).
+- Config only through env: every new variable goes into `.env.example`, `.env.production.example` and `docker-compose.prod.yml`. No server domains, IPs or paths in the code.
+- Postgres has a memory limit in the compose file (`POSTGRES_MEMORY`, default `512m`). If it gets tight, raise it in Coolify, don't remove it.
+- Every migration must work with the old code still running: add columns nullable or with a default, rename and drop only in the deploy after.
+- Status colours: errors use the fixed signal red (`--error`, glow on the dark ground) from starter's `DESIGN.md`, never the product colour.
+
+## Abweichungen vom Standard
+
+- The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
+- Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states. The app keeps Material's error colour until the next app change (backlog), so this rollout triggers no TestFlight build.
+- The test mode switch exists only on the web for now; the app follows before 1.0 (backlog).

@@ -38,7 +38,8 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
       captureException(error);
       return c.json({ error: 'Interner Fehler' }, 500);
     })
-    .get('/api/health', c => c.json({ status: 'ok' }))
+    // The CI compares revision with the deployed commit
+    .get('/api/health', c => c.json({ status: 'ok', revision: process.env.APP_VERSION || 'dev' }))
     .use('/api/v1/convert', bodyLimit({ maxSize: 8192, onError: c => c.json({ error: 'Der geteilte Text ist zu lang.' }, 413) }))
     .post('/api/v1/convert', async c => {
       let body: unknown;

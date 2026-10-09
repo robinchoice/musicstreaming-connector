@@ -7,7 +7,9 @@ const post = (body: unknown) => ({ method: 'POST', headers: { 'content-type': 'a
 
 test('public healthcheck and conversion require no account', async () => {
   const app = createApp(async input => { expect(input).toEqual({ input: 'song', target: 'appleMusic', country: 'DE' }); return conversion; });
-  expect((await app.request('/api/health')).status).toBe(200);
+  const health = await app.request('/api/health');
+  expect(health.status).toBe(200);
+  expect(await health.json()).toMatchObject({ status: 'ok', revision: expect.any(String) });
   const response = await app.request('/api/v1/convert', post({ input: ' song ', target: 'appleMusic' }));
   expect(response.status).toBe(200);
   expect(response.headers.get('cache-control')).toBe('no-store');

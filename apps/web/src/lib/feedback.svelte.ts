@@ -1,5 +1,6 @@
-import type { FeedbackContext } from '@app/shared';
+import { type FeedbackContext, LIVE } from '@app/shared';
 import { domToJpeg } from 'modern-screenshot';
+import { browser } from '$app/environment';
 import { api, recentErrors } from './api';
 
 type Kind = 'bug' | 'idea';
@@ -11,6 +12,18 @@ export const feedback = $state({
   screenshot: null as string | null,
   context: null as FeedbackContext | null,
 });
+
+const TEST_MODE_KEY = 'test-mode';
+
+// Shows the bug button. On until MusicLink goes live as 1.0, then off until
+// someone switches it on in the footer. The choice stays on this device.
+const savedTestMode: boolean | null = browser ? JSON.parse(localStorage.getItem(TEST_MODE_KEY) ?? 'null') : null;
+export const testMode = $state({ on: savedTestMode ?? !LIVE });
+
+export function setTestMode(on: boolean) {
+  testMode.on = on;
+  localStorage.setItem(TEST_MODE_KEY, JSON.stringify(on));
+}
 
 export function openFeedback(kind: Kind, screenshot: string | null = null) {
   feedback.kind = kind;
