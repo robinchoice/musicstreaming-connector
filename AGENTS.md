@@ -15,6 +15,8 @@ bun install --frozen-lockfile && bun run check && bun run test && bun run build
 cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when apps/mobile changed
 ```
 
+The browser tests start API and web on their own ports (53100, 54100), never a running dev server. If another worktree tests at the same time, pick other ports: `TEST_API_PORT=53101 TEST_WEB_PORT=54101 bun run test`.
+
 ## Deploy
 
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
