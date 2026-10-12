@@ -124,6 +124,11 @@ void main() {
       find.byType(TextField),
       'https://youtu.be/UijW9hGpnzc',
     );
+    await tester.scrollUntilVisible(
+      find.text('Link umwandeln'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Link umwandeln'));
     await tester.pumpAndSettle();
   }
@@ -246,6 +251,11 @@ void main() {
       ),
     );
     await submit(tester);
+    await tester.scrollUntilVisible(
+      find.text('Kein Treffer'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Kein Treffer'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Suche auf Apple Music teilen'),
@@ -476,6 +486,11 @@ void main() {
         }
         await tester.pumpAndSettle();
         expect(find.text('Paul Kalkbrenner'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('Als Spotify-Link teilen'),
+          150,
+          scrollable: find.byType(Scrollable).first,
+        );
         expect(find.text('Als Spotify-Link teilen'), findsOneWidget);
       },
     );
@@ -636,6 +651,11 @@ void main() {
       );
     });
     await submit(tester);
+    await tester.scrollUntilVisible(
+      find.text('Als Apple Music-Link teilen'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Als Apple Music-Link teilen'), findsOneWidget);
     await tester.tap(find.byTooltip('Einstellungen'));
     await tester.pumpAndSettle();

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/brand.dart';
+
 class ShareSetup extends StatefulWidget {
   const ShareSetup({super.key, required this.onDone, this.guideOnly = false});
 
@@ -60,7 +62,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     : () => setState(() => _guide = false),
               )
             : null,
-        title: Text(_guide ? 'MusicLink griffbereit' : 'MusicLink'),
+        title: const MusicLinkBrand(),
       ),
       body: SafeArea(
         child: Center(
@@ -79,14 +81,21 @@ class _ShareSetupState extends State<ShareSetup> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  _guide
-                      ? 'Beim nächsten Song\ngleich zur Hand.'
-                      : 'Dein Song.\nIhr Lieblingsplayer.',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -1,
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: _guide ? 'Beim nächsten Song\n' : 'Dein Song.\n',
+                      ),
+                      TextSpan(
+                        text: _guide
+                            ? 'gleich zur Hand.'
+                            : 'Ihr Lieblingsplayer.',
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
+                    ],
                   ),
+                  style: theme.textTheme.headlineLarge,
                 ),
                 const SizedBox(height: 18),
                 Text(
@@ -99,17 +108,17 @@ class _ShareSetupState extends State<ShareSetup> {
                 if (_guide) ...[
                   for (final step in const [
                     (
-                      '1',
+                      '01',
                       '„Mehr“ öffnen',
                       'In der Reihe mit den Apps ganz nach rechts wischen.',
                     ),
                     (
-                      '2',
+                      '02',
                       '„Bearbeiten“ → Plus bei MusicLink',
                       'Damit kommt MusicLink zu deinen Favoriten.',
                     ),
                     (
-                      '3',
+                      '03',
                       'MusicLink nach oben ziehen',
                       'Über den Griff rechts. Dann auf „Fertig“ tippen.',
                     ),
@@ -119,10 +128,14 @@ class _ShareSetupState extends State<ShareSetup> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text(step.$1),
+                          SizedBox(
+                            width: 32,
+                            child: Text(
+                              step.$1,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -145,7 +158,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
@@ -154,9 +167,14 @@ class _ShareSetupState extends State<ShareSetup> {
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 14),
-                        Icon(Icons.link, color: theme.colorScheme.primary),
+                        const MusicLinkMark(size: 32),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text('MusicLink')),
+                        Expanded(
+                          child: Text(
+                            'MusicLink',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
                         const Icon(Icons.drag_handle),
                         const Icon(Icons.arrow_upward, size: 18),
                       ],
@@ -197,7 +215,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
                       children: [
@@ -206,26 +224,15 @@ class _ShareSetupState extends State<ShareSetup> {
                           children: [
                             const Icon(
                               Icons.play_circle_fill,
-                              color: Color(0xFFDE3E46),
+                              color: muted,
                               size: 40,
                             ),
                             const Icon(Icons.arrow_forward, size: 18),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: Icon(
-                                Icons.link,
-                                size: 32,
-                                color: theme.colorScheme.onPrimary,
-                              ),
-                            ),
+                            const MusicLinkMark(size: 64),
                             const Icon(Icons.arrow_forward, size: 18),
                             const Icon(
                               Icons.music_note,
-                              color: Color(0xFFEC5664),
+                              color: muted,
                               size: 40,
                             ),
                           ],
@@ -269,6 +276,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     child: const Text('Später · direkt ausprobieren'),
                   ),
                 ],
+                const PleasanceFooter(),
               ],
             ),
           ),

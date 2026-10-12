@@ -12,24 +12,7 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: appName,
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF42633F),
-        primary: const Color(0xFF42633F),
-        error: errorDeep,
-        surface: const Color(0xFFFBFCF7),
-      ),
-      scaffoldBackgroundColor: const Color(0xFFFBFCF7),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-      useMaterial3: true,
-    ),
+    theme: buildTheme(),
     routerConfig: ref.watch(routerProvider),
     builder: (context, child) => FeedbackButton(child: child!),
     debugShowCheckedModeBanner: false,

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config.dart';
 import '../../core/api.dart';
+import '../../core/brand.dart';
 import '../feedback/feedback_button.dart';
 import '../feedback/feedback_sheet.dart';
 import '../friends/friends_bar.dart';
@@ -202,6 +203,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
               ),
               const SizedBox(height: 24),
               DropdownButtonFormField<String>(
+                style: Theme.of(context).textTheme.bodyMedium,
                 initialValue: target,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Zieldienst'),
@@ -406,7 +408,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(conversion == null ? 'MusicLink' : 'Bereit zum Teilen'),
+        title: const MusicLinkBrand(),
         backgroundColor: Colors.transparent,
         leading: conversion == null
             ? null
@@ -434,15 +436,33 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
               children: conversion == null
                   ? [
                       Text(
-                        'Dein Song.\nIhr Lieblingsplayer.',
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -1,
+                        'EIN SONG. MEHR VERBINDUNG.',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 1.4,
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(text: 'Dein Song.\n'),
+                            TextSpan(
+                              text: 'Ihr Lieblingsplayer.',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: theme.textTheme.headlineLarge,
+                      ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         'Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: muted,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       TextField(
@@ -457,13 +477,13 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         autocorrect: false,
                         decoration: const InputDecoration(
                           labelText: 'Link aus YouTube Music, Apple Music, Spotify oder Deezer',
-                          border: OutlineInputBorder(),
                           counterText: '',
                         ),
                         onSubmitted: (_) => _convert(),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
+                        style: theme.textTheme.bodyMedium,
                         isExpanded: true,
                         key: ValueKey('target-$_target'),
                         initialValue: _target,
@@ -480,13 +500,20 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                               },
                       ),
                       const SizedBox(height: 24),
-                      FilledButton.icon(
-                        onPressed: _loading ? null : _convert,
-                        icon: const Icon(Icons.arrow_forward),
-                        label: Text(
-                          _loading ? 'Suche läuft …' : 'Link umwandeln',
+                      if (_searchUrl != null)
+                        OutlinedButton.icon(
+                          onPressed: _loading ? null : _convert,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: const Text('Link umwandeln'),
+                        )
+                      else
+                        FilledButton.icon(
+                          onPressed: _loading ? null : _convert,
+                          icon: const Icon(Icons.arrow_forward),
+                          label: Text(
+                            _loading ? 'Suche läuft …' : 'Link umwandeln',
+                          ),
                         ),
-                      ),
                       if (_loading)
                         const Padding(
                           padding: EdgeInsets.all(24),
@@ -534,7 +561,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,20 +591,33 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         'Ohne gespeicherte Song-Historie. Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.',
                         style: theme.textTheme.bodySmall,
                       ),
+                      const PleasanceFooter(),
                     ]
                   : [
+                      Text(
+                        'BEREIT ZUM TEILEN',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
                       const SizedBox(height: 20),
-                      Center(child: _artwork(selected!, 148)),
+                      Center(child: _artwork(selected!, 150)),
                       const SizedBox(height: 24),
                       Text(
                         selected.title,
                         textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: theme.textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 8),
-                      Text(conversion.artist, textAlign: TextAlign.center),
+                      Text(
+                        conversion.artist,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: muted,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       Center(
                         child: TextButton.icon(
@@ -690,6 +730,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall,
                       ),
+                      const PleasanceFooter(),
                     ],
             ),
           ),
@@ -705,7 +746,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
             width: size,
             height: size,
             child: const ColoredBox(
-              color: Color(0xFFE8EDDF),
+              color: Color(0xFF302E36),
               child: Icon(Icons.music_note, size: 32),
             ),
           )
