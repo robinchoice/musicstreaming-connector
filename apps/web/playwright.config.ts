@@ -26,10 +26,18 @@ export default defineConfig({
       url: `${API}/api/health`,
       reuseExistingServer: false,
     },
+    // The production build, not vite dev: tests see the app as it runs live
     {
-      command: `bunx vite dev --port ${WEB_PORT} --strictPort`,
-      env: { API_INTERNAL_URL: API },
-      url: WEB,
+      command: 'bunx vite build --logLevel error && bun build/index.js',
+      env: {
+        NODE_ENV: 'production',
+        PORT: String(WEB_PORT),
+        ORIGIN: WEB,
+        BODY_SIZE_LIMIT: '8M',
+        API_INTERNAL_URL: API,
+      },
+      url: `${WEB}/health`,
+      timeout: 180_000,
       reuseExistingServer: false,
     },
   ],
