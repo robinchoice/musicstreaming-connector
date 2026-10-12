@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../config.dart';
 import '../../core/api.dart';
+import '../feedback/feedback_button.dart';
 import '../feedback/feedback_sheet.dart';
 import '../friends/friends_bar.dart';
 import '../friends/friends_screen.dart';
@@ -235,6 +238,30 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                 icon: const Icon(Icons.chat_bubble_outline),
                 label: const Text('Feedback geben'),
               ),
+              Consumer(
+                builder: (context, ref, _) => SwitchListTile(
+                  title: const Text('Testmodus'),
+                  subtitle: const Text(
+                    'Zeigt den Käfer-Knopf, mit dem du Fehler samt Screenshot meldest.',
+                  ),
+                  value: ref.watch(testModeProvider).value ?? false,
+                  onChanged: (on) =>
+                      ref.read(testModeProvider.notifier).set(on),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => _openPage('datenschutz', 'privacy'),
+                    child: const Text('Datenschutz'),
+                  ),
+                  TextButton(
+                    onPressed: () => _openPage('impressum', 'imprint'),
+                    child: const Text('Impressum'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
@@ -250,6 +277,18 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     setState(() => _target = target);
     await _savePreferences();
     if (mounted && hadResult) _convert();
+  }
+
+  /// Opens a page of the website, the English one unless the phone speaks German.
+  void _openPage(String german, String english) {
+    final path =
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'de'
+        ? german
+        : english;
+    launchUrl(
+      Uri.parse('${apiUrl.replaceFirst(RegExp(r'/+$'), '')}/$path'),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   List<DropdownMenuItem<String>> _targetItems() => [

@@ -124,4 +124,23 @@ void main() {
     expect(report.containsKey('screenshot'), isFalse);
     expect(report.containsKey('email'), isFalse);
   });
+  testWidgets('the test mode switch in the settings hides the bug button', (
+    tester,
+  ) async {
+    await mount(tester);
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Datenschutz'), findsOneWidget);
+    expect(find.text('Impressum'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Testmodus'));
+    await tester.tap(find.text('Testmodus'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
+
+    await tester.tap(find.text('Testmodus'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+  });
 }

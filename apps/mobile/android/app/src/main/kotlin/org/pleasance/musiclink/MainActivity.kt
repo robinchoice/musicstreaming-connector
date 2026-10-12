@@ -20,6 +20,11 @@ class MainActivity : FlutterActivity() {
                     preferences.edit().putString("social", call.arguments as String).apply()
                     result.success(null)
                 }
+                "getTestMode" -> result.success(if (preferences.contains("testMode")) preferences.getBoolean("testMode", false) else null)
+                "setTestMode" -> {
+                    preferences.edit().putBoolean("testMode", call.arguments as Boolean).apply()
+                    result.success(null)
+                }
                 "setPreferences" -> {
                     preferences.edit().putString("target", call.argument<String>("target")).apply()
                     result.success(null)

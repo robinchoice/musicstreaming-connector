@@ -4,7 +4,7 @@
 
 - Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
 - Live at https://musiclink.pleasance.org, Coolify on VPS 1, project `pleasance-musiclink`.
-- Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. From 1.0 on (`LIVE` in `packages/shared`) the web shows the bug only in test mode, a footer switch kept per device; „Feedback geben“ stays for everyone. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
+- Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. From 1.0 on (`LIVE` in `packages/shared`, `live` in the app's `config.dart`) the bug shows only in test mode, a switch kept per device in the web footer and the app settings; „Feedback geben“ stays for everyone. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
 - iOS: App Store Connect app `6819013473`, bundle `org.musiclink.prototype`. Signing material and TestFlight groups: `~/dev/kontor/infra.md`.
 
 ## Checks
@@ -47,5 +47,4 @@ The browser tests start API and web on their own ports (53100, 54100), never a r
 ## Abweichungen vom Standard
 
 - The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
-- Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states. The app keeps Material's error colour until the next app change (backlog), so this rollout triggers no TestFlight build.
-- The test mode switch exists only on the web for now; the app follows before 1.0 (backlog).
+- Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states.

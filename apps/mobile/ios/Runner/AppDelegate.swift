@@ -28,6 +28,13 @@ import UIKit
         guard let value = call.arguments as? String else { result(FlutterMethodNotImplemented); return }
         preferences.set(value, forKey: "social")
         result(nil)
+      // Whether the bug button shows, nil until someone flips the switch
+      case "getTestMode":
+        result(preferences.object(forKey: "testMode") as? Bool)
+      case "setTestMode":
+        guard let value = call.arguments as? Bool else { result(FlutterMethodNotImplemented); return }
+        preferences.set(value, forKey: "testMode")
+        result(nil)
       case "dismissShareSetup":
         preferences.set(true, forKey: "shareSetupSeen")
         result(nil)

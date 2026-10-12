@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config.dart';
+import 'core/brand.dart';
 import 'core/router.dart';
 import 'features/feedback/feedback_button.dart';
 
@@ -15,6 +16,7 @@ class App extends ConsumerWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF42633F),
         primary: const Color(0xFF42633F),
+        error: errorDeep,
         surface: const Color(0xFFFBFCF7),
       ),
       scaffoldBackgroundColor: const Color(0xFFFBFCF7),
