@@ -112,10 +112,10 @@ jobs:
 
       - name: Distribution-Signierung installieren
         env:
-          IOS_CERTIFICATE: ${{ secrets.MUSICLINK_IOS_CERTIFICATE }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.MUSICLINK_IOS_CERTIFICATE_PASSWORD }}
-          IOS_APP_PROFILE: ${{ secrets.MUSICLINK_IOS_APP_PROFILE }}
-          IOS_SHARE_PROFILE: ${{ secrets.MUSICLINK_IOS_SHARE_PROFILE }}
+          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_APP_PROFILE: ${{ secrets.IOS_APP_PROFILE_BASE64 }}
+          IOS_SHARE_PROFILE: ${{ secrets.IOS_SHARE_PROFILE_BASE64 }}
         run: |
           umask 077
           KEYCHAIN_PATH="$RUNNER_TEMP/musiclink.keychain-db"
