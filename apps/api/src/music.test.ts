@@ -109,6 +109,24 @@ test('Spotify → Deezer reads the track page and matches artist, version and du
   expect(result.candidates).toEqual([{ title: deezerTrack.title, url: 'https://www.deezer.com/track/67238735', album: 'Get Lucky', durationSeconds: 248, artworkUrl: 'https://cdn-images.dzcdn.net/cover.jpg' }]);
 });
 
+test('spotify.link short links resolve through their Branch page', async () => {
+  const shortLink = (page: string) => resolve({ input: 'Hör mal https://spotify.link/6tpneu0iVIb', target: 'deezer', country: 'DE' }, undefined, async url => {
+    if (url.hostname === 'spotify.app.link') {
+      expect(url.pathname).toBe('/6tpneu0iVIb');
+      return new Response(page);
+    }
+    if (url.hostname === 'open.spotify.com') {
+      expect(url.pathname).toBe('/track/2Foc5Q5nqNiosCNqttzHof');
+      return new Response('<meta property="og:title" content="Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)" /><meta name="music:musician_description" content="Daft Punk" />');
+    }
+    return Response.json({ data: [deezerTrack] });
+  });
+  const result = await shortLink('<a href="https://open.spotify.com/track/2Foc5Q5nqNiosCNqttzHof?si=x">Open</a>');
+  expect(result.sharePath).toBe('/s/sp/2Foc5Q5nqNiosCNqttzHof');
+  expect(result.candidates[0]!.url).toBe('https://www.deezer.com/track/67238735');
+  await expect(shortLink('<a href="https://open.spotify.com/playlist/432nsnOM9L55tkiOFnHbI2">Open</a>')).rejects.toMatchObject({ code: 'INVALID_LINK' });
+});
+
 test('Deezer → Spotify looks up the source and reports unknown tracks', async () => {
   const result = await resolve({ input: deezer, target: 'spotify', country: 'DE' }, undefined, async url => {
     if (url.hostname === 'api.deezer.com') return Response.json({ ...deezerTrack, title: 'Savior', artist: { name: 'Red Hot Chili Peppers' } });

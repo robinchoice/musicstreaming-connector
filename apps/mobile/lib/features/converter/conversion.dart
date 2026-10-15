@@ -9,7 +9,7 @@ const countries = ['DE', 'AT', 'CH', 'US', 'GB'];
 const _sources = {
   'appleMusic': r'music\.apple\.com/',
   'youtubeMusic': r'youtu(?:be\.com|\.be)/',
-  'spotify': r'open\.spotify\.com/',
+  'spotify': r'open\.spotify\.com/|spotify\.link/',
   'deezer': r'deezer\.com/',
 };
 

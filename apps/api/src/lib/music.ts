@@ -98,6 +98,16 @@ function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
 }
 type Session = ReturnType<typeof session>;
 
+// spotify.link is a Branch short link for spotify.app.link, whose page names the track it opens
+async function expandShortLink(input: string, { request }: Session) {
+  const short = input.match(/https?:\/\/spotify\.link\/([A-Za-z0-9]{6,20})(?![A-Za-z0-9])/);
+  if (!short) return input;
+  const page = await (await request(`https://spotify.app.link/${short[1]}`, {})).text();
+  const track = page.match(/https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/[A-Za-z0-9]{22}/)?.[0];
+  if (!track) throw new ResolutionError('INVALID_LINK');
+  return input.replace(short[0], track);
+}
+
 const appleTracks = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results.flatMap(item => {
   const parsed = appleTrack.safeParse(item);
   return parsed.success ? [parsed.data] : [];
@@ -167,10 +177,10 @@ async function findCandidates(target: Platform, source: Track, country: string, 
 }
 
 export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube): Promise<Conversion> {
-  const parsed = songSource(input.input);
-  if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
   const current = session(requestSignal, fetcher);
   try {
+    const parsed = songSource(await expandShortLink(input.input, current));
+    if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
     const source = await loadSource(parsed, current);
     const candidates = await findCandidates(input.target, source, input.country, current, search);
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
@@ -184,9 +194,9 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
 // The best match on every service at once, for the share page and for friends. A service
 // that finds nothing or fails gets a search link, so one slow service never blocks the rest.
 export async function resolveAll(input: { input: string; country: string }, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube): Promise<Song> {
-  const parsed = songSource(input.input);
   const current = session(requestSignal, fetcher);
   try {
+    const parsed = songSource(await expandShortLink(input.input, current));
     const source = await loadSource(parsed, current);
     const targets = Object.keys(platforms) as Platform[];
     const bests = await Promise.all(targets.map(target => target === parsed.platform ? undefined

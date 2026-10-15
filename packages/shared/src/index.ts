@@ -59,7 +59,7 @@ export const feedbackSchema = z.object({
 
 const sources: [RegExp, Platform][] = [
   [/music\.apple\.com\//, 'appleMusic'], [/youtu(?:be\.com|\.be)\//, 'youtubeMusic'],
-  [/open\.spotify\.com\//, 'spotify'], [/deezer\.com\//, 'deezer'],
+  [/open\.spotify\.com\/|spotify\.link\//, 'spotify'], [/deezer\.com\//, 'deezer'],
 ];
 
 export function targetsFor(input: string): Platform[] {
