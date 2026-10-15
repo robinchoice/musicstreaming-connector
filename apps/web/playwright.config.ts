@@ -22,7 +22,7 @@ export default defineConfig({
     {
       command: 'bun src/index.ts',
       cwd: '../api',
-      env: { PORT: String(API_PORT) },
+      env: { PORT: String(API_PORT), APP_URL: WEB },
       url: `${API}/api/health`,
       reuseExistingServer: false,
     },

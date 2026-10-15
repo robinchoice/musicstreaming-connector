@@ -22,6 +22,7 @@ The browser tests start the API and the production build of the web on their own
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
 - Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds the Android bundle.
 - Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
+- Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
 
 ## Pitfalls
 
@@ -44,8 +45,42 @@ The browser tests start the API and the production build of the web on their own
 - Postgres has a memory limit in the compose file (`POSTGRES_MEMORY`, default `512m`). If it gets tight, raise it in Coolify, don't remove it.
 - Every migration must work with the old code still running: add columns nullable or with a default, rename and drop only in the deploy after.
 - Status colours: errors use the fixed signal red (`--error`, glow on the dark ground) from starter's `DESIGN.md`, never the product colour.
+- The repo is public, its CI logs too. `secrets.yml` scans every push and PR with gitleaks („Secret scan“). Catch false alarms narrowly, by fingerprint in `.gitleaksignore` or by path and rule in `.gitleaks.toml`, never turn a rule off. A real finding is public already: rotate the secret right away.
+- No secrets in the client: everything in the web bundle and the app can be read, with LLMs from compiled apps too. Only the server decides what is allowed. Release builds of the app run with `--obfuscate --split-debug-info`, which makes them smaller and strips class and function names but protects nothing. No further obfuscation (string encryption, commercial tools). Symbolizing stack traces: „Release builds“.
+- Readable for agents („For agents“): every static public page is in `publicPages` in `apps/api/src/lib/public-pages.ts`, in German and English, with its content as Markdown in `body`. A new public page goes in with the same change; the browser test checks that every listed page exists. Only what anyone sees without a shared link: no share pages (`/s/…`), no invites (`/f/…`).
+
+## Secret scan
+
+`.github/workflows/secrets.yml` runs on every push to every branch and on PRs from forks, without `paths-ignore`, and scans the new commits with gitleaks (Docker image pinned by digest). A finding turns the run red; `--redact` keeps the value out of the public log.
+
+- Rules: the gitleaks defaults plus `.gitleaks.toml`, which only exempts `generic-api-key` in `bun.lock` and `apps/mobile/pubspec.lock`, where hashes trip it. Real token formats (`ghp_…`, `sk_live_…`) are still caught there.
+- False alarm: add the `Fingerprint` from the log as a line to `.gitleaksignore`.
+- Real finding: the scan runs after the push, so the secret is public already. Rotate it at once; removing it from the code or the history is not enough.
+- Locally over the whole history: `docker run --rm -v "$PWD:/repo" <image from secrets.yml> git /repo --no-banner --redact`.
+
+## For agents
+
+Other people's agents read the public pages without HTML, after [llms.txt](https://llmstxt.org). Source is `publicPages` in `apps/api/src/lib/public-pages.ts`, the routes are in `apps/api/src/routes/agents.ts`, and `hooks.server.ts` in the web forwards the paths to the API.
+
+- `/llms.txt`: name, tagline and every public page as a link to its Markdown. `/llms-full.txt`: all pages in one file.
+- `<page>.md`: every page as Markdown, the start page as `/index.md`. A request with `Accept: text/markdown` for a page that has Markdown gets it under the same URL, everyone else the HTML.
+- Language: `?lang=de|en`, else `Accept-Language`, else German. Links keep an explicit `?lang=`. The English legal pages (`/imprint`, `/privacy`) answer in English without it.
+- The API builds the links from `APP_URL`. Try it: `curl localhost:5173/llms.txt` with `bun run dev` running.
+
+## Release builds
+
+Release builds of the app (`mobile.yml`) are built with `--obfuscate`, so stack traces from the app, in GlitchTip too, only show obfuscated names. The symbols are kept for 90 days as the artifacts `symbols-ios` and `symbols-android` of the CI run; the app's build number is that run's number (`gh run list -w mobile.yml --json number,databaseId` gives the run ID). To read a trace:
+
+```sh
+gh run download <run-id> -n symbols-android -D /tmp/symbols
+flutter symbolize -i trace.txt -d /tmp/symbols/app.android-arm64.symbols   # iOS: app.ios-arm64.symbols
+```
+
+`trace.txt` is the raw stack trace with `build_id` and `abs …/virt …` lines (e.g. from `adb logcat`). Builds older than 90 days can no longer be symbolized.
 
 ## Abweichungen vom Standard
 
 - The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
 - Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states.
+- No README: the sections „Secret scan“, „For agents“ and „Release builds“, which starter keeps in its README, are here.
+- The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum and Datenschutz.

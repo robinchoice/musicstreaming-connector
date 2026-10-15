@@ -12,16 +12,31 @@ dns.setDefaultResultOrder('ipv4first');
 // proxy does the same for the browser; server-side loads come through here.
 const API_ORIGIN = process.env.API_INTERNAL_URL || (dev ? 'http://localhost:3000' : 'http://api:3000');
 
-export const handle: Handle = async ({ event, resolve }) => {
-  if (!event.url.pathname.startsWith('/api/')) return resolve(event);
+// Public content for agents comes from the API, see apps/api/src/routes/agents.ts
+const AGENT_PATH = /^\/llms(-full)?\.txt$|\.md$/;
 
-  const headers = new Headers(event.request.headers);
+export const handle: Handle = async ({ event, resolve }) => {
+  const { pathname, search } = event.url;
+  if (pathname.startsWith('/api/') || AGENT_PATH.test(pathname)) return proxy(event.request, `${API_ORIGIN}${pathname}${search}`);
+  return (await markdown(event.request, event.url)) ?? resolve(event);
+};
+
+// Agents that ask for Markdown get a public page as its .md, all others the HTML
+async function markdown(request: Request, url: URL) {
+  if (request.method !== 'GET' || !request.headers.get('accept')?.includes('text/markdown')) return;
+  const path = url.pathname === '/' ? '/index.md' : `${url.pathname.replace(/\/$/, '')}.md`;
+  const response = await proxy(request, `${API_ORIGIN}${path}${url.search}`);
+  if (response.ok) return response;
+}
+
+async function proxy(request: Request, target: string) {
+  const headers = new Headers(request.headers);
   headers.delete('host');
 
-  const res = await fetch(`${API_ORIGIN}${event.url.pathname}${event.url.search}`, {
-    method: event.request.method,
+  const res = await fetch(target, {
+    method: request.method,
     headers,
-    body: event.request.method !== 'GET' && event.request.method !== 'HEAD' ? event.request.body : undefined,
+    body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
     // @ts-expect-error — Bun supports duplex
     duplex: 'half',
   });
@@ -33,7 +48,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   responseHeaders.delete('content-length');
 
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: responseHeaders });
-};
+}
 
 export const handleError: HandleServerError = ({ error }) => {
   captureException(error);

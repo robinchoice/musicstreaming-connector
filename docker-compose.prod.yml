@@ -14,6 +14,7 @@ services:
     image: ghcr.io/robinchoice/musiclink-api:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD}@postgres:5432/app
+      APP_URL: ${APP_URL}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

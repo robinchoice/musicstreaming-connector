@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ResolutionError } from './lib/resolver';
 import { resolve, resolveAll } from './lib/music';
 import { captureException } from './monitoring';
+import { agentRoutes } from './routes/agents';
 import { feedbackRoutes } from './routes/feedback';
 
 // Without a database there is no feedback, the converter needs none.
@@ -40,6 +41,8 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
     })
     // The CI compares revision with the deployed commit
     .get('/api/health', c => c.json({ status: 'ok', revision: process.env.APP_VERSION || 'dev' }))
+    // /llms.txt, /llms-full.txt and <page>.md, forwarded by the web server
+    .route('/', agentRoutes)
     .use('/api/v1/convert', bodyLimit({ maxSize: 8192, onError: c => c.json({ error: 'Der geteilte Text ist zu lang.' }, 413) }))
     .post('/api/v1/convert', async c => {
       let body: unknown;
