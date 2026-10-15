@@ -8,7 +8,7 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN bun install --frozen-lockfile
 
-COPY packages packages
+COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN cd apps/web && bun run build
 
@@ -17,7 +17,8 @@ FROM oven/bun:1-slim
 WORKDIR /app
 COPY --from=build /app/apps/web/build build
 # adapter-node accepts 512 KB by default, too little for feedback screenshots
-ENV NODE_ENV=production PORT=3000 BODY_SIZE_LIMIT=8M
+ARG APP_VERSION=dev
+ENV NODE_ENV=production PORT=3000 BODY_SIZE_LIMIT=8M APP_VERSION=$APP_VERSION
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
   CMD bun -e "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"

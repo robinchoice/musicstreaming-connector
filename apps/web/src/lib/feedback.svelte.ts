@@ -1,5 +1,4 @@
 import { type FeedbackContext, LIVE } from '@app/shared';
-import { domToJpeg } from 'modern-screenshot';
 import { browser } from '$app/environment';
 import { api, recentErrors } from './api';
 
@@ -39,7 +38,8 @@ export function closeFeedback() {
 
 // What the tester sees right now, without anything marked data-feedback-ignore.
 // JPEG keeps a full screen at around 200 KB.
-export function takeScreenshot() {
+export async function takeScreenshot() {
+  const { domToJpeg } = await import('modern-screenshot');
   return domToJpeg(document.documentElement, {
     width: innerWidth,
     height: innerHeight,

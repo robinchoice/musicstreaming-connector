@@ -32,7 +32,7 @@ function mail(report: Report, to: string, screenshot: Buffer | null) {
   const { context } = report;
   return {
     to,
-    replyTo: report.email,
+    replyTo: report.email ? { name: '', address: report.email } : undefined,
     subject: `${report.kind === 'bug' ? 'Bug' : 'Idea'}: ${firstLine(report.message)}`,
     text: [
       report.message,

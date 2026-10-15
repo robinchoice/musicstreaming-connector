@@ -2,6 +2,8 @@ name: Mobile
 
 # Every change to the app gets analyze and test. On main: iOS → TestFlight,
 # Android → signed AAB as artifact. macOS minutes are free only for public repos.
+# Release builds are obfuscated, the symbols for `flutter symbolize` are kept as an artifact for
+# 90 days (AGENTS.md, "Release builds"). They never go into the bundle or the repo.
 
 on:
   workflow_dispatch:
@@ -134,7 +136,7 @@ jobs:
 
       # Eindeutige, steigende Build-Nummer pro Lauf, TestFlight lehnt Duplikate ab.
       - name: Flutter-Build vorbereiten
-        run: flutter build ios --release --no-codesign --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
+        run: flutter build ios --config-only --release --no-codesign --obfuscate --split-debug-info=$RUNNER_TEMP/symbols --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
 
       - name: Archive bauen
         working-directory: apps/mobile/ios
@@ -191,6 +193,13 @@ jobs:
             --apiKey '${{ vars.ASC_KEY_ID }}' \
             --apiIssuer '${{ vars.ASC_ISSUER_ID }}'
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: symbols-ios
+          path: ${{ runner.temp }}/symbols
+          retention-days: 90
+          if-no-files-found: error
+
       - name: Signierung aufräumen
         if: always()
         run: |
@@ -235,9 +244,16 @@ jobs:
           EOT
 
       - name: App Bundle bauen
-        run: flutter build appbundle --release --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
+        run: flutter build appbundle --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
 
       - uses: actions/upload-artifact@v4
         with:
           name: android-aab
           path: apps/mobile/build/app/outputs/bundle/release/app-release.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: symbols-android
+          path: ${{ runner.temp }}/symbols
+          retention-days: 90
+          if-no-files-found: error
