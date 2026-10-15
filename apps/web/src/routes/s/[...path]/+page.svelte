@@ -1,9 +1,20 @@
 <script lang="ts">
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
+  import { onMount } from 'svelte';
   import { platforms, type Platform } from '@app/shared';
   let { data } = $props();
   const song = $derived(data.song);
-  const order = Object.keys(platforms) as Platform[];
+  // The service a visitor opened last comes first next time, kept on the device only
+  const KEY = 'musiclink-service';
+  let mine = $state<Platform | null>(null);
+  const order = $derived((Object.keys(platforms) as Platform[]).toSorted((a, b) => Number(b === mine) - Number(a === mine)));
+  onMount(() => {
+    const saved = localStorage.getItem(KEY);
+    if (saved && saved in platforms) mine = saved as Platform;
+  });
+  function remember(platform: Platform) {
+    try { localStorage.setItem(KEY, platform); } catch {}
+  }
 </script>
 
 <svelte:head><title>{song.source.title} · {song.source.artist} · MusicLink</title></svelte:head>
@@ -17,11 +28,11 @@
         <div><div class="eyebrow">JEMAND HAT DIR EINEN SONG GESCHICKT</div><h1>{song.source.title}</h1><p>{song.source.artist}</p></div>
       </div>
       <h2>Wo hörst du Musik?</h2>
-      {#each order as platform}
+      {#each order as platform (platform)}
         {@const link = song.links[platform]}
-        <a class="service" class:missing={!link.found} href={link.url} rel="noreferrer">
+        <a class="service" class:missing={!link.found} class:mine={platform === mine} href={link.url} rel="noreferrer" onclick={() => remember(platform)}>
           <span class="dot {platform}" aria-hidden="true"></span>
-          <span class="name">{platforms[platform]}{#if !link.found}<small>Kein sicherer Treffer · auf {platforms[platform]} suchen</small>{/if}</span>
+          <span class="name">{platforms[platform]}{#if !link.found}<small>Kein sicherer Treffer · auf {platforms[platform]} suchen</small>{:else if platform === mine}<small>Dein Dienst</small>{/if}</span>
           <span class="go">{link.found ? 'Öffnen ↗' : 'Suchen ↗'}</span>
         </a>
       {/each}
@@ -48,6 +59,7 @@
   .service { display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-top: 8px; background: #1B1A20; color: var(--text); text-decoration: none; font-size: 15px; }
   .service:hover { background: var(--raised); }
   .service.missing { opacity: .6; }
+  .service.mine { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
   .name { display: flex; flex-direction: column; }
   .name small { font-size: 11px; color: var(--muted); }
   .go { margin-left: auto; font-size: 12px; color: var(--muted); }
