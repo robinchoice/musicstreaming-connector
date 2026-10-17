@@ -20,6 +20,8 @@ The browser tests start the API and the production build of the web on their own
 ## Deploy
 
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
+- After a successful deploy, `screenshots` photographs the public home page in fresh browser contexts (German, desktop 1440×900 and phone 390×844 at double density). No login, shared links, query parameters or user data. The starter script `apps/web/screenshots.ts` replaces `docs/screenshots/` with WebP images, so only the current set is kept. Run locally with `bun run screenshots [url]` in `apps/web`.
+- Changed screenshots are committed to `main` by `github-actions[bot]` with `[skip ci]` to prevent deploy loops. Fetch before pushing. Only after the screenshots succeed, the job sends `prototype-deployed` (`client_payload: {slug, sha}`) to `robinchoice/pleasance` using the existing `PLEASANCE_DISPATCH_TOKEN` secret, scoped to that receiver. Without the secret only the dispatch is skipped.
 - Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds the Android bundle.
 - Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
 - Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
