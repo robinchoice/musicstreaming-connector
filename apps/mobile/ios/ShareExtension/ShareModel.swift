@@ -153,7 +153,7 @@ final class ShareModel: ObservableObject {
     static func targets(for input: String) -> [String] {
         let source = input.contains("music.apple.com/") ? "appleMusic"
             : input.contains("youtube.com/") || input.contains("youtu.be/") ? "youtubeMusic"
-            : input.contains("open.spotify.com/") ? "spotify"
+            : input.contains("open.spotify.com/") || input.contains("spotify.link/") ? "spotify"
             : input.contains("deezer.com/") ? "deezer" : nil
         return ["appleMusic", "youtubeMusic", "spotify", "deezer"].filter { $0 != source }
     }

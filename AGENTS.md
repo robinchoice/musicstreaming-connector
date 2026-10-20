@@ -13,6 +13,8 @@
 cp -n .env.example .env && docker compose up -d   # Postgres on port 5439 for the API tests
 bun install --frozen-lockfile && bun run check && bun run test   # test builds the web and tests the build
 cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when apps/mobile changed
+# On macOS (also runs in mobile.yml):
+swiftc -parse-as-library ios/ShareExtension/ShareModel.swift test/share_targets.swift -o /tmp/musiclink-share-targets-test && /tmp/musiclink-share-targets-test
 ```
 
 The browser tests start the API and the production build of the web on their own ports (53100, 54100), never a running dev server. If another worktree tests at the same time, pick other ports: `TEST_API_PORT=53101 TEST_WEB_PORT=54101 bun run test`.

@@ -62,6 +62,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Test share extension targets
+        run: |
+          swiftc -parse-as-library ios/ShareExtension/ShareModel.swift test/share_targets.swift -o "$RUNNER_TEMP/share-targets-test"
+          "$RUNNER_TEMP/share-targets-test"
       - run: flutter build ios --release --no-codesign --dart-define=API_URL=https://example.invalid
 
   ios:
