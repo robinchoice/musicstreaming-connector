@@ -180,7 +180,6 @@ test('friends message has one link for one service and one line per service othe
     .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc`);
 });
 
-
 test('invalid source metadata reports only a fixed failure class and provider', async () => {
   await expect(resolve({ input: youtube, target: 'appleMusic', country: 'DE' }, undefined,
     async () => Response.json({ title: { private: 'private song title' }, author_name: 'private artist' })))
