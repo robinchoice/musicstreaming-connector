@@ -1,6 +1,7 @@
 import { platforms, type Conversion, type ConversionInput, type Platform, type Song } from '@app/shared';
 import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
+import { captureMessage } from '../monitoring';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, type Fetch } from './resolver';
 
 const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -98,11 +99,24 @@ function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
 }
 type Session = ReturnType<typeof session>;
 
+async function providerCall<T>(provider: Platform, signal: AbortSignal, call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (!(error instanceof ResolutionError) && !signal.aborted) {
+      const failure = error instanceof z.ZodError || error instanceof SyntaxError ? 'invalid_response'
+        : error instanceof TypeError ? 'request_failed' : 'unexpected';
+      captureMessage('Music provider failure', { level: 'warning', tags: { provider, failure } });
+    }
+    throw error;
+  }
+}
+
 // spotify.link is a Branch short link for spotify.app.link, whose page names the track it opens
-async function expandShortLink(input: string, { request }: Session) {
+async function expandShortLink(input: string, { request, signal }: Session) {
   const short = input.match(/https?:\/\/spotify\.link\/([A-Za-z0-9]{6,20})(?![A-Za-z0-9])/);
   if (!short) return input;
-  const page = await (await request(`https://spotify.app.link/${short[1]}`, {})).text();
+  const page = await providerCall('spotify', signal, async () => (await request(`https://spotify.app.link/${short[1]}`, {})).text());
   const track = page.match(/https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/[A-Za-z0-9]{22}/)?.[0];
   if (!track) throw new ResolutionError('INVALID_LINK');
   return input.replace(short[0], track);
@@ -181,8 +195,8 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
   try {
     const parsed = songSource(await expandShortLink(input.input, current));
     if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
-    const source = await loadSource(parsed, current);
-    const candidates = await findCandidates(input.target, source, input.country, current, search);
+    const source = await providerCall(parsed.platform, current.signal, () => loadSource(parsed, current));
+    const candidates = await providerCall(input.target, current.signal, () => findCandidates(input.target, source, input.country, current, search));
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
     return { source: { title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(parsed) };
   } catch (error) {
@@ -197,10 +211,10 @@ export async function resolveAll(input: { input: string; country: string }, requ
   const current = session(requestSignal, fetcher);
   try {
     const parsed = songSource(await expandShortLink(input.input, current));
-    const source = await loadSource(parsed, current);
+    const source = await providerCall(parsed.platform, current.signal, () => loadSource(parsed, current));
     const targets = Object.keys(platforms) as Platform[];
     const bests = await Promise.all(targets.map(target => target === parsed.platform ? undefined
-      : findCandidates(target, source, input.country, current, search).then(candidates => candidates[0], () => undefined)));
+      : providerCall(target, current.signal, () => findCandidates(target, source, input.country, current, search)).then(candidates => candidates[0], () => undefined)));
     const links = Object.fromEntries(targets.map((target, i) => [target, target === parsed.platform ? { url: source.url, found: true }
       : bests[i] ? { url: bests[i].url, found: true } : { url: searchUrl(target, source, input.country), found: false }])) as Song['links'];
     // YouTube thumbnails are letterboxed video frames, a square album cover from another service looks better

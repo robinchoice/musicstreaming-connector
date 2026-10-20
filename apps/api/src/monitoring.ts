@@ -29,3 +29,5 @@ Sentry.init({
 })
 
 export const captureException = Sentry.captureException
+
+export const captureMessage = Sentry.captureMessage

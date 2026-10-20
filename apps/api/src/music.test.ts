@@ -1,7 +1,12 @@
-import { expect, test } from 'bun:test';
+import { afterAll, afterEach, expect, spyOn, test } from 'bun:test';
+import * as monitoring from './monitoring';
 import { friendsMessage } from '@app/shared';
 import { resolve, resolveAll, sharePath, songSource, type MusicSearch } from './lib/music';
 import type { Fetch } from './lib/resolver';
+
+const diagnostics = spyOn(monitoring, 'captureMessage').mockImplementation(() => 'test');
+afterEach(() => diagnostics.mockClear());
+afterAll(() => diagnostics.mockRestore());
 
 const youtube = 'https://music.youtube.com/watch?v=UijW9hGpnzc';
 const apple = 'https://music.apple.com/de/album/savior/945575406?i=945575419';
@@ -173,4 +178,58 @@ test('friends message has one link for one service and one line per service othe
     .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x');
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
     .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc`);
+});
+
+
+test('invalid source metadata reports only a fixed failure class and provider', async () => {
+  await expect(resolve({ input: youtube, target: 'appleMusic', country: 'DE' }, undefined,
+    async () => Response.json({ title: { private: 'private song title' }, author_name: 'private artist' })))
+    .rejects.toMatchObject({ code: 'NETWORK' });
+  expect(diagnostics.mock.calls).toEqual([
+    ['Music provider failure', { level: 'warning', tags: { provider: 'youtubeMusic', failure: 'invalid_response' } }],
+  ]);
+});
+
+test.each(['appleMusic', 'spotify', 'deezer'] as const)('invalid %s results preserve NETWORK and report the target', async target => {
+  await expect(resolve({ input: youtube, target, country: 'DE' }, undefined, async (url, init) =>
+    url.hostname === 'www.youtube.com' ? fetcher(url, init) : new Response('private upstream response')))
+    .rejects.toMatchObject({ code: 'NETWORK' });
+  expect(diagnostics.mock.calls).toEqual([
+    ['Music provider failure', { level: 'warning', tags: { provider: target, failure: 'invalid_response' } }],
+  ]);
+});
+
+test('a failed target keeps its search fallback without reporting the raw error', async () => {
+  const result = await resolveAll({ input: apple, country: 'DE' }, undefined, async (url, init) => {
+    if (url.hostname === 'itunes.apple.com') return fetcher(url, init);
+    if (url.hostname === 'labs.api.listenbrainz.org') return Response.json([]);
+    return Response.json({ data: [] });
+  }, async () => { throw new Error('private song https://private.example/?token=private'); });
+  expect(result.links.youtubeMusic.found).toBe(false);
+  expect(result.links.youtubeMusic.url).toContain('music.youtube.com/search');
+  expect(diagnostics.mock.calls).toEqual([
+    ['Music provider failure', { level: 'warning', tags: { provider: 'youtubeMusic', failure: 'unexpected' } }],
+  ]);
+});
+
+test('failed short-link requests report Spotify without the link or network error', async () => {
+  await expect(resolve({ input: 'https://spotify.link/6tpneu0iVIb', target: 'appleMusic', country: 'DE' }, undefined,
+    async () => { throw new TypeError('private request details'); }))
+    .rejects.toMatchObject({ code: 'NETWORK' });
+  expect(diagnostics.mock.calls).toEqual([
+    ['Music provider failure', { level: 'warning', tags: { provider: 'spotify', failure: 'request_failed' } }],
+  ]);
+});
+
+test('expected upstream failures and cancellation produce no diagnostic event', async () => {
+  for (const status of [404, 429, 500]) {
+    await expect(resolve({ input: youtube, target: 'appleMusic', country: 'DE' }, undefined,
+      async () => new Response('', { status }))).rejects.toBeDefined();
+  }
+  const controller = new AbortController();
+  controller.abort();
+  await expect(resolve({ input: youtube, target: 'appleMusic', country: 'DE' }, controller.signal,
+    async (_, init) => { init.signal!.throwIfAborted(); throw new Error('unreachable'); }))
+    .rejects.toMatchObject({ code: 'NETWORK' });
+  expect(diagnostics).not.toHaveBeenCalled();
 });
