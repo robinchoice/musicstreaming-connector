@@ -1,0 +1,21 @@
+MusicLink macht aus einem Song-Link einen Link, der bei deinen Freunden im eigenen Streamingdienst aufgeht.
+
+Du hörst einen Song und willst ihn teilen, aber deine Freunde nutzen einen anderen Musikdienst? Tippe in deiner Musik-App auf „Teilen“ und wähle MusicLink. MusicLink sucht denselben Song beim Dienst deiner Freunde und zeigt ihn dir mit Cover, Album und Länge. Das Android-Teilen-Menü öffnet MusicLink mit dem Song-Link. Den passenden Link teilst du anschließend direkt weiter.
+
+SO GEHT'S
+• In deiner Musik-App auf „Teilen“ tippen und MusicLink wählen
+• Zieldienst wählen oder Freunde antippen
+• Den fertigen Link weiterschicken oder kopieren
+
+FREUNDE UND GRUPPEN
+Merke dir, welcher Freund welchen Dienst nutzt, und fasse sie zu Gruppen zusammen. Beim Teilen genügt ein Tipp auf die Gruppe: Jeder bekommt eine Zeile mit dem Link für seinen Dienst. Freunde bleiben auf deinem Gerät.
+
+DIE RICHTIGE AUFNAHME
+Gibt es einen Song in mehreren Fassungen, etwa live oder remastered, wählst du vor dem Teilen die passende aus.
+
+OHNE ANMELDUNG
+MusicLink braucht kein Konto und keinen Zugriff auf deine Musikdienste. Keine Werbung, kein Tracking. MusicLink liest nur öffentliche Song-Angaben.
+
+Funktioniert mit Song-Links aus YouTube Music, Apple Music, Spotify und Deezer. MusicLink ist ein unabhängiges Werkzeug und steht in keiner Verbindung zu diesen Diensten.
+
+MusicLink ist ein Werkzeug von Pleasance aus Freiburg.

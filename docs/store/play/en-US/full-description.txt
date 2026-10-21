@@ -1,0 +1,18 @@
+MusicLink helps you share songs with friends who use a different music streaming service.
+
+Share a song from your music app and choose MusicLink. Pick the destination service, check the matching recording and pass on its link. MusicLink accepts song links directly from the Android share menu.
+
+FRIENDS AND GROUPS
+Save which music service each friend uses, and organise friends into groups. Share a message containing a link for each person's service. Your friends and groups stay on your device.
+
+FIND THE RIGHT RECORDING
+Compare matching recordings, including live versions and remasters, before sharing. Results show the cover, album and track length.
+
+NO ACCOUNT REQUIRED
+MusicLink needs no account and no access to your streaming accounts. No ads or tracking. It reads public song information and links to the music services; it does not play or download music.
+
+Works with song links from YouTube Music, Apple Music, Spotify and Deezer. MusicLink is an independent tool and is not affiliated with these services.
+
+The app interface is currently in German.
+
+A tool by Pleasance, Freiburg, Germany.

@@ -24,7 +24,7 @@ The browser tests start the API and the production build of the web on their own
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
 - After a successful deploy, `screenshots` photographs the public home page in fresh browser contexts (German, desktop 1440×900 and phone 390×844 at double density). No login, shared links, query parameters or user data. The starter script `apps/web/screenshots.ts` replaces `docs/screenshots/` with WebP images, so only the current set is kept. Run locally with `bun run screenshots [url]` in `apps/web`.
 - Changed screenshots are committed to `main` by `github-actions[bot]` with `[skip ci]` to prevent deploy loops. Fetch before pushing. Only after the screenshots succeed, the job sends `prototype-deployed` (`client_payload: {slug, sha}`) to `robinchoice/pleasance` using the existing `PLEASANCE_DISPATCH_TOKEN` secret, scoped to that receiver. Without the secret only the dispatch is skipped.
-- Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds the Android bundle. Job `testflight` (`apps/mobile/tool/testflight.mjs`) gives every build to the internal group „MusicLink Internal“.
+- Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds upload-key-signed Android AAB and APK artifacts (kept for 90 days). Android release CI requires the `ANDROID_KEYSTORE_*`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets. After Robin confirms `org.pleasance.musiclink`, uploads the first AAB manually and grants the service account access, set `PLAY_SERVICE_ACCOUNT_JSON` and `PLAY_UPLOAD=true` to upload subsequent builds to Play internal testing. Never enable this before package-name confirmation; no production promotion runs automatically. Job `testflight` (`apps/mobile/tool/testflight.mjs`) gives every build to the internal group „MusicLink Internal“.
 - External testers (group „MusicLink V1“) don't get every build: TestFlight mails a group's testers for each build it is given. Only the build of a release tag `v*` goes there and is submitted for the beta review, and an agent sets that tag only when Robin asks for a release. `git tag v<version> && git push origin v<version>` builds iOS and Android again and releases that build. An already uploaded build: `node tool/testflight.mjs [--quiet] <build number> "MusicLink Internal" "MusicLink V1"` in `apps/mobile` with `ASC_*` from `~/.secrets`.
 - Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
 - Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
@@ -78,8 +78,10 @@ Release builds of the app (`mobile.yml`) are built with `--obfuscate`, so stack 
 
 ```sh
 gh run download <run-id> -n symbols-android -D /tmp/symbols
-flutter symbolize -i trace.txt -d /tmp/symbols/app.android-arm64.symbols   # iOS: app.ios-arm64.symbols
+flutter symbolize -i trace.txt -d /tmp/symbols/aab/app.android-arm64.symbols   # Play; sideloaded APK: apk/; iOS: app.ios-arm64.symbols
 ```
+
+Android symbols are separated into `aab/` for Play installations and `apk/` for sideloaded APKs; use the set matching the installation.
 
 `trace.txt` is the raw stack trace with `build_id` and `abs …/virt …` lines (e.g. from `adb logcat`). Builds older than 90 days can no longer be symbolized.
 
