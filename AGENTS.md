@@ -32,6 +32,7 @@ The browser tests start the API and the production build of the web on their own
 ## Pitfalls
 
 - The bundle ID `org.musiclink.prototype` and the repo name predate the naming rules and stay as they are.
+- Apple may report a build as `VALID` before TestFlight group assignment can resolve its ID (404). Once the build is readable, rerun only the failed `testflight` job; do not upload the same build number again.
 - The iOS app signs with explicit distribution profiles for the app and the share extension (secrets `IOS_CERTIFICATE_BASE64`, `IOS_APP_PROFILE_BASE64`, `IOS_SHARE_PROFILE_BASE64`). A new extension or capability needs new profiles.
 - No GitHub issues for feedback: the repo is public, reports and screenshots would be too. They stay in the database and the mail.
 - adapter-node accepts 512 KB request bodies by default. `Dockerfile.web` raises `BODY_SIZE_LIMIT`, otherwise app screenshots (PNG) fail with 413 at the web proxy.
