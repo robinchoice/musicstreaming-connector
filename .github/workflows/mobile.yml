@@ -1,7 +1,8 @@
 name: Mobile
 
-# Every change to the app gets analyze and test. On main: iOS → TestFlight,
-# Android → signed AAB as artifact. macOS minutes are free only for public repos.
+# Every change to the app gets analyze and test. On main: iOS → TestFlight group
+# „MusicLink Internal“, Android → signed AAB as artifact. Release tags `v*` also reach
+# the external group „MusicLink V1“ (AGENTS.md, "Deploy"). macOS minutes are free only for public repos.
 # Release builds are obfuscated, the symbols for `flutter symbolize` are kept as an artifact for
 # 90 days (AGENTS.md, "Release builds"). They never go into the bundle or the repo.
 
@@ -11,6 +12,8 @@ on:
     paths: ['apps/mobile/**', '.github/workflows/mobile.yml']
   push:
     branches: [main]
+    # GitHub ignores the path filter for tags
+    tags: ['v*']
     paths: ['apps/mobile/**', '.github/workflows/mobile.yml']
 
 env:
@@ -214,6 +217,27 @@ jobs:
             "$HOME/.appstoreconnect/private_keys/AuthKey_${{ vars.ASC_KEY_ID }}.p8" \
             "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-App.mobileprovision" \
             "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-Share.mobileprovision"
+
+  # Every build goes to the internal group. Only release tags reach the external group
+  # and its beta review: every build given to a group mails its testers.
+  testflight:
+    needs: ios
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build an TestFlight-Gruppen geben
+        env:
+          ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          if [ "$RELEASE" = true ]; then
+            node tool/testflight.mjs "$GITHUB_RUN_NUMBER" "MusicLink Internal" "MusicLink V1"
+          else
+            node tool/testflight.mjs "$GITHUB_RUN_NUMBER" "MusicLink Internal"
+          fi
 
   android:
     needs: [check, android-build]
