@@ -1,17 +1,29 @@
-import { inviteSlugs, platforms, type Friend, type Platform } from '@app/shared';
+import { z } from 'zod';
+import { inviteSlugs, type Friend, type Platform } from '@app/shared';
 
 // Friends stay in this browser. Nothing about them reaches our server.
 type Saved = { friends: Friend[]; groups: { name: string; members: string[] }[]; me: Friend | null };
 const KEY = 'musiclink-friends';
+const friendSchema = z.object({ name: z.string(), platform: z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']) });
+const groupSchema = z.object({
+  name: z.string(),
+  members: z.array(z.unknown()).transform(members => members.filter((member): member is string => typeof member === 'string')),
+});
+const savedSchema = z.object({
+  friends: z.array(z.unknown()).catch([]),
+  groups: z.array(z.unknown()).catch([]),
+  me: z.unknown(),
+});
 
 export const social = $state<Saved>({ friends: [], groups: [], me: null });
 
 export function loadFriends() {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved>;
-    social.friends = (saved.friends ?? []).filter(friend => friend.platform in platforms);
-    social.groups = saved.groups ?? [];
-    social.me = saved.me?.platform && saved.me.platform in platforms ? saved.me : null;
+    const saved = savedSchema.safeParse(JSON.parse(localStorage.getItem(KEY) ?? '{}')).data;
+    if (!saved) return;
+    social.friends = saved.friends.flatMap(friend => friendSchema.safeParse(friend).data ?? []);
+    social.groups = saved.groups.flatMap(group => groupSchema.safeParse(group).data ?? []);
+    social.me = friendSchema.safeParse(saved.me).data ?? null;
   } catch {}
 }
 

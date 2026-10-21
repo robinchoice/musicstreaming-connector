@@ -65,7 +65,7 @@
     <form class="panel" onsubmit={submit}>
       <p>{panel === 'add' ? 'Freund von Hand anlegen. Schneller geht es, wenn er dir seinen Einladungslink schickt.' : panel === 'group' ? `Gruppe aus ${selected.join(', ')}` : 'Dein Dienst und Name für deinen Einladungslink.'}</p>
       <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? 'Name der Gruppe, z. B. WG' : panel === 'invite' ? 'Dein Name' : 'Name'} required />
-      {#if panel !== 'group'}<select bind:value={platform}>{#each Object.keys(platforms) as Platform[] as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
+      {#if panel !== 'group'}<select bind:value={platform}>{#each (Object.keys(platforms) as Platform[]) as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
       <button type="submit">{panel === 'invite' ? 'Einladung teilen ↗' : 'Speichern'}</button>
     </form>
   {/if}

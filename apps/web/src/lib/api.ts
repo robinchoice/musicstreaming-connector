@@ -1,4 +1,7 @@
+import { z } from 'zod';
 import { toastError } from './toast.svelte';
+
+const errorAnswer = z.object({ error: z.string().min(1), searchUrl: z.url().exactOptional() });
 
 // The last failed calls, newest first. Feedback sends them along.
 export const recentErrors: string[] = [];
@@ -9,20 +12,20 @@ function noteError(method: string, path: string, status: number | string) {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public searchUrl?: string) {
+  constructor(message: string, public searchUrl: string | undefined = undefined) {
     super(message);
   }
 }
 
 async function call<T>(method: 'GET' | 'POST', path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   try {
-    const response = await fetch(`/api/v1${path}`, method === 'GET' ? { signal } : {
+    const response = await fetch(`/api/v1${path}`, method === 'GET' ? { signal: signal ?? null } : {
       method, headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body), signal,
+      body: JSON.stringify(body), signal: signal ?? null,
     });
     if (!response.ok) {
       noteError(method, path, response.status);
-      const body = await response.json().catch(() => null);
+      const body = errorAnswer.safeParse(await response.json().catch(() => null)).data;
       throw new ApiError(body?.error || 'Der Dienst ist gerade nicht erreichbar.', body?.searchUrl);
     }
     return response.json();

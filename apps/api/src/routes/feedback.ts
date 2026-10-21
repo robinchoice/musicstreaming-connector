@@ -32,7 +32,7 @@ function mail(report: Report, to: string, screenshot: Buffer | null) {
   const { context } = report;
   return {
     to,
-    replyTo: report.email ? { name: '', address: report.email } : undefined,
+    ...(report.email ? { replyTo: { name: '', address: report.email } } : {}),
     subject: `${report.kind === 'bug' ? 'Bug' : 'Idea'}: ${firstLine(report.message)}`,
     text: [
       report.message,
@@ -74,7 +74,7 @@ export const feedbackRoutes = (db: Database) =>
 
       const to = process.env.FEEDBACK_EMAIL;
       try {
-        if (to) await sendMail(mail({ id: row!.id, kind, message, email, context: fullContext }, to, screenshot));
+        if (to) await sendMail(mail({ id: row!.id, kind, message, ...(email === undefined ? {} : { email }), context: fullContext }, to, screenshot));
       } catch (error) {
         console.error('Feedback mail failed:', error);
         captureException(error);

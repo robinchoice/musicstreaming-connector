@@ -16,8 +16,8 @@ const TEST_MODE_KEY = 'test-mode';
 
 // Shows the bug button. On until MusicLink goes live as 1.0, then off until
 // someone switches it on in the footer. The choice stays on this device.
-const savedTestMode: boolean | null = browser ? JSON.parse(localStorage.getItem(TEST_MODE_KEY) ?? 'null') : null;
-export const testMode = $state({ on: savedTestMode ?? !LIVE });
+const savedTestMode = browser ? localStorage.getItem(TEST_MODE_KEY) : null;
+export const testMode = $state({ on: savedTestMode === 'true' ? true : savedTestMode === 'false' ? false : !LIVE });
 
 export function setTestMode(on: boolean) {
   testMode.on = on;

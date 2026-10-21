@@ -17,7 +17,9 @@ cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when ap
 swiftc -parse-as-library ios/ShareExtension/ShareModel.swift test/share_targets.swift -o /tmp/musiclink-share-targets-test && /tmp/musiclink-share-targets-test
 ```
 
-The browser tests start the API and the production build of the web on their own ports (53100, 54100), never a running dev server. If another worktree tests at the same time, pick other ports: `TEST_API_PORT=53101 TEST_WEB_PORT=54101 bun run test`.
+The browser tests start the API and the production build of the web on their own ports (31100, 31101), never a running dev server. Keep test ports below Linux's ephemeral range (32768–60999), so outgoing connections cannot occupy them. If another worktree tests at the same time, pick other ports: `TEST_API_PORT=31102 TEST_WEB_PORT=31103 bun run test`.
+
+`bun run test` gives the API and browser suites their own empty temporary database on the server from `DATABASE_URL`. The user needs `CREATEDB` (local Compose and CI already have it). The runner deletes only that database on success, failure or SIGINT/SIGTERM; direct `bun test` or `playwright test` calls bypass isolation.
 
 ## Deploy
 
@@ -30,6 +32,9 @@ The browser tests start the API and the production build of the web on their own
 - Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
 
 ## Pitfalls
+
+- Gitleaks 8.30.1 reads the checkout's `.gitleaksignore` in addition to `--gitleaks-ignore-path`. The workflow replaces it with `CONFIG_REF`'s version too; fork PRs use the base commit's config and ignores.
+- Correlated subselects in `sql` templates: in a single-table select Drizzle renders columns without table names, including inside templates. `exists (select 1 from ${subs} where ${subs.userId} = ${users.id})` becomes `where "user_id" = "id"`, silently referring to the subselect's ID. Use a join or `alias()`, or two simple queries.
 
 - The bundle ID `org.musiclink.prototype` and the repo name predate the naming rules and stay as they are.
 - Apple may report a build as `VALID` before TestFlight group assignment can resolve its ID (404). Once the build is readable, rerun only the failed `testflight` job; do not upload the same build number again.
@@ -44,6 +49,9 @@ The browser tests start the API and the production build of the web on their own
 
 ## Conventions
 
+- Strict TypeScript: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`; Biome forbids `any` (`noExplicitAny`, `noImplicitAnyLet`, `noEvolvingTypes`). Unknown input stays `unknown` until parsed with zod: request bodies, external JSON, saved preferences and env in `apps/api/src/env.ts` (imported first at boot). Schemas passed to library types use `.exactOptional()`. Fix type errors at their source, without casts or suppression comments.
+- On SIGTERM/SIGINT the API finishes startup, drains requests and closes its database pool. Compose allows 30 seconds; mail connections have bounded timeouts. There is no worker role.
+
 - Stateless, so MusicLink can move to another server or run replicated behind a load balancer (`infra.md`, „Skalierung“): disk and process memory hold no state that must outlive an instance or hold for all of them. Feedback and its rate limits live in Postgres, no volume besides `pgdata`. In-memory caches only if every instance may lose them, like the 24-hour song cache.
 - No background jobs or timers (`setTimeout`, `setInterval`) in the API process. If one is needed, it runs as its own `worker` role like in starter.
 - Every role has a health check in its image: API `/api/health`, web `/health` (process only).
@@ -57,7 +65,7 @@ The browser tests start the API and the production build of the web on their own
 
 ## Secret scan
 
-`.github/workflows/secrets.yml` runs on every push to every branch and on PRs from forks, without `paths-ignore`, and scans the new commits with gitleaks (Docker image pinned by digest). A finding turns the run red; `--redact` keeps the value out of the public log.
+`.github/workflows/secrets.yml` runs on every branch/tag push and on PRs from forks, without `paths-ignore`, and scans new commits including merge resolutions with gitleaks (Docker image pinned by digest). Fork PRs use the base commit’s config and ignores; new branches/tags without new commits are skipped. A finding turns the run red; `--redact` keeps the value out of the public log.
 
 - Rules: the gitleaks defaults plus `.gitleaks.toml`, which only exempts `generic-api-key` in `bun.lock` and `apps/mobile/pubspec.lock`, where hashes trip it. Real token formats (`ghp_…`, `sk_live_…`) are still caught there.
 - False alarm: add the `Fingerprint` from the log as a line to `.gitleaksignore`.
@@ -92,3 +100,5 @@ Android symbols are separated into `aab/` for Play installations and `apk/` for 
 - Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states.
 - No README: the sections „Secret scan“, „For agents“ and „Release builds“, which starter keeps in its README, are here.
 - The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum and Datenschutz.
+- Magic-link verification limits and ALTCHA before login mails do not apply: MusicLink has no accounts or login routes and sends only feedback notifications.
+- Biome runs the three rules against `any` via `bun run check`; existing formatting is kept, so this rollout does not enable the starter's other lint/format rules.

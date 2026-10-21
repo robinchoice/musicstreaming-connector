@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { z } from 'zod';
   import {
     closeFeedback,
     feedback,
@@ -16,9 +17,19 @@
   const STORAGE_KEY = 'feedback-button';
   const EMAIL_KEY = 'feedback-email';
 
+  const positionSchema = z.object({ x: z.number(), y: z.number() });
+
+  function savedPosition() {
+    try {
+      return positionSchema.safeParse(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).data ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   let width = $state(0);
   let height = $state(0);
-  let saved = $state<{ x: number; y: number } | null>(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
+  let saved = $state<{ x: number; y: number } | null>(savedPosition());
   let capturing = $state(false);
   let flash = $state(false);
   let message = $state('');

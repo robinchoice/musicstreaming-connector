@@ -57,7 +57,7 @@
           <p>Schick {name} deinen Dienst zurück, dann klappt es in beide Richtungen.</p>
           <input bind:value={myName} maxlength="40" placeholder="Dein Name" autocomplete="given-name" />
           <div class="services">
-            {#each Object.keys(platforms) as Platform[] as mine}
+            {#each (Object.keys(platforms) as Platform[]) as mine}
               <button onclick={() => answer(mine)}><span class="dot {mine}"></span>{platforms[mine]}</button>
             {/each}
           </div>

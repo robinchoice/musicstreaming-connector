@@ -3,12 +3,11 @@ import { createDb, feedback, migrateDb } from '@app/db';
 import { eq } from 'drizzle-orm';
 import { createApp } from './app';
 
-// Runs against DATABASE_URL, every test from its own address
-const db = createDb(process.env.DATABASE_URL!);
+const db = createDb(process.env.DATABASE_URL);
 const app = createApp(async () => { throw new Error('unused'); }, db);
 const log = spyOn(console, 'log');
 
-beforeAll(() => migrateDb(process.env.DATABASE_URL!));
+beforeAll(() => migrateDb(process.env.DATABASE_URL), 20_000);
 afterAll(() => db.$client.end());
 afterEach(() => { delete process.env.FEEDBACK_EMAIL; });
 

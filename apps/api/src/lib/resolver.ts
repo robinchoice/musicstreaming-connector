@@ -2,7 +2,7 @@ import { failureMessages, type Conversion, type FailureCode, type Platform } fro
 import { z } from 'zod';
 
 export class ResolutionError extends Error {
-  constructor(public code: FailureCode, public searchUrl?: string) {
+  constructor(public code: FailureCode, public searchUrl: string | undefined = undefined) {
     super(failureMessages[code]);
   }
 }

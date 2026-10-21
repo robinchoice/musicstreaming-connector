@@ -66,7 +66,7 @@ export const searchYouTube: MusicSearch = async (query, signal) => {
   return (results.songs?.contents ?? []).flatMap(item =>
     item.id && item.title && item.artists ? [{
       id: item.id, title: item.title, artists: item.artists.map(artist => artist.name),
-      album: item.album?.name, durationSeconds: item.duration?.seconds,
+      ...(item.album ? { album: item.album.name } : {}), ...(item.duration ? { durationSeconds: item.duration.seconds } : {}),
       artworkUrl: item.thumbnails?.[0]?.url ?? null,
     }] : []);
 };
@@ -94,7 +94,7 @@ function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
     if (!response.ok) throw new ResolutionError('NETWORK');
     return response;
   };
-  const get = async (origin: string, params: Record<string, string>) => (await request(origin, params)).json();
+  const get = async (origin: string, params: Record<string, string>): Promise<unknown> => (await request(origin, params)).json();
   return { controller, signal, request, get };
 }
 type Session = ReturnType<typeof session>;
@@ -136,17 +136,17 @@ function loadSource(parsed: Source, { request, get, signal }: Session): Promise<
     } else if (parsed.platform === 'appleMusic') {
       const track = appleTracks(await get('https://itunes.apple.com/lookup', { id: parsed.id, country: parsed.country, entity: 'song' })).find(track => String(track.trackId) === parsed.id);
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      source = { title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, durationSeconds: track.trackTimeMillis ? track.trackTimeMillis / 1000 : undefined, artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
+      source = { title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
     } else if (parsed.platform === 'spotify') {
       const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; MusicLink/0.3)' })).text();
       const duration = Number(spotifyMeta(html, 'music:duration'));
-      source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, durationSeconds: duration > 0 ? duration : undefined, artworkUrl: https(spotifyMeta(html, 'og:image')) };
+      source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, ...(duration > 0 ? { durationSeconds: duration } : {}), artworkUrl: https(spotifyMeta(html, 'og:image')) };
     } else {
       // Deezer reports unknown tracks as an error object with status 200
-      const body = await get(`https://api.deezer.com/track/${parsed.id}`, {}) as { error?: unknown };
-      if (body.error) throw new ResolutionError('SOURCE_UNAVAILABLE');
+      const body = await get(`https://api.deezer.com/track/${parsed.id}`, {});
+      if (z.object({ error: z.unknown() }).safeParse(body).data?.error) throw new ResolutionError('SOURCE_UNAVAILABLE');
       const track = deezerTrack.parse(body);
-      source = { title: track.title, artist: track.artist.name, url: `https://www.deezer.com/track/${track.id}`, durationSeconds: track.duration, artworkUrl: https(track.album?.cover_xl) };
+      source = { title: track.title, artist: track.artist.name, url: `https://www.deezer.com/track/${track.id}`, ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_xl) };
     }
     source.title = source.title.trim();
     source.artist = source.artist.trim();
@@ -174,17 +174,17 @@ function findCandidates(target: Platform, source: Track, country: string, { get,
           const songId = url.searchParams.get('i');
           url.search = '';
           if (songId) url.searchParams.set('i', songId);
-          return [{ title: track.trackName, url: url.toString(), album: track.collectionName, durationSeconds: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : undefined, artworkUrl: https(track.artworkUrl100) }];
+          return [{ title: track.trackName, url: url.toString(), ...(track.collectionName === undefined ? {} : { album: track.collectionName }), ...(track.trackTimeMillis ? { durationSeconds: Math.round(track.trackTimeMillis / 1000) } : {}), artworkUrl: https(track.artworkUrl100) }];
         });
     } else if (target === 'youtubeMusic') {
       candidates = (await search(query, signal))
         .filter(track => /^[A-Za-z0-9_-]{11}$/.test(track.id) && matches(track.title, track.artists, track.durationSeconds))
-        .map(track => ({ title: track.title, url: `https://music.youtube.com/watch?v=${track.id}`, album: track.album, durationSeconds: track.durationSeconds, artworkUrl: https(track.artworkUrl) }));
+        .map(track => ({ title: track.title, url: `https://music.youtube.com/watch?v=${track.id}`, ...(track.album === undefined ? {} : { album: track.album }), ...(track.durationSeconds === undefined ? {} : { durationSeconds: track.durationSeconds }), artworkUrl: https(track.artworkUrl) }));
     } else if (target === 'deezer') {
       candidates = z.object({ data: z.array(z.unknown()) }).parse(await get('https://api.deezer.com/search', { q: query, limit: '25' })).data.flatMap(item => {
         const track = deezerTrack.safeParse(item);
         if (!track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration)) return [];
-        return [{ title: track.data.title, url: `https://www.deezer.com/track/${track.data.id}`, album: track.data.album?.title, durationSeconds: track.data.duration, artworkUrl: https(track.data.album?.cover_medium) }];
+        return [{ title: track.data.title, url: `https://www.deezer.com/track/${track.data.id}`, ...(track.data.album?.title === undefined ? {} : { album: track.data.album.title }), ...(track.data.duration === undefined ? {} : { durationSeconds: track.data.duration }), artworkUrl: https(track.data.album?.cover_medium) }];
       });
     } else {
       candidates = await spotifyCandidates(source, get);

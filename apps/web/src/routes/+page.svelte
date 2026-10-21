@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { z } from 'zod';
   import { onDestroy, onMount } from 'svelte';
   import Friends from '$lib/components/Friends.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
@@ -38,8 +39,8 @@
   onMount(() => {
     canShare = typeof navigator.share === 'function';
     try {
-      const saved = JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}');
-      if (saved.target in platforms) target = savedTarget = saved.target;
+      const saved = z.object({ target: z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']) }).safeParse(JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}')).data;
+      if (saved) target = savedTarget = saved.target;
     } catch {}
     const region = navigator.language.split('-')[1]?.toUpperCase();
     if (countries.some(code => code === region)) country = region!;

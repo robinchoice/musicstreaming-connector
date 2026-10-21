@@ -11,6 +11,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
   api:
+    stop_grace_period: 30s
     image: ghcr.io/robinchoice/musiclink-api:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
       DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD}@postgres:5432/app

@@ -1,9 +1,34 @@
+import './env';
 import './monitoring';
 import { createDb, migrateDb } from '@app/db';
 import { createApp } from './app';
 
-// A failed migration aborts the boot.
-await migrateDb(process.env.DATABASE_URL!);
-const db = createDb(process.env.DATABASE_URL!);
+const db = createDb(process.env.DATABASE_URL);
+let stopping = false;
 
-export default { port: Number(process.env.PORT || 3000), idleTimeout: 30, fetch: createApp(undefined, db).fetch };
+async function shutdown() {
+  if (stopping) return;
+  stopping = true;
+  const server = await startup;
+  await server.stop();
+  await db.$client.end();
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+const startup = (async () => {
+  // A failed migration aborts the boot.
+  console.log('[boot] Migrating database');
+  await migrateDb(process.env.DATABASE_URL);
+  const server = Bun.serve({
+    port: Number(process.env.PORT || 3000),
+    idleTimeout: 30,
+    fetch: createApp(undefined, db).fetch,
+  });
+  console.log(`[boot] API listening on port ${server.port}`);
+  return server;
+})();
+
+await startup;
