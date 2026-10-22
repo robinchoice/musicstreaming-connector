@@ -143,7 +143,7 @@ jobs:
 
       # Eindeutige, steigende Build-Nummer pro Lauf, TestFlight lehnt Duplikate ab.
       - name: Flutter-Build vorbereiten
-        run: flutter build ios --config-only --release --no-codesign --obfuscate --split-debug-info=$RUNNER_TEMP/symbols --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
+        run: flutter build ios --config-only --release --no-codesign --obfuscate --split-debug-info=$RUNNER_TEMP/symbols --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --dart-define=BUILD_NUMBER=$GITHUB_RUN_NUMBER --build-number=$GITHUB_RUN_NUMBER
 
       - name: Archive bauen
         working-directory: apps/mobile/ios
@@ -274,10 +274,10 @@ jobs:
             "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > key.properties
 
       - name: App Bundle bauen
-        run: flutter build appbundle --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/aab --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
+        run: flutter build appbundle --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/aab --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --dart-define=BUILD_NUMBER=$GITHUB_RUN_NUMBER --build-number=$GITHUB_RUN_NUMBER
 
       - name: APK bauen
-        run: flutter build apk --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/apk --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --build-number=$GITHUB_RUN_NUMBER
+        run: flutter build apk --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/apk --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN --dart-define=BUILD_NUMBER=$GITHUB_RUN_NUMBER --build-number=$GITHUB_RUN_NUMBER
 
       - name: Remove signing material
         if: always()

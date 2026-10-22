@@ -119,6 +119,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('an outdated build shows only the update screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [updateRequiredProvider.overrideWith((ref) async => true)],
+        child: const App(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Update nötig'), findsOneWidget);
+    expect(find.text('Jetzt aktualisieren'), findsOneWidget);
+    expect(find.text('Link umwandeln'), findsNothing);
+  });
+
   Future<void> submit(WidgetTester tester) async {
     await tester.enterText(
       find.byType(TextField),

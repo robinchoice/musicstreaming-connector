@@ -111,6 +111,7 @@ final class ShareModel: ObservableObject {
             if let url = components?.url {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 25
+                Self.identify(&request)
                 if let result = try? await URLSession.shared.data(for: request),
                    (result.1 as? HTTPURLResponse)?.statusCode == 200 {
                     song = try? JSONDecoder().decode(Song.self, from: result.0)
@@ -174,6 +175,12 @@ final class ShareModel: ObservableObject {
     private var input: String?
     private var isClosed = false
 
+    // Lets the API ask outdated builds to update (status 426), see apps/api/src/app.ts
+    private static func identify(_ request: inout URLRequest) {
+        request.setValue("ios", forHTTPHeaderField: "X-App-Platform")
+        request.setValue(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String, forHTTPHeaderField: "X-App-Build")
+    }
+
     private var apiURL: URL? {
         let defines = Bundle.main.object(forInfoDictionaryKey: "MusicLinkDartDefines") as? String ?? ""
         for encoded in defines.split(separator: ",") {
@@ -227,6 +234,7 @@ final class ShareModel: ObservableObject {
                 var request = URLRequest(url: apiURL.appendingPathComponent("api/v1/convert"))
                 request.httpMethod = "POST"
                 request.timeoutInterval = 25
+                Self.identify(&request)
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = try JSONEncoder().encode(["input": input, "target": target, "country": country])
                 let (data, response) = try await URLSession.shared.data(for: request)

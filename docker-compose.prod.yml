@@ -22,6 +22,8 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
       FEEDBACK_EMAIL: ${FEEDBACK_EMAIL:-}
+      MIN_BUILD_IOS: ${MIN_BUILD_IOS:-}
+      MIN_BUILD_ANDROID: ${MIN_BUILD_ANDROID:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:
       postgres:

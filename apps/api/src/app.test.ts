@@ -61,3 +61,22 @@ test('song lookups are cached so share pages do not hit the services again', asy
   expect(calls).toBe(1);
   expect((await app.request('/api/v1/song?country=XX&input=x')).status).toBe(400);
 });
+
+test('asks app builds below the minimum to update, but keeps feedback open', async () => {
+  process.env.MIN_BUILD_IOS = '30';
+  try {
+    const app = createApp(async () => conversion);
+    const as = (platform: string, build: string) => ({ 'x-app-platform': platform, 'x-app-build': build });
+    const outdated = await app.request('/api/v1/app', { headers: as('ios', '29') });
+    expect(outdated.status).toBe(426);
+    expect(await outdated.json()).toMatchObject({ code: 'UPDATE_REQUIRED', error: expect.any(String) });
+    const convert = { ...post({ input: 'song', target: 'appleMusic' }), headers: { 'content-type': 'application/json', ...as('ios', '29') } };
+    expect((await app.request('/api/v1/convert', convert)).status).toBe(426);
+    expect((await app.request('/api/v1/app', { headers: as('ios', '30') })).status).toBe(200);
+    expect((await app.request('/api/v1/app', { headers: as('android', '1') })).status).toBe(200);
+    expect((await app.request('/api/v1/app')).status).toBe(200);
+    expect((await app.request('/api/v1/feedback', { method: 'POST', headers: as('ios', '1') })).status).not.toBe(426);
+  } finally {
+    delete process.env.MIN_BUILD_IOS;
+  }
+});

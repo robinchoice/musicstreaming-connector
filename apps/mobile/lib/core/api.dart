@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -32,10 +33,40 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// Below the minimum build of its platform the API answers 426, see apps/api/src/app.ts.
+final updateRequiredProvider = FutureProvider.autoDispose(
+  (ref) => ref.watch(apiProvider).updateRequired(),
+);
+
+Map<String, String> get _appHeaders => buildNumber == 0
+    ? const {}
+    : {
+        'x-app-platform': defaultTargetPlatform == TargetPlatform.iOS
+            ? 'ios'
+            : 'android',
+        'x-app-build': '$buildNumber',
+      };
+
 class Api {
   final http.Client client;
   final String baseUrl;
   Api(this.client, this.baseUrl);
+
+  /// Asked once at launch. Offline or failing, the app just starts.
+  Future<bool> updateRequired() async {
+    if (buildNumber == 0) return false;
+    try {
+      final response = await client
+          .get(
+            Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/app'),
+            headers: _appHeaders,
+          )
+          .timeout(const Duration(seconds: 10));
+      return response.statusCode == 426;
+    } on Exception {
+      return false;
+    }
+  }
 
   Future<Conversion> convert(
     String input, {
@@ -51,6 +82,7 @@ class Api {
             headers: {
               'content-type': 'application/json',
               'accept': 'application/json',
+              ..._appHeaders,
             },
             body: jsonEncode({
               'input': input,
@@ -97,7 +129,7 @@ class Api {
           .get(
             Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/song')
                 .replace(queryParameters: {'input': input, 'country': country}),
-            headers: {'accept': 'application/json'},
+            headers: {'accept': 'application/json', ..._appHeaders},
           )
           .timeout(const Duration(seconds: 25));
       final body =
@@ -141,6 +173,7 @@ class Api {
             headers: {
               'content-type': 'application/json',
               'accept': 'application/json',
+              ..._appHeaders,
             },
             body: jsonEncode(body),
           )

@@ -7,6 +7,8 @@ const envSchema = z.object({
   APP_URL: z.url(),
   PORT: port.or(unset).exactOptional(),
   SMTP_PORT: port.or(unset).exactOptional(),
+  MIN_BUILD_IOS: z.string().regex(/^\d*$/).exactOptional(),
+  MIN_BUILD_ANDROID: z.string().regex(/^\d*$/).exactOptional(),
   SENTRY_DSN: z.url().or(unset).exactOptional(),
   FEEDBACK_EMAIL: z.email().or(unset).exactOptional(),
 });
