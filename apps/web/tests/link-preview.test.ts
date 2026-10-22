@@ -15,3 +15,12 @@ test('an invite overrides the preview instead of adding a second one', async ({ 
   expect(html.match(/<meta property="og:title"/g)).toHaveLength(1);
   expect(html).toContain('<meta property="og:title" content="Lea hört auf Spotify"');
 });
+
+test('pages and the API carry the security headers', async ({ request }) => {
+  for (const path of ['/', '/api/health']) {
+    const headers = (await request.get(path)).headers();
+    expect(headers['strict-transport-security']).toBe('max-age=31536000');
+    expect(headers['x-content-type-options']).toBe('nosniff');
+  }
+  expect((await request.get('/')).headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+});

@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test';
 
+// Console errors fail the test, CSP violations included
+let errors: string[] = [];
+test.beforeEach(({ page }) => {
+  errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', err => errors.push(err.message));
+});
+test.afterEach(() => expect(errors).toEqual([]));
+
 test('invalid saved entries preserve valid friends and groups after saving', async ({ page }) => {
   await page.addInitScript(() => {
     if (localStorage.getItem('musiclink-friends') !== null) return;

@@ -1,6 +1,17 @@
 import { LIVE } from '@app/shared';
 import { expect, test } from '@playwright/test';
 
+// Console errors fail the test, CSP violations included
+let errors: string[] = [];
+test.beforeEach(({ page }) => {
+  errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', err => errors.push(err.message));
+});
+test.afterEach(() => expect(errors).toEqual([]));
+
 test('the test mode switch in the footer hides the bug button', async ({ page }) => {
   await page.goto('/');
   const testMode = page.getByRole('checkbox', { name: 'Testmodus' });

@@ -15,10 +15,21 @@ const API_ORIGIN = process.env.API_INTERNAL_URL || (dev ? 'http://localhost:3000
 // Public content for agents comes from the API, see apps/api/src/routes/agents.ts
 const AGENT_PATH = /^\/llms(-full)?\.txt$|\.md$/;
 
+// From starter. The CSP comes from svelte.config.js. Browsers ignore HSTS over
+// plain HTTP, so it is harmless in dev.
+const SECURITY_HEADERS = {
+  'strict-transport-security': 'max-age=31536000',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+};
+
 export const handle: Handle = async ({ event, resolve }) => {
   const { pathname, search } = event.url;
-  if (pathname.startsWith('/api/') || AGENT_PATH.test(pathname)) return proxy(event.request, `${API_ORIGIN}${pathname}${search}`);
-  return (await markdown(event.request, event.url)) ?? resolve(event);
+  const response = pathname.startsWith('/api/') || AGENT_PATH.test(pathname)
+    ? await proxy(event.request, `${API_ORIGIN}${pathname}${search}`)
+    : ((await markdown(event.request, event.url)) ?? (await resolve(event)));
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);
+  return response;
 };
 
 // Agents that ask for Markdown get a public page as its .md, all others the HTML
