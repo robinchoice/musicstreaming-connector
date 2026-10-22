@@ -10,9 +10,10 @@ export async function appleMusicToken(env: Record<string, string | undefined> = 
   const pem = Buffer.from(key, 'base64').toString().replace(/-----[A-Z ]+-----|\s/g, '');
   const signer = await crypto.subtle.importKey('pkcs8', Buffer.from(pem, 'base64'), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   const iat = Math.floor(now / 1000);
-  const encode = (value: object) => base64url(new TextEncoder().encode(JSON.stringify(value)));
+  const encoder = new TextEncoder();
+  const encode = (value: object) => base64url(encoder.encode(JSON.stringify(value)));
   const unsigned = `${encode({ alg: 'ES256', kid })}.${encode({ iss: team, iat, exp: iat + 12 * 60 * 60 })}`;
-  const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, signer, new TextEncoder().encode(unsigned));
+  const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, signer, encoder.encode(unsigned));
   cached = { token: `${unsigned}.${base64url(new Uint8Array(signature))}`, expires: now + 12 * 60 * 60_000 };
   return cached.token;
 }

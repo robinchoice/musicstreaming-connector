@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -40,27 +39,22 @@ final updateRequiredProvider = FutureProvider.autoDispose(
 
 Map<String, String> get _appHeaders => buildNumber == 0
     ? const {}
-    : {
-        'x-app-platform': defaultTargetPlatform == TargetPlatform.iOS
-            ? 'ios'
-            : 'android',
-        'x-app-build': '$buildNumber',
-      };
+    : {'x-app-platform': appPlatform, 'x-app-build': '$buildNumber'};
 
 class Api {
   final http.Client client;
   final String baseUrl;
   Api(this.client, this.baseUrl);
 
+  Uri _url(String path) =>
+      Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1$path');
+
   /// Asked once at launch. Offline or failing, the app just starts.
   Future<bool> updateRequired() async {
     if (buildNumber == 0) return false;
     try {
       final response = await client
-          .get(
-            Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/app'),
-            headers: _appHeaders,
-          )
+          .get(_url('/app'), headers: _appHeaders)
           .timeout(const Duration(seconds: 10));
       return response.statusCode == 426;
     } on Exception {
@@ -76,9 +70,7 @@ class Api {
     try {
       final response = await client
           .post(
-            Uri.parse(
-              '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/convert',
-            ),
+            _url('/convert'),
             headers: {
               'content-type': 'application/json',
               'accept': 'application/json',
@@ -127,7 +119,7 @@ class Api {
     try {
       final response = await client
           .get(
-            Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/song')
+            _url('/song')
                 .replace(queryParameters: {'input': input, 'country': country}),
             headers: {'accept': 'application/json', ..._appHeaders},
           )
@@ -167,9 +159,7 @@ class Api {
     try {
       final response = await client
           .post(
-            Uri.parse(
-              '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1/feedback',
-            ),
+            _url('/feedback'),
             headers: {
               'content-type': 'application/json',
               'accept': 'application/json',

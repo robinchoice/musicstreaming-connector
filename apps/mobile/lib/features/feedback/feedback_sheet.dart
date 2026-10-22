@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../config.dart';
 import '../../core/api.dart';
 import '../../core/router.dart';
 
@@ -22,7 +23,7 @@ Future<void> showFeedbackSheet(
 }) {
   final size = MediaQuery.sizeOf(context);
   final feedbackContext = {
-    'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+    'platform': appPlatform,
     'page': ref
         .read(routerProvider)
         .routerDelegate

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,9 +11,7 @@ class UpdateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final store = defaultTargetPlatform == TargetPlatform.iOS
-        ? appStoreUrl
-        : playStoreUrl;
+    final store = appPlatform == 'ios' ? appStoreUrl : playStoreUrl;
     return Scaffold(
       body: SafeArea(
         child: Center(

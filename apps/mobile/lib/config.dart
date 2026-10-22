@@ -1,3 +1,8 @@
+import 'package:flutter/foundation.dart';
+
+String get appPlatform =>
+    defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+
 const appName = 'Songgate';
 // The same as LIVE in packages/shared: true once Songgate is live as 1.0.
 // From then on the bug button waits for the test mode switch in the settings.
