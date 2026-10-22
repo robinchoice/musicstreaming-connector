@@ -17,10 +17,10 @@
   }
 </script>
 
-<svelte:head><title>{song.source.title} · {song.source.artist} · MusicLink</title></svelte:head>
+<svelte:head><title>{song.source.title} · {song.source.artist} · Songgate</title></svelte:head>
 
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> MusicLink</a><span class="badge">Ohne Anmeldung</span></header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> Songgate</a><span class="badge">Ohne Anmeldung</span></header>
   <main>
     <section class="card">
       <div class="song">
@@ -37,7 +37,7 @@
         </a>
       {/each}
     </section>
-    <p class="more">Selbst einen Song teilen? <a href="/">MusicLink öffnen</a></p>
+    <p class="more">Selbst einen Song teilen? <a href="/">Songgate öffnen</a></p>
   </main>
   <PleasanceFooter />
 </div>

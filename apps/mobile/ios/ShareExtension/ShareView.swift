@@ -76,7 +76,7 @@ struct ShareView: View {
                                 .padding(.top, 12)
                             }
                             if model.friends.isEmpty {
-                                Text("Tipp: In der MusicLink-App speicherst du Freunde mit ihrem Dienst und teilst an mehrere auf einmal.")
+                                Text("Tipp: In der Songgate-App speicherst du Freunde mit ihrem Dienst und teilst an mehrere auf einmal.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
@@ -109,14 +109,14 @@ struct ShareView: View {
                 .padding(.horizontal)
             }
             .background(Color(red: 251 / 255, green: 252 / 255, blue: 247 / 255))
-            .navigationTitle("MusicLink")
+            .navigationTitle("Songgate")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showingGuide = true } label: {
                         Image(systemName: "star")
                     }
-                    .accessibilityLabel("MusicLink griffbereit")
+                    .accessibilityLabel("Songgate griffbereit")
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Schließen", action: finish)
@@ -128,9 +128,9 @@ struct ShareView: View {
         .sheet(isPresented: $showingGuide) {
             NavigationStack {
                 Form {
-                    Text("Im Teilen-Menü: Mehr → Bearbeiten → Plus bei MusicLink. Ziehe MusicLink über den Griff nach oben und tippe auf Fertig.")
+                    Text("Im Teilen-Menü: Mehr → Bearbeiten → Plus bei Songgate. Ziehe Songgate über den Griff nach oben und tippe auf Fertig.")
                 }
-                .navigationTitle("MusicLink griffbereit")
+                .navigationTitle("Songgate griffbereit")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

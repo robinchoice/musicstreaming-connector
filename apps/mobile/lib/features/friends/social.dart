@@ -160,7 +160,7 @@ String inviteUrl(Friend me) =>
     '${_origin()}/f/${inviteSlugs[me.platform]}?name=${Uri.encodeQueryComponent(me.name)}';
 
 String inviteText(Friend me) =>
-    'Ich höre auf ${platforms[me.platform]}. Speicher mich in MusicLink, dann bekomme ich deine Songs immer passend:\n${inviteUrl(me)}';
+    'Ich höre auf ${platforms[me.platform]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:\n${inviteUrl(me)}';
 
 /// One link if everyone uses the same service, otherwise one line per
 /// service plus the share page for everyone else. Same as packages/shared.

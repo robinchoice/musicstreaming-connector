@@ -28,7 +28,7 @@
     const me = { name: value, platform };
     setMe(me);
     const url = inviteUrl(location.origin, me);
-    const text = `Ich höre auf ${platforms[platform]}. Speicher mich in MusicLink, dann bekomme ich deine Songs immer passend:`;
+    const text = `Ich höre auf ${platforms[platform]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:`;
     try {
       if (typeof navigator.share === 'function') await navigator.share({ text, url });
       else { await navigator.clipboard.writeText(`${text}\n${url}`); toast('Einladung kopiert.'); }

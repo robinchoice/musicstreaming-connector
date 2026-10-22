@@ -7,6 +7,6 @@ export const load: PageLoad = ({ params, url }) => {
   const name = (url.searchParams.get('name') ?? '').trim().slice(0, 40);
   if (!platform || !name) return {};
   return {
-    meta: { title: `${name} hört auf ${platforms[platform]}`, description: `Speicher ${name} in MusicLink, dann landen deine Songs immer direkt in ${platforms[platform]}.` },
+    meta: { title: `${name} hört auf ${platforms[platform]}`, description: `Speicher ${name} in Songgate, dann landen deine Songs immer direkt in ${platforms[platform]}.` },
   };
 };

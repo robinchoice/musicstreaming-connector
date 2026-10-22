@@ -1,4 +1,4 @@
-# MusicLink
+# Songgate
 
 ## Purpose & links
 
@@ -26,7 +26,7 @@ The browser tests start the API and the production build of the web on their own
 - A push to `main` runs `ci.yml`: checks, builds the images, then deploys them through the Coolify API.
 - After a successful deploy, `screenshots` photographs the public home page in fresh browser contexts (German, desktop 1440×900 and phone 390×844 at double density). No login, shared links, query parameters or user data. The starter script `apps/web/screenshots.ts` replaces `docs/screenshots/` with WebP images, so only the current set is kept. Run locally with `bun run screenshots [url]` in `apps/web`.
 - Changed screenshots are committed to `main` by `github-actions[bot]` with `[skip ci]` to prevent deploy loops. Fetch before pushing. Only after the screenshots succeed, the job sends `prototype-deployed` (`client_payload: {slug, sha}`) to `robinchoice/pleasance` using the existing `PLEASANCE_DISPATCH_TOKEN` secret, scoped to that receiver. Without the secret only the dispatch is skipped.
-- Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds upload-key-signed Android AAB and APK artifacts (kept for 90 days). Android release CI requires the `ANDROID_KEYSTORE_*`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets. After Robin confirms `org.pleasance.musiclink`, uploads the first AAB manually and grants the service account access, set `PLAY_SERVICE_ACCOUNT_JSON` and `PLAY_UPLOAD=true` to upload subsequent builds to Play internal testing. Never enable this before package-name confirmation; no production promotion runs automatically. Job `testflight` (`apps/mobile/tool/testflight.mjs`) gives every build to the internal group „MusicLink Internal“.
+- Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds upload-key-signed Android AAB and APK artifacts (kept for 90 days). Android release CI requires the `ANDROID_KEYSTORE_*`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets. Robin confirmed `org.pleasance.songgate` on 22 October 2026. After he uploads the first AAB manually and grants the service account access, set `PLAY_SERVICE_ACCOUNT_JSON` and `PLAY_UPLOAD=true` to upload subsequent builds to Play internal testing. Never enable this before package-name confirmation; no production promotion runs automatically. Job `testflight` (`apps/mobile/tool/testflight.mjs`) gives every build to the internal group „MusicLink Internal“.
 - External testers (group „MusicLink V1“) don't get every build: TestFlight mails a group's testers for each build it is given. Only the build of a release tag `v*` goes there and is submitted for the beta review, and an agent sets that tag only when Robin asks for a release. `git tag v<version> && git push origin v<version>` builds iOS and Android again and releases that build. An already uploaded build: `node tool/testflight.mjs [--quiet] <build number> "MusicLink Internal" "MusicLink V1"` in `apps/mobile` with `ASC_*` from `~/.secrets`.
 - Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
 - Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
@@ -52,7 +52,7 @@ The browser tests start the API and the production build of the web on their own
 - Strict TypeScript: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`; Biome forbids `any` (`noExplicitAny`, `noImplicitAnyLet`, `noEvolvingTypes`). Unknown input stays `unknown` until parsed with zod: request bodies, external JSON, saved preferences and env in `apps/api/src/env.ts` (imported first at boot). Schemas passed to library types use `.exactOptional()`. Fix type errors at their source, without casts or suppression comments.
 - On SIGTERM/SIGINT the API finishes startup, drains requests and closes its database pool. Compose allows 30 seconds; mail connections have bounded timeouts. There is no worker role.
 
-- Stateless, so MusicLink can move to another server or run replicated behind a load balancer (`infra.md`, „Skalierung“): disk and process memory hold no state that must outlive an instance or hold for all of them. Feedback and its rate limits live in Postgres, no volume besides `pgdata`. In-memory caches only if every instance may lose them, like the 24-hour song cache.
+- Stateless, so Songgate can move to another server or run replicated behind a load balancer (`infra.md`, „Skalierung“): disk and process memory hold no state that must outlive an instance or hold for all of them. Feedback and its rate limits live in Postgres, no volume besides `pgdata`. In-memory caches only if every instance may lose them, like the 24-hour song cache.
 - No background jobs or timers (`setTimeout`, `setInterval`) in the API process. If one is needed, it runs as its own `worker` role like in starter.
 - Every role has a health check in its image: API `/api/health`, web `/health` (process only).
 - Config only through env: every new variable goes into `.env.example`, `.env.production.example` and `docker-compose.prod.yml`. No server domains, IPs or paths in the code.
@@ -96,9 +96,11 @@ Android symbols are separated into `aab/` for Play installations and `apk/` for 
 
 ## Abweichungen vom Standard
 
+- Songgate keeps the existing repo `musicstreaming-connector`, iOS bundle IDs `org.musiclink.prototype` / `org.musiclink.prototype.share`, app group, `musiclink://` URL scheme, device storage keys, TestFlight group names and infrastructure identifiers (Coolify, images, tokens). Android uses `org.pleasance.songgate`; share `/s/…` and invite `/f/…` links remain valid.
+
 - The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
-- Signal colours: only the error signal, MusicLink has no „your turn“ or „new“ states.
+- Signal colours: only the error signal, Songgate has no „your turn“ or „new“ states.
 - No README: the sections „Secret scan“, „For agents“ and „Release builds“, which starter keeps in its README, are here.
 - The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum and Datenschutz.
-- Magic-link verification limits and ALTCHA before login mails do not apply: MusicLink has no accounts or login routes and sends only feedback notifications.
+- Magic-link verification limits and ALTCHA before login mails do not apply: Songgate has no accounts or login routes and sends only feedback notifications.
 - Biome runs the three rules against `any` via `bun run check`; existing formatting is kept, so this rollout does not enable the starter's other lint/format rules.

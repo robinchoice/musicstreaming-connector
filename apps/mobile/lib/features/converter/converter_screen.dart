@@ -408,7 +408,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const MusicLinkBrand(),
+        title: const SonggateBrand(),
         backgroundColor: Colors.transparent,
         leading: conversion == null
             ? null
@@ -572,7 +572,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Hole MusicLink nach vorne ins Teilen-Menü. Dann sparst du dir das Einfügen.',
+                                'Hole Songgate nach vorne ins Teilen-Menü. Dann sparst du dir das Einfügen.',
                               ),
                               TextButton.icon(
                                 onPressed: _loading ? null : _openGuide,
@@ -584,7 +584,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                         )
                       else
                         const Text(
-                          'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle MusicLink.',
+                          'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.',
                         ),
                       const SizedBox(height: 24),
                       Text(

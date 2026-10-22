@@ -190,8 +190,8 @@ ThemeData buildTheme() {
   );
 }
 
-class MusicLinkMark extends StatelessWidget {
-  const MusicLinkMark({super.key, this.size = 38});
+class SonggateMark extends StatelessWidget {
+  const SonggateMark({super.key, this.size = 38});
 
   final double size;
 
@@ -204,14 +204,14 @@ class MusicLinkMark extends StatelessWidget {
   );
 }
 
-class MusicLinkBrand extends StatelessWidget {
-  const MusicLinkBrand({super.key});
+class SonggateBrand extends StatelessWidget {
+  const SonggateBrand({super.key});
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const MusicLinkMark(),
+      const SonggateMark(),
       const SizedBox(width: 11),
       Flexible(
         child: Text(appName, style: Theme.of(context).textTheme.titleLarge),

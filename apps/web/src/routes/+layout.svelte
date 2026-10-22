@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-  <title>MusicLink · Musik verbindet</title>
+  <title>Songgate · Musik verbindet</title>
   <meta name="description" content="Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung." />
   <meta property="og:site_name" content={APP_NAME} />
   <meta property="og:type" content="website" />

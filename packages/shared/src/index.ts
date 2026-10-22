@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-export const APP_NAME = 'MusicLink';
+export const APP_NAME = 'Songgate';
 export const APP_BAND = { from: 3.85, to: 4.55 };
 export const APP_TAGLINE = 'Ein Link für einen Song, der bei allen im eigenen Streamingdienst aufgeht.';
-// True once MusicLink is live as 1.0 (starter README, "Live als 1.0"). From then on
+// True once Songgate is live as 1.0 (starter README, "Live als 1.0"). From then on
 // the bug button waits for the test mode switch, see testMode in the web's feedback.svelte.ts.
 export const LIVE = false;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
@@ -20,7 +20,7 @@ export const conversionInput = z.object({
 export type ConversionInput = z.infer<typeof conversionInput>;
 
 export const failureMessages = {
-  INVALID_LINK: 'Teile bitte einen einzelnen Song aus YouTube Music, Apple Music, Spotify oder Deezer mit MusicLink.',
+  INVALID_LINK: 'Teile bitte einen einzelnen Song aus YouTube Music, Apple Music, Spotify oder Deezer mit Songgate.',
   UNSUPPORTED_LINK: 'Teile einen Song aus YouTube Music, Apple Music, Spotify oder Deezer und wähle einen anderen Zieldienst.',
   SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song konnten nicht geladen werden.',
   NO_MATCH: 'Für diese Aufnahme wurde kein passender Treffer gefunden.',

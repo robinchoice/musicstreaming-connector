@@ -14,7 +14,7 @@ export const feedback = $state({
 
 const TEST_MODE_KEY = 'test-mode';
 
-// Shows the bug button. On until MusicLink goes live as 1.0, then off until
+// Shows the bug button. On until Songgate goes live as 1.0, then off until
 // someone switches it on in the footer. The choice stays on this device.
 const savedTestMode = browser ? localStorage.getItem(TEST_MODE_KEY) : null;
 export const testMode = $state({ on: savedTestMode === 'true' ? true : savedTestMode === 'false' ? false : !LIVE });

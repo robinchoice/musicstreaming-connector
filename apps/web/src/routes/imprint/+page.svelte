@@ -12,5 +12,5 @@
   <h2>Responsible for content according to § 18(2) MStV</h2>
   <p>Robin Wahl, Bugginger Straße 37, 79114 Freiburg, Germany</p>
 
-  <p>This imprint applies to the website and the MusicLink apps for iOS and Android.</p>
+  <p>This imprint applies to the website and the Songgate apps for iOS and Android.</p>
 </LegalPage>

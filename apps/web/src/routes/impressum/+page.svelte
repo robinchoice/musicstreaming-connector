@@ -12,5 +12,5 @@
   <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
   <p>Robin Wahl, Bugginger Straße 37, 79114 Freiburg</p>
 
-  <p>Dieses Impressum gilt für die Website und die Apps von MusicLink für iOS und Android.</p>
+  <p>Dieses Impressum gilt für die Website und die Apps von Songgate für iOS und Android.</p>
 </LegalPage>

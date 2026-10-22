@@ -22,9 +22,9 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
         body: [
           'Share songs from YouTube Music, Apple Music, Spotify or Deezer as a link for your people’s favourite player. No account, no stored song history. The website is in German.',
           '## How it works',
-          '1. Bring a song: copy its link in your music app via “Share”.\n2. Find the recording: MusicLink looks for the matching song on the target service and shows the matches.\n3. Pass it on: copy the right link and share it. Or share one link for everyone, where each person picks their own service.',
+          '1. Bring a song: copy its link in your music app via “Share”.\n2. Find the recording: Songgate looks for the matching song on the target service and shows the matches.\n3. Pass it on: copy the right link and share it. Or share one link for everyone, where each person picks their own service.',
           '## Friends and groups',
-          'Save friends with their music service, and MusicLink builds one message with a link per service. Friends and groups stay on your device, an invite link only carries a name and a service.',
+          'Save friends with their music service, and Songgate builds one message with a link per service. Friends and groups stay on your device, an invite link only carries a name and a service.',
         ].join('\n\n'),
       },
       { path: '/imprint', title: 'Imprint', description: `Provider and contact of ${APP_NAME}.`, body: fullText('/imprint') },
@@ -39,9 +39,9 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
       body: [
         'Teile Songs aus YouTube Music, Apple Music, Spotify oder Deezer als Link für den Lieblingsplayer deiner Menschen. Ohne Konto, ohne gespeicherte Song-Historie.',
         '## So funktioniert’s',
-        '1. Song mitbringen: Den Link in deiner Musik-App über „Teilen“ kopieren.\n2. Aufnahme finden: MusicLink sucht den passenden Song beim Zieldienst und zeigt dir die Treffer.\n3. Freude weitergeben: Passenden Link kopieren und teilen. Oder ein Link für alle, auf dem jeder seinen Dienst wählt.',
+        '1. Song mitbringen: Den Link in deiner Musik-App über „Teilen“ kopieren.\n2. Aufnahme finden: Songgate sucht den passenden Song beim Zieldienst und zeigt dir die Treffer.\n3. Freude weitergeben: Passenden Link kopieren und teilen. Oder ein Link für alle, auf dem jeder seinen Dienst wählt.',
         '## Freunde und Gruppen',
-        'Speichere Freunde mit ihrem Musikdienst, dann baut MusicLink eine Nachricht mit einem Link pro Dienst. Freunde und Gruppen bleiben auf deinem Gerät, ein Einladungslink enthält nur Namen und Dienst.',
+        'Speichere Freunde mit ihrem Musikdienst, dann baut Songgate eine Nachricht mit einem Link pro Dienst. Freunde und Gruppen bleiben auf deinem Gerät, ein Einladungslink enthält nur Namen und Dienst.',
       ].join('\n\n'),
     },
     { path: '/impressum', title: 'Impressum', description: `Anbieter und Kontakt von ${APP_NAME}.`, body: fullText('/impressum') },

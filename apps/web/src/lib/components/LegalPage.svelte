@@ -5,10 +5,10 @@
   let { title, lang, other, children }: { title: string; lang: 'de' | 'en'; other: { href: string; label: string }; children: Snippet } = $props();
 </script>
 
-<svelte:head><title>{title} · MusicLink</title></svelte:head>
+<svelte:head><title>{title} · Songgate</title></svelte:head>
 
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> MusicLink</a></header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> Songgate</a></header>
   <main {lang}>
     <a class="other" href={other.href} hreflang={lang === 'de' ? 'en' : 'de'}>{other.label}</a>
     <h1>{title}</h1>

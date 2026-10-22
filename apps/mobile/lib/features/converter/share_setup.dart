@@ -62,7 +62,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     : () => setState(() => _guide = false),
               )
             : null,
-        title: const MusicLinkBrand(),
+        title: const SonggateBrand(),
       ),
       body: SafeArea(
         child: Center(
@@ -100,7 +100,7 @@ class _ShareSetupState extends State<ShareSetup> {
                 const SizedBox(height: 18),
                 Text(
                   _guide
-                      ? 'Füge MusicLink zu deinen Favoriten im iPhone-Teilen-Menü hinzu.'
+                      ? 'Füge Songgate zu deinen Favoriten im iPhone-Teilen-Menü hinzu.'
                       : 'Teile Musik in dem Dienst, den deine Freunde nutzen. Direkt aus deiner Musik-App.',
                   style: theme.textTheme.bodyLarge,
                 ),
@@ -114,12 +114,12 @@ class _ShareSetupState extends State<ShareSetup> {
                     ),
                     (
                       '02',
-                      '„Bearbeiten“ → Plus bei MusicLink',
-                      'Damit kommt MusicLink zu deinen Favoriten.',
+                      '„Bearbeiten“ → Plus bei Songgate',
+                      'Damit kommt Songgate zu deinen Favoriten.',
                     ),
                     (
                       '03',
-                      'MusicLink nach oben ziehen',
+                      'Songgate nach oben ziehen',
                       'Über den Griff rechts. Dann auf „Fertig“ tippen.',
                     ),
                   ])
@@ -167,11 +167,11 @@ class _ShareSetupState extends State<ShareSetup> {
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 14),
-                        const MusicLinkMark(size: 32),
+                        const SonggateMark(size: 32),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'MusicLink',
+                            'Songgate',
                             style: theme.textTheme.titleMedium,
                           ),
                         ),
@@ -228,7 +228,7 @@ class _ShareSetupState extends State<ShareSetup> {
                               size: 40,
                             ),
                             const Icon(Icons.arrow_forward, size: 18),
-                            const MusicLinkMark(size: 64),
+                            const SonggateMark(size: 64),
                             const Icon(Icons.arrow_forward, size: 18),
                             const Icon(
                               Icons.music_note,
@@ -239,7 +239,7 @@ class _ShareSetupState extends State<ShareSetup> {
                         ),
                         const SizedBox(height: 20),
                         const Text(
-                          'YouTube Music → MusicLink → Apple Music',
+                          'YouTube Music → Songgate → Apple Music',
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -249,7 +249,7 @@ class _ShareSetupState extends State<ShareSetup> {
                   for (final text in const [
                     'Ohne Anmeldung loslegen',
                     'In deiner Musik-App bleiben',
-                    'MusicLink einmal nach vorne holen',
+                    'Songgate einmal nach vorne holen',
                   ])
                     Padding(
                       padding: const EdgeInsets.only(bottom: 14),

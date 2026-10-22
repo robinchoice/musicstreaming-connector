@@ -15,7 +15,7 @@ final testModeProvider = AsyncNotifierProvider<TestModeController, bool>(
   TestModeController.new,
 );
 
-/// Shows the bug button. On until MusicLink goes live as 1.0, then off until
+/// Shows the bug button. On until Songgate goes live as 1.0, then off until
 /// someone switches it on in the settings. The choice stays on the device.
 class TestModeController extends AsyncNotifier<bool> {
   static const _channel = MethodChannel('org.musiclink.prototype/preferences');

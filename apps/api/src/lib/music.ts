@@ -85,7 +85,7 @@ export function sharePath(source: Source) {
 function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(requestSignal ? [requestSignal] : [])]);
-  const request = async (origin: string, params: Record<string, string>, headers = { 'user-agent': 'MusicLink/0.3' }) => {
+  const request = async (origin: string, params: Record<string, string>, headers = { 'user-agent': 'Songgate/0.3' }) => {
     const url = new URL(origin);
     url.search = new URLSearchParams(params).toString();
     const response = await fetcher(url, { signal, redirect: 'error', headers });
@@ -138,7 +138,7 @@ function loadSource(parsed: Source, { request, get, signal }: Session): Promise<
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
       source = { title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
     } else if (parsed.platform === 'spotify') {
-      const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; MusicLink/0.3)' })).text();
+      const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; Songgate/0.3)' })).text();
       const duration = Number(spotifyMeta(html, 'music:duration'));
       source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, ...(duration > 0 ? { durationSeconds: duration } : {}), artworkUrl: https(spotifyMeta(html, 'og:image')) };
     } else {

@@ -1,4 +1,4 @@
-package org.pleasance.musiclink
+package org.pleasance.songgate
 
 import io.flutter.embedding.android.FlutterActivity
 import android.content.Intent

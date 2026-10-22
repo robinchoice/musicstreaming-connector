@@ -26,7 +26,7 @@
     const me = { name: myName.trim().slice(0, 40), platform: mine };
     setMe(me);
     const url = inviteUrl(page.url.origin, me);
-    const text = `Ich höre auf ${platforms[mine]}. Speicher mich in MusicLink, dann bekomme ich deine Songs immer passend:`;
+    const text = `Ich höre auf ${platforms[mine]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:`;
     try {
       if (typeof navigator.share === 'function') await navigator.share({ text, url });
       else { await navigator.clipboard.writeText(`${text}\n${url}`); toast('Einladung kopiert. Schick sie an ' + name + '.'); }
@@ -35,11 +35,11 @@
 </script>
 
 <svelte:head>
-  <title>{platform && name ? `${name} hört auf ${platforms[platform]}` : 'Einladung'} · MusicLink</title>
+  <title>{platform && name ? `${name} hört auf ${platforms[platform]}` : 'Einladung'} · Songgate</title>
 </svelte:head>
 
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> MusicLink</a><span class="badge">Ohne Anmeldung</span></header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> Songgate</a><span class="badge">Ohne Anmeldung</span></header>
   <main>
     {#if !platform || !name}
       <section class="card"><h1>Diese Einladung ist unvollständig.</h1><p>Bitte um einen neuen Einladungslink.</p></section>
@@ -49,7 +49,7 @@
         <h1>{name} hört auf {platforms[platform]}</h1>
         <p>Speicher {name}, dann landen deine Songs bei {name} immer direkt in {platforms[platform]}.</p>
         <div class="actions">
-          <a class="button primary" href="musiclink://app/friend?{new URLSearchParams({ name, service: page.params.service ?? '' })}">In der MusicLink-App speichern</a>
+          <a class="button primary" href="musiclink://app/friend?{new URLSearchParams({ name, service: page.params.service ?? '' })}">In der Songgate-App speichern</a>
           <button class="secondary" onclick={save} disabled={saved}>{saved ? `✓ ${name} ist gespeichert` : 'Hier im Browser speichern'}</button>
         </div>
         <div class="answer">

@@ -142,7 +142,7 @@ class FriendsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'Damit MusicLink weiß, wohin deine Songs sollen. Alles bleibt auf diesem Handy.',
+            'Damit Songgate weiß, wohin deine Songs sollen. Alles bleibt auf diesem Handy.',
           ),
           const SizedBox(height: 16),
           Builder(

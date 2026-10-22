@@ -103,7 +103,7 @@
 {/snippet}
 
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> MusicLink</a><span class="header-note">Gute Musik kennt keine Plattform.</span><span class="badge">Ohne Anmeldung</span></header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> Songgate</a><span class="header-note">Gute Musik kennt keine Plattform.</span><span class="badge">Ohne Anmeldung</span></header>
   <main>
     <section class="intro">
       <div class="eyebrow">EIN SONG. MEHR VERBINDUNG.</div>
