@@ -18,7 +18,8 @@ export const load: PageServerLoad = async ({ params, fetch, request }) => {
   const country = countries.find(code => code === region) ?? 'DE';
   const response = await fetch(`/api/v1/song?${new URLSearchParams({ input: link, country })}`);
   const body = await response.json();
-  if (!response.ok) error(response.status === 429 ? 503 : 404, body.error ?? 'Der Song konnte nicht geladen werden.');
+  // Busy or unreachable services are temporary, only a song that cannot be found is a 404
+  if (!response.ok) error(response.status === 429 || response.status >= 500 ? 503 : 404, body.error ?? 'Der Song konnte nicht geladen werden.');
   const song = body as Song;
   const found = (Object.keys(platforms) as Platform[]).filter(platform => song.links[platform].found).map(platform => platforms[platform]);
   return {
