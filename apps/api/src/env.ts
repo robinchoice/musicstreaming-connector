@@ -11,6 +11,9 @@ const envSchema = z.object({
   MIN_BUILD_ANDROID: z.string().regex(/^\d*$/).exactOptional(),
   SENTRY_DSN: z.url().or(unset).exactOptional(),
   FEEDBACK_EMAIL: z.email().or(unset).exactOptional(),
+  APPLE_MUSIC_TEAM_ID: z.string().regex(/^[A-Z0-9]{10}$/).or(unset).exactOptional(),
+  APPLE_MUSIC_KEY_ID: z.string().regex(/^[A-Z0-9]{10}$/).or(unset).exactOptional(),
+  APPLE_MUSIC_KEY_BASE64: z.base64().or(unset).exactOptional(),
 });
 
 declare module 'bun' {

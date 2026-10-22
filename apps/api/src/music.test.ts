@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, spyOn, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import * as monitoring from './monitoring';
 import { friendsMessage } from '@app/shared';
 import { resolve, resolveAll, sharePath, songSource, type MusicSearch } from './lib/music';
@@ -231,4 +231,62 @@ test('expected upstream failures and cancellation produce no diagnostic event', 
     async (_, init) => { init.signal!.throwIfAborted(); throw new Error('unreachable'); }))
     .rejects.toMatchObject({ code: 'NETWORK' });
   expect(diagnostics).not.toHaveBeenCalled();
+});
+
+describe('ISRC matching with a MusicKit key', async () => {
+  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64');
+  const pem = `-----BEGIN PRIVATE KEY-----\n${pkcs8.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
+  beforeAll(() => Object.assign(process.env, { APPLE_MUSIC_TEAM_ID: 'TEAM123456', APPLE_MUSIC_KEY_ID: 'KEY1234567', APPLE_MUSIC_KEY_BASE64: Buffer.from(pem).toString('base64') }));
+  afterAll(() => { delete process.env.APPLE_MUSIC_TEAM_ID; delete process.env.APPLE_MUSIC_KEY_ID; delete process.env.APPLE_MUSIC_KEY_BASE64; });
+
+  const isrc = 'USQX91300108';
+  const appleSong = (id: string, album: string, playable = true) => ({ id, attributes: {
+    name: 'Get Lucky', url: `https://music.apple.com/de/album/get-lucky/1?i=${id}`, albumName: album, durationInMillis: 369629, isrc,
+    artwork: { url: 'https://is1-ssl.mzstatic.com/image/thumb/a/{w}x{h}bb.jpg' }, ...(playable ? { playParams: { id } } : {}),
+  } });
+  const deezerSource = { ...deezerTrack, isrc };
+
+  test('Deezer → Apple takes the original album by ISRC with a signed developer token', async () => {
+    const result = await resolve({ input: deezer, target: 'appleMusic', country: 'AT' }, undefined, async (url, init) => {
+      if (url.hostname === 'api.deezer.com') return Response.json(deezerSource);
+      expect(url.hostname).toBe('api.music.apple.com');
+      expect(url.pathname).toBe('/v1/catalog/at/songs');
+      expect(url.searchParams.get('filter[isrc]')).toBe(isrc);
+      const [header, payload, signature] = new Headers(init.headers).get('authorization')!.replace('Bearer ', '').split('.');
+      expect(JSON.parse(Buffer.from(header!, 'base64url').toString())).toEqual({ alg: 'ES256', kid: 'KEY1234567' });
+      expect(JSON.parse(Buffer.from(payload!, 'base64url').toString())).toMatchObject({ iss: 'TEAM123456' });
+      expect(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pair.publicKey, Buffer.from(signature!, 'base64url'), new TextEncoder().encode(`${header}.${payload}`))).toBe(true);
+      return Response.json({ data: [appleSong('1445215790', 'NYE 2018/2019'), appleSong('617154366', 'Random Access Memories'), appleSong('100', 'Unavailable', false)] });
+    });
+    expect(result.candidates.map(candidate => candidate.url)).toEqual(['https://music.apple.com/de/album/get-lucky/1?i=617154366', 'https://music.apple.com/de/album/get-lucky/1?i=1445215790']);
+    expect(result.candidates[0]).toMatchObject({ album: 'Random Access Memories', durationSeconds: 370, artworkUrl: 'https://is1-ssl.mzstatic.com/image/thumb/a/100x100bb.jpg' });
+  });
+
+  test('Apple → Deezer reads the ISRC from the Apple Music API and skips the text search', async () => {
+    const result = await resolve({ input: apple, target: 'deezer', country: 'DE' }, undefined, async (url, init) => {
+      if (url.hostname === 'api.music.apple.com') {
+        expect(url.pathname).toBe('/v1/catalog/de/songs/945575419');
+        return Response.json({ data: [appleSong('945575419', 'Californication')] });
+      }
+      if (url.hostname === 'api.deezer.com') {
+        expect(url.pathname).toBe(`/track/isrc:${isrc}`);
+        return Response.json(deezerSource);
+      }
+      return fetcher(url, init);
+    });
+    expect(result.candidates).toEqual([{ title: deezerTrack.title, url: 'https://www.deezer.com/track/67238735', album: 'Get Lucky', durationSeconds: 248, artworkUrl: 'https://cdn-images.dzcdn.net/cover.jpg' }]);
+  });
+
+  test('an unknown ISRC falls back to text matching, a rejected key is reported too', async () => {
+    for (const apple of [Response.json({ data: [] }), new Response('', { status: 401 })]) {
+      const result = await resolve({ input: deezer, target: 'appleMusic', country: 'DE' }, undefined, async url => {
+        if (url.hostname === 'api.deezer.com') return Response.json({ ...deezerSource, title: 'Savior', artist: { name: 'Red Hot Chili Peppers' }, duration: 292 });
+        if (url.hostname === 'api.music.apple.com') return apple;
+        return Response.json({ results: [track] });
+      });
+      expect(result.candidates[0]!.url).toBe('https://music.apple.com/de/album/savior/945575406?i=945575419');
+    }
+    expect(diagnostics.mock.calls).toEqual([['ISRC lookup failure', { level: 'warning', tags: { provider: 'appleMusic' } }]]);
+  });
 });

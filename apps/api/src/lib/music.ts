@@ -2,6 +2,7 @@ import { platforms, type Conversion, type ConversionInput, type Platform, type S
 import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
 import { captureMessage } from '../monitoring';
+import { appleMusicToken } from './apple-music';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, type Fetch } from './resolver';
 
 const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -23,9 +24,15 @@ const appleTrack = z.object({
 });
 const deezerTrack = z.object({
   id: z.number(), title: z.string(), duration: z.number().optional(), readable: z.boolean().optional(),
-  artist: z.object({ name: z.string() }), album: z.object({ title: z.string().optional(), cover_medium: z.string().optional(), cover_xl: z.string().optional() }).optional(),
+  isrc: z.string().optional(), artist: z.object({ name: z.string() }), album: z.object({ title: z.string().optional(), cover_medium: z.string().optional(), cover_xl: z.string().optional() }).optional(),
 });
-type Track = { title: string; artist: string; url: string; durationSeconds?: number; artworkUrl: string | null };
+// The Apple Music API, unlike the iTunes API, knows each song's ISRC (needs the MusicKit key)
+const appleSong = z.object({ id: z.string(), attributes: z.object({
+  name: z.string(), url: z.string(), albumName: z.string().optional(), durationInMillis: z.number().optional(),
+  isrc: z.string().optional(), artwork: z.object({ url: z.string() }).optional(), playParams: z.unknown().optional(),
+}) });
+const isrcCode = (value?: string) => value && /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(value) ? { isrc: value } : {};
+type Track = { title: string; artist: string; url: string; durationSeconds?: number; artworkUrl: string | null; isrc?: string };
 type Source = ReturnType<typeof songSource>;
 const https = (url?: string | null) => url?.startsWith('https://') ? url : null;
 type YouTubeSong = { id: string; title: string; artists: string[]; album?: string; durationSeconds?: number; artworkUrl: string | null };
@@ -85,7 +92,7 @@ export function sharePath(source: Source) {
 function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(requestSignal ? [requestSignal] : [])]);
-  const request = async (origin: string, params: Record<string, string>, headers = { 'user-agent': 'Songgate/0.3' }) => {
+  const request = async (origin: string, params: Record<string, string>, headers: Record<string, string> = { 'user-agent': 'Songgate/0.3' }) => {
     const url = new URL(origin);
     url.search = new URLSearchParams(params).toString();
     const response = await fetcher(url, { signal, redirect: 'error', headers });
@@ -122,21 +129,68 @@ async function expandShortLink(input: string, { request, signal }: Session) {
   return input.replace(short[0], track);
 }
 
+async function appleCatalog(path: string, params: Record<string, string>, { request }: Session) {
+  const token = await appleMusicToken();
+  if (!token) return [];
+  const body: unknown = await (await request(`https://api.music.apple.com/v1/catalog/${path}`, params, { authorization: `Bearer ${token}` })).json();
+  return z.object({ data: z.array(appleSong) }).parse(body).data;
+}
+
+// An ISRC lookup that fails leaves text matching; reported so a broken MusicKit key gets noticed
+function isrcFailure(provider: Platform, signal: AbortSignal) {
+  if (!signal.aborted) captureMessage('ISRC lookup failure', { level: 'warning', tags: { provider } });
+}
+
+function appleCandidate(link: string, title: string, album: string | undefined, millis: number | undefined, artworkUrl: string | null) {
+  const url = new URL(link);
+  if (url.protocol !== 'https:' || url.hostname !== 'music.apple.com' || url.username || url.password) return [];
+  const songId = url.searchParams.get('i');
+  url.search = '';
+  if (songId) url.searchParams.set('i', songId);
+  return [{ title, url: url.toString(), ...(album === undefined ? {} : { album }), ...(millis ? { durationSeconds: Math.round(millis / 1000) } : {}), artworkUrl }];
+}
+const deezerCandidate = (track: z.infer<typeof deezerTrack>) => ({ title: track.title, url: `https://www.deezer.com/track/${track.id}`, ...(track.album?.title === undefined ? {} : { album: track.album.title }), ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_medium) });
+
+// The ISRC names the recording, so a hit needs no text comparison
+async function isrcCandidates(target: Platform, isrc: string, country: string, current: Session): Promise<Conversion['candidates']> {
+  try {
+    if (target === 'appleMusic') {
+      // The oldest song ID is usually the original album, compilations come later
+      return (await appleCatalog(`${country.toLowerCase()}/songs`, { 'filter[isrc]': isrc }, current))
+        .filter(song => song.attributes.playParams !== undefined).toSorted((a, b) => Number(a.id) - Number(b.id))
+        .flatMap(({ attributes: song }) => appleCandidate(song.url, song.name, song.albumName, song.durationInMillis, https(song.artwork?.url.replace('{w}x{h}', '100x100'))));
+    }
+    if (target === 'deezer') {
+      // Deezer answers an unknown ISRC with an error object, which does not parse as a track
+      const track = deezerTrack.safeParse(await current.get(`https://api.deezer.com/track/isrc:${isrc}`, {}));
+      return track.success && track.data.readable !== false ? [deezerCandidate(track.data)] : [];
+    }
+  } catch {
+    isrcFailure(target, current.signal);
+  }
+  return [];
+}
+
 const appleTracks = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results.flatMap(item => {
   const parsed = appleTrack.safeParse(item);
   return parsed.success ? [parsed.data] : [];
 });
 
-function loadSource(parsed: Source, { request, get, signal }: Session): Promise<Track> {
+function loadSource(parsed: Source, current: Session): Promise<Track> {
+  const { request, get, signal } = current;
   return providerCall(parsed.platform, signal, async () => {
     let source: Track;
     if (parsed.platform === 'youtubeMusic') {
       const metadata = z.object({ title: z.string().min(1), author_name: z.string().min(1), thumbnail_url: z.string().optional() }).parse(await get('https://www.youtube.com/oembed', { url: `https://www.youtube.com/watch?v=${parsed.id}`, format: 'json' }));
       source = { title: metadata.title, artist: metadata.author_name.replace(/ - Topic$/, ''), url: `https://music.youtube.com/watch?v=${parsed.id}`, artworkUrl: https(metadata.thumbnail_url) };
     } else if (parsed.platform === 'appleMusic') {
-      const track = appleTracks(await get('https://itunes.apple.com/lookup', { id: parsed.id, country: parsed.country, entity: 'song' })).find(track => String(track.trackId) === parsed.id);
+      const [body, isrc] = await Promise.all([
+        get('https://itunes.apple.com/lookup', { id: parsed.id, country: parsed.country, entity: 'song' }),
+        appleCatalog(`${parsed.country.toLowerCase()}/songs/${parsed.id}`, {}, current).then(songs => songs[0]?.attributes.isrc, () => { isrcFailure('appleMusic', signal); return undefined; }),
+      ]);
+      const track = appleTracks(body).find(track => String(track.trackId) === parsed.id);
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      source = { title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
+      source = { ...isrcCode(isrc), title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
     } else if (parsed.platform === 'spotify') {
       const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; Songgate/0.3)' })).text();
       const duration = Number(spotifyMeta(html, 'music:duration'));
@@ -146,7 +200,7 @@ function loadSource(parsed: Source, { request, get, signal }: Session): Promise<
       const body = await get(`https://api.deezer.com/track/${parsed.id}`, {});
       if (z.object({ error: z.unknown() }).safeParse(body).data?.error) throw new ResolutionError('SOURCE_UNAVAILABLE');
       const track = deezerTrack.parse(body);
-      source = { title: track.title, artist: track.artist.name, url: `https://www.deezer.com/track/${track.id}`, ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_xl) };
+      source = { ...isrcCode(track.isrc), title: track.title, artist: track.artist.name, url: `https://www.deezer.com/track/${track.id}`, ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_xl) };
     }
     source.title = source.title.trim();
     source.artist = source.artist.trim();
@@ -155,8 +209,11 @@ function loadSource(parsed: Source, { request, get, signal }: Session): Promise<
   });
 }
 
-function findCandidates(target: Platform, source: Track, country: string, { get, signal }: Session, search: MusicSearch): Promise<Conversion['candidates']> {
+function findCandidates(target: Platform, source: Track, country: string, current: Session, search: MusicSearch): Promise<Conversion['candidates']> {
+  const { get, signal } = current;
   return providerCall(target, signal, async () => {
+    const exact = source.isrc ? await isrcCandidates(target, source.isrc, country, current) : [];
+    if (exact.length) return exact.slice(0, 8);
     const original = recording(source.title, [source.artist]);
     const matches = (title: string, artists: string[], duration?: number) => {
       const candidate = recording(title, artists);
@@ -168,14 +225,7 @@ function findCandidates(target: Platform, source: Track, country: string, { get,
     if (target === 'appleMusic') {
       candidates = appleTracks(await get('https://itunes.apple.com/search', { term: `${source.artist} ${original.title}`, entity: 'song', country, limit: '25' }))
         .filter(track => track.isStreamable === true && matches(track.trackName, [track.artistName], track.trackTimeMillis ? track.trackTimeMillis / 1000 : undefined))
-        .flatMap(track => {
-          const url = new URL(track.trackViewUrl);
-          if (url.protocol !== 'https:' || url.hostname !== 'music.apple.com' || url.username || url.password) return [];
-          const songId = url.searchParams.get('i');
-          url.search = '';
-          if (songId) url.searchParams.set('i', songId);
-          return [{ title: track.trackName, url: url.toString(), ...(track.collectionName === undefined ? {} : { album: track.collectionName }), ...(track.trackTimeMillis ? { durationSeconds: Math.round(track.trackTimeMillis / 1000) } : {}), artworkUrl: https(track.artworkUrl100) }];
-        });
+        .flatMap(track => appleCandidate(track.trackViewUrl, track.trackName, track.collectionName, track.trackTimeMillis, https(track.artworkUrl100)));
     } else if (target === 'youtubeMusic') {
       candidates = (await search(query, signal))
         .filter(track => /^[A-Za-z0-9_-]{11}$/.test(track.id) && matches(track.title, track.artists, track.durationSeconds))
@@ -183,8 +233,7 @@ function findCandidates(target: Platform, source: Track, country: string, { get,
     } else if (target === 'deezer') {
       candidates = z.object({ data: z.array(z.unknown()) }).parse(await get('https://api.deezer.com/search', { q: query, limit: '25' })).data.flatMap(item => {
         const track = deezerTrack.safeParse(item);
-        if (!track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration)) return [];
-        return [{ title: track.data.title, url: `https://www.deezer.com/track/${track.data.id}`, ...(track.data.album?.title === undefined ? {} : { album: track.data.album.title }), ...(track.data.duration === undefined ? {} : { durationSeconds: track.data.duration }), artworkUrl: https(track.data.album?.cover_medium) }];
+        return !track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration) ? [] : [deezerCandidate(track.data)];
       });
     } else {
       candidates = await spotifyCandidates(source, get);
