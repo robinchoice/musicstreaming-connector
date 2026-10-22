@@ -4,14 +4,14 @@ import { createDb } from '@app/db';
 const appModule = JSON.stringify(`${import.meta.dir}/app.ts`);
 
 // Isolated processes keep module mocks and OS signals out of the other tests.
-function start(entry: 'index', setup: string, env: Record<string, string> = {}) {
+function start(setup: string, env: Record<string, string> = {}) {
   const child = Bun.spawn(
     [
       process.execPath,
       '--eval',
       `import { mock } from 'bun:test';
        ${setup}
-       await import(${JSON.stringify(`${import.meta.dir}/${entry}.ts`)});`,
+       await import(${JSON.stringify(`${import.meta.dir}/index.ts`)});`,
     ],
     {
       env: {
@@ -43,7 +43,6 @@ function start(entry: 'index', setup: string, env: Record<string, string> = {}) 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   test(`API drains an active database request on ${signal}`, async () => {
     const { child, until } = start(
-      'index',
       `mock.module(${appModule}, () => ({
          createApp: (_resolver, db) => ({ fetch: async () => {
            console.log('request-started');
@@ -71,7 +70,6 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     const connection = await db.$client.reserve();
     await connection`select pg_advisory_lock(hashtext('migrations'))`;
     const { child, until } = start(
-      'index',
       `mock.module(${appModule}, () => ({
          createApp: () => ({ fetch: () => new Response('ready') })
        }));`,

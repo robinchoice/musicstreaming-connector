@@ -3,7 +3,7 @@
   import { onDestroy, onMount } from 'svelte';
   import Friends from '$lib/components/Friends.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { countries, friendsMessage, platforms, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
+  import { countries, friendsMessage, platforms, platformSchema, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
   import { api, ApiError } from '$lib/api';
   import { social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
@@ -39,7 +39,7 @@
   onMount(() => {
     canShare = typeof navigator.share === 'function';
     try {
-      const saved = z.object({ target: z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']) }).safeParse(JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}')).data;
+      const saved = z.object({ target: platformSchema }).safeParse(JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}')).data;
       if (saved) target = savedTarget = saved.target;
     } catch {}
     const region = navigator.language.split('-')[1]?.toUpperCase();

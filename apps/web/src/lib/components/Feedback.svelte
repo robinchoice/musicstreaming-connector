@@ -29,7 +29,7 @@
 
   let width = $state(0);
   let height = $state(0);
-  let saved = $state<{ x: number; y: number } | null>(savedPosition());
+  let saved = $state(savedPosition());
   let capturing = $state(false);
   let flash = $state(false);
   let message = $state('');

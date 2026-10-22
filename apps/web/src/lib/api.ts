@@ -17,11 +17,11 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: 'GET' | 'POST', path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+async function call<T>(method: 'GET' | 'POST', path: string, body: unknown, signal: AbortSignal | null = null): Promise<T> {
   try {
-    const response = await fetch(`/api/v1${path}`, method === 'GET' ? { signal: signal ?? null } : {
+    const response = await fetch(`/api/v1${path}`, method === 'GET' ? { signal } : {
       method, headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body), signal: signal ?? null,
+      body: JSON.stringify(body), signal,
     });
     if (!response.ok) {
       noteError(method, path, response.status);

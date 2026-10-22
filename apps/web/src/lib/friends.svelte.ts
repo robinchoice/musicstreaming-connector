@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { inviteSlugs, type Friend, type Platform } from '@app/shared';
+import { inviteSlugs, platformSchema, type Friend, type Platform } from '@app/shared';
 
 // Friends stay in this browser. Nothing about them reaches our server.
 type Saved = { friends: Friend[]; groups: { name: string; members: string[] }[]; me: Friend | null };
 const KEY = 'musiclink-friends';
-const friendSchema = z.object({ name: z.string(), platform: z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']) });
+const friendSchema = z.object({ name: z.string(), platform: platformSchema });
 const groupSchema = z.object({
   name: z.string(),
   members: z.array(z.unknown()).transform(members => members.filter((member): member is string => typeof member === 'string')),

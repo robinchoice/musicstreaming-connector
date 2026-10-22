@@ -233,11 +233,9 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
-          if [ "$RELEASE" = true ]; then
-            node tool/testflight.mjs "$GITHUB_RUN_NUMBER" "MusicLink Internal" "MusicLink V1"
-          else
-            node tool/testflight.mjs "$GITHUB_RUN_NUMBER" "MusicLink Internal"
-          fi
+          groups=("MusicLink Internal")
+          [ "$RELEASE" = true ] && groups+=("MusicLink V1")
+          node tool/testflight.mjs "$GITHUB_RUN_NUMBER" "${groups[@]}"
 
   android:
     needs: [check, android-build]
