@@ -3,7 +3,7 @@
 ## Purpose & links
 
 - Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
-- Live at https://musiclink.pleasance.org, Coolify on VPS 1, project `pleasance-musiclink`.
+- Live at https://songgate.app, Coolify on VPS 1, project `pleasance-musiclink`.
 - Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. From 1.0 on (`LIVE` in `packages/shared`, `live` in the app's `config.dart`) the bug shows only in test mode, a switch kept per device in the web footer and the app settings; „Feedback geben“ stays for everyone. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
 - iOS: App Store Connect app `6819013473`, bundle `org.musiclink.prototype`. Signing material and TestFlight groups: `~/dev/kontor/infra.md`.
 
@@ -28,7 +28,7 @@ The browser tests start the API and the production build of the web on their own
 - Changed screenshots are committed to `main` by `github-actions[bot]` with `[skip ci]` to prevent deploy loops. Fetch before pushing. Only after the screenshots succeed, the job sends `prototype-deployed` (`client_payload: {slug, sha}`) to `robinchoice/pleasance` using the existing `PLEASANCE_DISPATCH_TOKEN` secret, scoped to that receiver. Without the secret only the dispatch is skipped.
 - Pushes that touch `apps/mobile` also run `mobile.yml`, which uploads an iOS build to TestFlight and builds upload-key-signed Android AAB and APK artifacts (kept for 90 days). Android release CI requires the `ANDROID_KEYSTORE_*`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` secrets. Robin confirmed `org.pleasance.songgate` on 22 October 2026. After he uploads the first AAB manually and grants the service account access, set `PLAY_SERVICE_ACCOUNT_JSON` and `PLAY_UPLOAD=true` to upload subsequent builds to Play internal testing. Never enable this before package-name confirmation; no production promotion runs automatically. Job `testflight` (`apps/mobile/tool/testflight.mjs`) gives every build to the internal group „MusicLink Internal“.
 - External testers (group „MusicLink V1“) don't get every build: TestFlight mails a group's testers for each build it is given. Only the build of a release tag `v*` goes there and is submitted for the beta review, and an agent sets that tag only when Robin asks for a release. `git tag v<version> && git push origin v<version>` builds iOS and Android again and releases that build. An already uploaded build: `node tool/testflight.mjs [--quiet] <build number> "MusicLink Internal" "MusicLink V1"` in `apps/mobile` with `ASC_*` from `~/.secrets`.
-- Verify: `gh run watch`. The deploy job only turns green once `https://musiclink.pleasance.org/api/health` reports the commit as `revision`.
+- Verify: `gh run watch`. The deploy job only turns green once `https://songgate.app/api/health` reports the commit as `revision`.
 - Pushes to any branch and PRs from forks also run `secrets.yml`, the secret scan (see „Secret scan“).
 
 ## Pitfalls
@@ -36,7 +36,7 @@ The browser tests start the API and the production build of the web on their own
 - Gitleaks 8.30.1 reads the checkout's `.gitleaksignore` in addition to `--gitleaks-ignore-path`. The workflow replaces it with `CONFIG_REF`'s version too; fork PRs use the base commit's config and ignores.
 - Correlated subselects in `sql` templates: in a single-table select Drizzle renders columns without table names, including inside templates. `exists (select 1 from ${subs} where ${subs.userId} = ${users.id})` becomes `where "user_id" = "id"`, silently referring to the subselect's ID. Use a join or `alias()`, or two simple queries.
 
-- The bundle ID `org.musiclink.prototype` and the repo name predate the naming rules and stay as they are.
+- The bundle ID `org.musiclink.prototype` and the repo name predate the naming rules and stay as they are. The old `musiclink.pleasance.org` host redirects to `songgate.app` with paths and queries intact; `/api` stays on the old host for installed app builds (POST requests must not be redirected). `www.songgate.app` redirects to the apex. The rules live on VPS 1 in `/data/coolify/proxy/dynamic/musiclink-redirect.yaml`.
 - Apple may report a build as `VALID` before TestFlight group assignment can resolve its ID (404). Once the build is readable, rerun only the failed `testflight` job; do not upload the same build number again.
 - The iOS app signs with explicit distribution profiles for the app and the share extension (secrets `IOS_CERTIFICATE_BASE64`, `IOS_APP_PROFILE_BASE64`, `IOS_SHARE_PROFILE_BASE64`). A new extension or capability needs new profiles.
 - No GitHub issues for feedback: the repo is public, reports and screenshots would be too. They stay in the database and the mail.
