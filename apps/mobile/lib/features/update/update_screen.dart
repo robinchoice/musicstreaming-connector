@@ -11,7 +11,7 @@ class UpdateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final store = appPlatform == 'ios' ? appStoreUrl : playStoreUrl;
+    final store = isIOS ? appStoreUrl : playStoreUrl;
     return Scaffold(
       body: SafeArea(
         child: Center(

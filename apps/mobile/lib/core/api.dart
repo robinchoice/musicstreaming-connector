@@ -44,10 +44,10 @@ Map<String, String> get _appHeaders => buildNumber == 0
 class Api {
   final http.Client client;
   final String baseUrl;
-  Api(this.client, this.baseUrl);
+  Api(this.client, String baseUrl)
+      : baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
 
-  Uri _url(String path) =>
-      Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/api/v1$path');
+  Uri _url(String path) => Uri.parse('$baseUrl/api/v1$path');
 
   /// Asked once at launch. Offline or failing, the app just starts.
   Future<bool> updateRequired() async {

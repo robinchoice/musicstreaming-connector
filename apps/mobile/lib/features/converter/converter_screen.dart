@@ -34,7 +34,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
   bool _showSetup = false;
   bool _guideOnly = false;
   bool _sharing = false;
-  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _isIOS => !kIsWeb && isIOS;
   final _input = TextEditingController();
   Conversion? _conversion;
   String? _selection;

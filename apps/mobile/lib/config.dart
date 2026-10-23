@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-String get appPlatform =>
-    defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+bool get isIOS => defaultTargetPlatform == TargetPlatform.iOS;
+
+String get appPlatform => isIOS ? 'ios' : 'android';
 
 const appName = 'Songgate';
 // The same as LIVE in packages/shared: true once Songgate is live as 1.0.

@@ -18,9 +18,8 @@ on:
 
 env:
   FLUTTER_VERSION: 3.47.5
-  API_URL: ${{ vars.API_URL }}
-  SENTRY_DSN: ${{ vars.SENTRY_DSN }}
-  BUILD_FLAGS: --dart-define=BUILD_NUMBER=${{ github.run_number }} --build-number=${{ github.run_number }}
+  # Unique, increasing build number per run; TestFlight rejects duplicates.
+  BUILD_FLAGS: --release --obfuscate --dart-define=API_URL=${{ vars.API_URL }} --dart-define=SENTRY_DSN=${{ vars.SENTRY_DSN }} --dart-define=BUILD_NUMBER=${{ github.run_number }} --build-number=${{ github.run_number }}
 
 defaults:
   run:
@@ -142,9 +141,8 @@ jobs:
           printf '%s' "$IOS_APP_PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-App.mobileprovision"
           printf '%s' "$IOS_SHARE_PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-Share.mobileprovision"
 
-      # Eindeutige, steigende Build-Nummer pro Lauf, TestFlight lehnt Duplikate ab.
       - name: Flutter-Build vorbereiten
-        run: flutter build ios --config-only --release --no-codesign --obfuscate --split-debug-info=$RUNNER_TEMP/symbols --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN $BUILD_FLAGS
+        run: flutter build ios --config-only --no-codesign --split-debug-info=$RUNNER_TEMP/symbols $BUILD_FLAGS
 
       - name: Archive bauen
         working-directory: apps/mobile/ios
@@ -275,10 +273,10 @@ jobs:
             "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" > key.properties
 
       - name: App Bundle bauen
-        run: flutter build appbundle --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/aab --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN $BUILD_FLAGS
+        run: flutter build appbundle --split-debug-info=$RUNNER_TEMP/symbols/aab $BUILD_FLAGS
 
       - name: APK bauen
-        run: flutter build apk --release --obfuscate --split-debug-info=$RUNNER_TEMP/symbols/apk --dart-define=API_URL=$API_URL --dart-define=SENTRY_DSN=$SENTRY_DSN $BUILD_FLAGS
+        run: flutter build apk --split-debug-info=$RUNNER_TEMP/symbols/apk $BUILD_FLAGS
 
       - name: Remove signing material
         if: always()
