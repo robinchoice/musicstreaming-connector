@@ -18,6 +18,9 @@ struct ShareTargetsTests {
             let expected = ["appleMusic", "youtubeMusic", "spotify", "deezer"].filter { $0 != source }
             precondition(ShareModel.targets(for: input) == expected, "Unexpected targets for \(input)")
         }
+        let shared = ShareModel.shareURL("https://songgate.app/s/yt/x", from: Friend(name: "Robin Ö+", platform: "youtubeMusic"))
+        precondition(shared == "https://songgate.app/s/yt/x?from=Robin%20%C3%96%2B&service=youtube", "Unexpected share URL \(shared)")
+        precondition(ShareModel.shareURL("https://songgate.app/s/yt/x", from: nil) == "https://songgate.app/s/yt/x")
         print("Share targets: \(cases.count) cases passed")
     }
 }

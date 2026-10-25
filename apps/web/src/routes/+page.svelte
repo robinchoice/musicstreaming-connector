@@ -3,7 +3,7 @@
   import { onDestroy, onMount } from 'svelte';
   import Friends from '$lib/components/Friends.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { countries, friendsMessage, platforms, platformSchema, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
+  import { countries, friendsMessage, platforms, platformSchema, shareUrl, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
   import { api, ApiError } from '$lib/api';
   import { social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
@@ -70,7 +70,7 @@
       if (chosen.length) {
         const song = await api.get<Song>(`/song?${new URLSearchParams({ input, country })}`, current.signal);
         if (current.signal.aborted) return;
-        message = friendsMessage(song, social.friends.filter(friend => chosen.includes(friend.name)), location.origin);
+        message = friendsMessage(song, social.friends.filter(friend => chosen.includes(friend.name)), location.origin, social.me);
         return;
       }
       const result = await api.post<Conversion>('/convert', { input, target, country }, current.signal);
@@ -146,7 +146,7 @@
             {/if}
             <p class="hint">Prüfe die gewünschte Aufnahme vor dem Teilen.</p>
             <div class="actions"><button class="primary" onclick={() => copy(selection)}>{copied ? 'Link kopiert ✓' : 'Link kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(selection)}>Weiterteilen ↗</button>{/if}<a href={selection} target="_blank" rel="noreferrer">Auf {platforms[conversion.target]} prüfen ↗</a></div>
-            <p class="everyone">Oder ein Link für alle, jeder wählt seinen Dienst: <button type="button" onclick={() => navigator.clipboard.writeText(location.origin + conversion!.sharePath).then(() => toast('Link für alle kopiert.'), () => toastError('Kopieren nicht möglich.'))}>{location.origin.replace(/^https?:\/\//, '')}{conversion.sharePath} kopieren</button></p>
+            <p class="everyone">Oder ein Link für alle, jeder wählt seinen Dienst: <button type="button" onclick={() => navigator.clipboard.writeText(shareUrl(location.origin, conversion!.sharePath, social.me)).then(() => toast('Link für alle kopiert.'), () => toastError('Kopieren nicht möglich.'))}>{location.origin.replace(/^https?:\/\//, '')}{conversion.sharePath} kopieren</button></p>
           </div>
         {/if}
       </div>

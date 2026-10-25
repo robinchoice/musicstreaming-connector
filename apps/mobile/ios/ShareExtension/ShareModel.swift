@@ -47,6 +47,7 @@ struct FriendGroup: Codable, Hashable {
 private struct Social: Decodable {
     let friends: [Friend]?
     let groups: [FriendGroup]?
+    let me: Friend?
 }
 
 private struct APIError: Decodable {
@@ -69,6 +70,7 @@ final class ShareModel: ObservableObject {
 
     let friends: [Friend]
     let groups: [FriendGroup]
+    let me: Friend?
     @Published private(set) var chosen: [String] = []
     @Published private(set) var message: String?
     @Published private(set) var isLoadingMessage = false
@@ -82,6 +84,7 @@ final class ShareModel: ObservableObject {
             .flatMap { try? JSONDecoder().decode(Social.self, from: Data($0.utf8)) }
         friends = (social?.friends ?? []).filter { Self.platforms[$0.platform] != nil }
         groups = social?.groups ?? []
+        me = social?.me.flatMap { Self.platforms[$0.platform] == nil ? nil : $0 }
     }
 
     func toggle(_ name: String) {
@@ -148,8 +151,18 @@ final class ShareModel: ObservableObject {
             lines.append("\(Self.platforms[service] ?? service) (\(names)): \(song.links[service]?.url ?? "")")
         }
         let origin = apiURL.absoluteString.hasSuffix("/") ? String(apiURL.absoluteString.dropLast()) : apiURL.absoluteString
-        lines.append("Andere: \(origin)\(song.sharePath)")
+        lines.append("Andere: \(Self.shareURL(origin + song.sharePath, from: me))")
         message = lines.joined(separator: "\n")
+    }
+
+    // A share page may name its sender, same as shareUrl in packages/shared
+    static let inviteSlugs = ["appleMusic": "apple", "youtubeMusic": "youtube", "spotify": "spotify", "deezer": "deezer"]
+    static func shareURL(_ url: String, from: Friend?) -> String {
+        guard let from, let slug = inviteSlugs[from.platform], var components = URLComponents(string: url) else { return url }
+        components.queryItems = [URLQueryItem(name: "from", value: from.name), URLQueryItem(name: "service", value: slug)]
+        // URLComponents keeps "+", which the web reads as a space
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+        return components.string ?? url
     }
 
     static func targets(for input: String) -> [String] {

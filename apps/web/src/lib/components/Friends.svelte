@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { renderSVG } from 'uqr';
   import { platforms, type Platform } from '@app/shared';
   import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
@@ -9,6 +10,8 @@
   let name = $state('');
   let platform = $state<Platform>('spotify');
   onMount(loadFriends);
+  // Face to face the invite is scanned instead of sent
+  const qr = $derived(panel === 'invite' && name.trim() ? renderSVG(inviteUrl(location.origin, { name: name.trim().slice(0, 40), platform }), { border: 2 }) : '');
 
   const toggle = (friend: string) => selected = selected.includes(friend) ? selected.filter(other => other !== friend) : [...selected, friend];
   const groupOn = (members: string[]) => members.length === selected.length && members.every(member => selected.includes(member));
@@ -68,6 +71,7 @@
       <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? 'Name der Gruppe, z. B. WG' : panel === 'invite' ? 'Dein Name' : 'Name'} required />
       {#if panel !== 'group'}<select bind:value={platform}>{#each (Object.keys(platforms) as Platform[]) as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
       <button type="submit">{panel === 'invite' ? 'Einladung teilen ↗' : 'Speichern'}</button>
+      {#if qr}<figure class="qr"><span role="img" aria-label="QR-Code deiner Einladung">{@html qr}</span><figcaption>Oder lass den Code mit der Kamera scannen.</figcaption></figure>{/if}
     </form>
   {/if}
 </div>
@@ -93,5 +97,9 @@
   .panel { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
   .panel p { width: 100%; margin: 0; font-size: 12px; color: var(--muted); }
   .panel input, .panel select { flex: 1; min-width: 140px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 10px; }
+  .qr { width: 100%; margin: 4px 0 0; display: flex; align-items: center; gap: 14px; }
+  .qr span { width: 132px; flex-shrink: 0; line-height: 0; border-radius: 8px; overflow: hidden; }
+  .qr :global(svg) { display: block; width: 100%; height: auto; }
+  .qr figcaption { font-size: 12px; color: var(--muted); }
   .panel button { border: 0; border-radius: 8px; padding: 10px 14px; background: var(--gradient); color: var(--ink); font-weight: 650; }
 </style>

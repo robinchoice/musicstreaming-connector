@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../converter/conversion.dart';
@@ -128,6 +129,54 @@ Future<void> shareInvite(
   }
 }
 
+/// Face to face the invite is scanned instead of sent.
+Future<void> showInviteQr(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(socialProvider).me;
+  final me =
+      current ??
+      await showAddFriendDialog(
+        context,
+        ref,
+        title: 'Meine Einladung',
+        initial: const Friend('', 'spotify'),
+        save: false,
+      );
+  if (me == null || !context.mounted) return;
+  if (current == null) await ref.read(socialProvider.notifier).setMe(me);
+  if (!context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('${me.name} · ${platforms[me.platform]}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 240,
+            height: 240,
+            child: QrImageView(
+              data: inviteUrl(me),
+              backgroundColor: Colors.white,
+              semanticsLabel: 'QR-Code deiner Einladung',
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Lass den Code mit der Kamera scannen.',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Fertig'),
+        ),
+      ],
+    ),
+  );
+}
+
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
 
@@ -162,6 +211,11 @@ class FriendsScreen extends ConsumerWidget {
                     : 'Einladung teilen (${social.me!.name} · ${platforms[social.me!.platform]})',
               ),
             ),
+          ),
+          TextButton.icon(
+            onPressed: () => showInviteQr(context, ref),
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Einladung als QR-Code zeigen'),
           ),
           TextButton.icon(
             onPressed: () => showAddFriendDialog(context, ref),

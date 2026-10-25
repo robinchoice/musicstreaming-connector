@@ -162,9 +162,15 @@ String inviteUrl(Friend me) =>
 String inviteText(Friend me) =>
     'Ich höre auf ${platforms[me.platform]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:\n${inviteUrl(me)}';
 
+/// A share page may name its sender, so the recipient can save them and
+/// answer with their own service. Same as shareUrl in packages/shared.
+String shareUrl(String path, Friend? from) => from == null
+    ? '${_origin()}$path'
+    : '${_origin()}$path?from=${Uri.encodeQueryComponent(from.name)}&service=${inviteSlugs[from.platform]}';
+
 /// One link if everyone uses the same service, otherwise one line per
 /// service plus the share page for everyone else. Same as packages/shared.
-String friendsMessage(Song song, List<Friend> friends) {
+String friendsMessage(Song song, List<Friend> friends, {Friend? from}) {
   final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
   final services = <String>[];
   for (final friend in friends) {
@@ -175,6 +181,6 @@ String friendsMessage(Song song, List<Friend> friends) {
     head,
     for (final platform in services)
       '${platforms[platform]} (${friends.where((friend) => friend.platform == platform).map((friend) => friend.name).join(', ')}): ${song.links[platform]}',
-    'Andere: ${_origin()}${song.sharePath}',
+    'Andere: ${shareUrl(song.sharePath, from)}',
   ].join('\n');
 }

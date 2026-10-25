@@ -10,7 +10,9 @@ import 'package:musiclink/app.dart';
 import 'package:musiclink/core/api.dart';
 import 'package:musiclink/core/router.dart';
 import 'package:musiclink/features/converter/conversion.dart';
+import 'package:musiclink/features/friends/friends_screen.dart';
 import 'package:musiclink/features/friends/social.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 final song = Song.fromJson({
   'source': {
@@ -75,6 +77,13 @@ void main() {
       'Spotify (Lisa, Ben): https://open.spotify.com/track/x\n'
       'Apple Music (Jonas): https://music.apple.com/de/song/1\n'
       'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+    );
+    expect(
+      friendsMessage(song, const [
+        Friend('Lisa', 'spotify'),
+        Friend('Jonas', 'appleMusic'),
+      ], from: const Friend('Robin Ö', 'youtubeMusic')).split('\n').last,
+      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube',
     );
     final album = Song.fromJson({
       'source': {
@@ -205,5 +214,21 @@ void main() {
       {'name': 'Robin', 'platform': 'deezer'},
     ]);
     expect(find.text('Robin hört auf Deezer'), findsNothing);
+  });
+
+  testWidgets('the own invite shows as a QR code', (tester) async {
+    stored = jsonEncode({
+      'friends': [],
+      'groups': [],
+      'me': {'name': 'Robin', 'platform': 'deezer'},
+    });
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: FriendsScreen())),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einladung als QR-Code zeigen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Robin · Deezer'), findsOneWidget);
+    expect(find.byType(QrImageView), findsOneWidget);
   });
 }

@@ -1,9 +1,11 @@
 <script lang="ts">
+  import Connect from '$lib/components/Connect.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
   import { onMount } from 'svelte';
   import { platforms, type Platform } from '@app/shared';
   let { data } = $props();
   const song = $derived(data.song);
+  const from = $derived(data.from);
   // The service a visitor opened last comes first next time, kept on the device only
   const KEY = 'musiclink-service';
   let mine = $state<Platform | null>(null);
@@ -25,7 +27,7 @@
     <section class="card">
       <div class="song">
         {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
-        <div><div class="eyebrow">JEMAND HAT DIR {song.source.kind === 'album' ? 'EIN ALBUM' : 'EINEN SONG'} GESCHICKT</div><h1>{song.source.title}</h1><p>{song.source.artist}</p></div>
+        <div><div class="eyebrow">{from ? from.name.toUpperCase() : 'JEMAND'} HAT DIR {song.source.kind === 'album' ? 'EIN ALBUM' : 'EINEN SONG'} GESCHICKT</div><h1>{song.source.title}</h1><p>{song.source.artist}</p></div>
       </div>
       <h2>Wo hörst du Musik?</h2>
       {#each order as platform (platform)}
@@ -37,6 +39,7 @@
         </a>
       {/each}
     </section>
+    {#if from}<section class="card sender"><Connect name={from.name} platform={from.platform} heading="h2" /></section>{/if}
     <p class="more">Selbst Musik teilen? <a href="/">Songgate öffnen</a></p>
   </main>
   <PleasanceFooter />
@@ -65,6 +68,7 @@
   .go { margin-left: auto; font-size: 12px; color: var(--muted); }
   .dot { width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; }
   .appleMusic { background: #FA2D48; } .youtubeMusic { background: #FF0033; } .spotify { background: #1DB954; } .deezer { background: #A238FF; }
+  .sender { margin-top: 16px; text-align: center; }
   .more { color: var(--muted); font-size: 13px; margin-top: 18px; }
   @media(max-width: 650px) {
     .shell { padding: 0 18px; } .card { padding: 18px; }

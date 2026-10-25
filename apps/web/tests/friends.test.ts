@@ -37,3 +37,15 @@ test('invalid saved entries preserve valid friends and groups after saving', asy
     me: null,
   });
 });
+
+test('an invite saves its sender and the own invite shows as a QR code', async ({ page }) => {
+  await page.goto('/f/spotify?name=Lea');
+  await page.getByRole('button', { name: 'Hier im Browser speichern' }).click();
+  await expect(page.getByRole('button', { name: '✓ Lea ist gespeichert' })).toBeDisabled();
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: /Lea/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Meine Einladung' }).click();
+  await expect(page.getByRole('img', { name: 'QR-Code deiner Einladung' })).toHaveCount(0);
+  await page.getByPlaceholder('Dein Name').fill('Robin');
+  await expect(page.getByRole('img', { name: 'QR-Code deiner Einladung' }).locator('svg')).toBeVisible();
+});

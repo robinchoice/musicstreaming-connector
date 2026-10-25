@@ -88,11 +88,16 @@ export interface Song {
 export interface Friend { name: string; platform: Platform }
 export const inviteSlugs: Record<Platform, string> = { appleMusic: 'apple', youtubeMusic: 'youtube', spotify: 'spotify', deezer: 'deezer' };
 
+// A share page may name its sender, so the recipient can save them and answer with their own service
+export function shareUrl(origin: string, path: string, from: Friend | null): string {
+  return from ? `${origin}${path}?${new URLSearchParams({ from: from.name, service: inviteSlugs[from.platform] })}` : `${origin}${path}`;
+}
+
 // One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else
-export function friendsMessage(song: Song, friends: Friend[], origin: string): string {
+export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null): string {
   const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
   const services = [...new Set(friends.map(friend => friend.platform))];
   if (services.length === 1) return `${head}\n${song.links[services[0]!].url}`;
   const lines = services.map(platform => `${platforms[platform]} (${friends.filter(friend => friend.platform === platform).map(friend => friend.name).join(', ')}): ${song.links[platform].url}`);
-  return [head, ...lines, `Andere: ${origin}${song.sharePath}`].join('\n');
+  return [head, ...lines, `Andere: ${shareUrl(origin, song.sharePath, from)}`].join('\n');
 }

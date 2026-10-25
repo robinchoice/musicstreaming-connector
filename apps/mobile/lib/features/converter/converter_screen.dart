@@ -151,13 +151,14 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     }
     final song = _song;
     if (song == null || !mounted || id != _requestId) return;
-    final friends = ref
-        .read(socialProvider)
-        .friends
+    final social = ref.read(socialProvider);
+    final friends = social.friends
         .where((friend) => _friends.contains(friend.name))
         .toList();
     setState(
-      () => _message = friends.isEmpty ? null : friendsMessage(song, friends),
+      () => _message = friends.isEmpty
+          ? null
+          : friendsMessage(song, friends, from: social.me),
     );
   }
 

@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { countries, platforms, type Platform, type Song } from '@app/shared';
+import { platformForSlug } from '$lib/friends.svelte';
 import type { PageServerLoad } from './$types';
 
 // The inverse of sharePath in the API: back to a link the resolver understands
@@ -16,7 +17,7 @@ function sourceLink(path: string) {
   if (a === 'dz' && b && !c) return `https://www.deezer.com/album/${b}`;
 }
 
-export const load: PageServerLoad = async ({ params, fetch, request }) => {
+export const load: PageServerLoad = async ({ params, fetch, request, url }) => {
   const link = sourceLink(params.path);
   if (!link) error(404, 'Diesen Link gibt es nicht.');
   const region = request.headers.get('accept-language')?.match(/^[a-z]{2}-([a-z]{2})/i)?.[1]?.toUpperCase();
@@ -27,8 +28,13 @@ export const load: PageServerLoad = async ({ params, fetch, request }) => {
   if (!response.ok) error(response.status === 429 || response.status >= 500 ? 503 : 404, body.error ?? 'Der Link konnte nicht geladen werden.');
   const song = body as Song;
   const found = (Object.keys(platforms) as Platform[]).filter(platform => song.links[platform].found).map(platform => platforms[platform]);
+  // Optional sender, see shareUrl in packages/shared
+  const name = (url.searchParams.get('from') ?? '').trim().slice(0, 40);
+  const platform = platformForSlug(url.searchParams.get('service') ?? '');
+  const from = name && platform ? { name, platform } : null;
   return {
     song,
-    meta: { title: `${song.source.title} · ${song.source.artist}`, description: `Anhören auf ${found.join(', ')}`, image: song.source.artworkUrl ?? undefined },
+    from,
+    meta: { title: `${song.source.title} · ${song.source.artist}`, description: `${from ? `Von ${from.name} · ` : ''}Anhören auf ${found.join(', ')}`, image: song.source.artworkUrl ?? undefined },
   };
 };
