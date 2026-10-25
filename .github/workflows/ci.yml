@@ -37,6 +37,9 @@ jobs:
       - run: bun run check
       # Builds the web app and tests the build
       - run: bun run test
+      # The CLI as one file with the live URL baked in, built to check it compiles (AGENTS.md, „CLI“)
+      - run: bun run build
+        working-directory: apps/cli
 
   build-and-push:
     needs: check

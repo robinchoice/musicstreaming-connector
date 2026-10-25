@@ -2,7 +2,7 @@
 
 ## Purpose & links
 
-- Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), Flutter app with a share extension (`apps/mobile`).
+- Shares songs between YouTube Music, Apple Music, Spotify and Deezer, no sign-up: SvelteKit web (`apps/web`), Hono API (`apps/api`), CLI `songgate` (`apps/cli`, „CLI“), Flutter app with a share extension (`apps/mobile`).
 - Live at https://songgate.app, Coolify on VPS 1, project `pleasance-musiclink`.
 - Feedback button in web and app (bug with screenshot, ideas from the footer or the app settings), ported from `robinchoice/starter`. From 1.0 on (`LIVE` in `packages/shared`, `live` in the app's `config.dart`) the bug shows only in test mode, a switch kept per device in the web footer and the app settings; „Feedback geben“ stays for everyone. Reports land in Postgres and are mailed to `FEEDBACK_EMAIL`. The tester's email is optional; the Savor workflow „Weihnachtstester“ picks the most helpful testers from it.
 - iOS: App Store Connect app `6819013473`, bundle `org.musiclink.prototype`. Signing material and TestFlight groups: `~/dev/kontor/infra.md`.
@@ -11,7 +11,8 @@
 
 ```sh
 cp -n .env.example .env && docker compose up -d   # Postgres on port 5439 for the API tests
-bun install --frozen-lockfile && bun run check && bun run test   # test builds the web and tests the build
+bun install --frozen-lockfile && bun run check && bun run test   # test builds the web and tests the build, plus the CLI against the API
+cd apps/cli && bun run build   # when apps/cli changed, compiles build/songgate
 cd apps/mobile && flutter pub get && flutter analyze && flutter test   # when apps/mobile changed
 # On macOS (also runs in mobile.yml):
 swiftc -parse-as-library ios/ShareExtension/ShareModel.swift test/share_targets.swift -o /tmp/musiclink-share-targets-test && /tmp/musiclink-share-targets-test
@@ -63,6 +64,7 @@ The browser tests start the API and the production build of the web on their own
 - Status colours: errors use the fixed signal red (`--error`, glow on the dark ground) from starter's `DESIGN.md`, never the product colour.
 - The repo is public, its CI logs too. `secrets.yml` scans every push and PR with gitleaks („Secret scan“). Catch false alarms narrowly, by fingerprint in `.gitleaksignore` or by path and rule in `.gitleaks.toml`, never turn a rule off. A real finding is public already: rotate the secret right away.
 - No secrets in the client: everything in the web bundle and the app can be read, with LLMs from compiled apps too. Only the server decides what is allowed. Release builds of the app run with `--obfuscate --split-debug-info`, which makes them smaller and strips class and function names but protects nothing. No further obfuscation (string encryption, commercial tools). Symbolizing stack traces: „Release builds“.
+- CLI („CLI“): every core feature gets a command in `apps/cli/src/commands` in the same change, like `convert.ts`, with text, `--json` and a test in `cli.test.ts`. The CLI talks only to the HTTP API, never to the database, so the converter throttle holds for it too.
 - Readable for agents („For agents“): every static public page is in `publicPages` in `apps/api/src/lib/public-pages.ts`, in German and English, with its content as Markdown in `body`. A new public page goes in with the same change; the browser test checks that every listed page exists. Only what anyone sees without a shared link: no share pages (`/s/…`), no invites (`/f/…`).
 
 ## Secret scan
@@ -83,6 +85,16 @@ Other people's agents read the public pages without HTML, after [llms.txt](https
 - Language: `?lang=de|en`, else `Accept-Language`, else German. Links keep an explicit `?lang=`. The English legal pages (`/imprint`, `/privacy`) answer in English without it.
 - The API builds the links from `APP_URL`. Try it: `curl localhost:5173/llms.txt` with `bun run dev` running.
 
+## CLI
+
+`apps/cli` is Songgate on the command line, so agents, scripts and tests use the converter by command instead of the UI. Like web and app it talks only to the public HTTP API (`POST /api/v1/convert`, `GET /api/v1/song`), with the same per-process throttle. `parseArgs` from `node:util` reads the arguments, no further dependency.
+
+- Build: `bun run build` in `apps/cli` compiles `apps/cli/build/songgate`, one file with Bun inside (about 110 MB). The app's address is baked in: `APP_URL` from the environment at build time, else `https://songgate.app`. `--url` picks another, such as `http://localhost:5173` against `bun run dev`. Without building: `bun apps/cli/src/main.ts <command>`.
+- `songgate convert <link>` shows the song's links on every service (`found: false` = search only) and the share page, like `/s/…`. `--to apple|youtube|spotify|deezer` asks the converter for matches on one service instead, `--country DE|AT|CH|US|GB` picks the catalogue. `-` reads the link, or a shared text with a link in it, from stdin.
+- Output: text for people, with `--json` exactly one JSON value on stdout: the API's answer plus `shareUrl`, errors as `{ "error": "…" }`, the help as a list of commands. Exit codes: 0 done, 1 error (also answers of the API such as `NO_MATCH` or the throttle), 2 wrong usage. Help and messages are in `apps/cli/src/messages.ts` in German and English, the language comes from `LANG` or `--lang`; the API's own errors stay German like the web.
+- New commands: a file in `apps/cli/src/commands` like `convert.ts`, entered in `commands` in `src/cli.ts`. A command names help lines, options and `run`, which calls the API through `ctx.api`, reads the answer with zod and returns `{ data, text }`, `data` for `--json`. The tests in `src/cli.test.ts` run the CLI in-process against the real API with faked music services.
+- Other platforms: `bun run build --target=bun-darwin-arm64` in `apps/cli` (likewise `bun-linux-x64`, `bun-linux-arm64`, `bun-windows-x64`) overwrites `build/songgate`. The CI builds the file on every run as a check but does not publish it.
+
 ## Release builds
 
 Release builds of the app (`mobile.yml`) are built with `--obfuscate`, so stack traces from the app, in GlitchTip too, only show obfuscated names. The symbols are kept for 90 days as the artifacts `symbols-ios` and `symbols-android` of the CI run; the app's build number is that run's number (`gh run list -w mobile.yml --json number,databaseId` gives the run ID). To read a trace:
@@ -102,7 +114,9 @@ Android symbols are separated into `aab/` for Play installations and `apk/` for 
 
 - The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
 - Signal colours: only the error signal, Songgate has no „your turn“ or „new“ states.
-- No README: the sections „Secret scan“, „For agents“ and „Release builds“, which starter keeps in its README, are here.
+- No README: the sections „Secret scan“, „For agents“, „CLI“ and „Release builds“, which starter keeps in its README, are here.
 - The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum and Datenschutz.
 - Magic-link verification limits and ALTCHA before login mails do not apply: Songgate has no accounts or login routes and sends only feedback notifications.
+- The CLI has no `login`, `whoami`, `logout`, session file or exit code 3: Songgate has no accounts, `convert` needs none. Its tests need no database, they run with plain `bun test`.
+- The CLI's texts live in `apps/cli/src/messages.ts`, not in `packages/shared`: there is no shared `messages.ts`, web and API speak German only.
 - Biome runs the three rules against `any` via `bun run check`; existing formatting is kept, so this rollout does not enable the starter's other lint/format rules.

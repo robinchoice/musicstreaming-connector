@@ -1,0 +1,14 @@
+{
+  "name": "@app/cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build.ts",
+    "test": "bun test",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "zod": "^4.6.6"
+  }
+}
