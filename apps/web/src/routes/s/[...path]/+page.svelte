@@ -25,7 +25,7 @@
     <section class="card">
       <div class="song">
         {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
-        <div><div class="eyebrow">JEMAND HAT DIR EINEN SONG GESCHICKT</div><h1>{song.source.title}</h1><p>{song.source.artist}</p></div>
+        <div><div class="eyebrow">JEMAND HAT DIR {song.source.kind === 'album' ? 'EIN ALBUM' : 'EINEN SONG'} GESCHICKT</div><h1>{song.source.title}</h1><p>{song.source.artist}</p></div>
       </div>
       <h2>Wo hörst du Musik?</h2>
       {#each order as platform (platform)}
@@ -37,7 +37,7 @@
         </a>
       {/each}
     </section>
-    <p class="more">Selbst einen Song teilen? <a href="/">Songgate öffnen</a></p>
+    <p class="more">Selbst Musik teilen? <a href="/">Songgate öffnen</a></p>
   </main>
   <PleasanceFooter />
 </div>

@@ -7,7 +7,7 @@ import { EXIT } from './command';
 import { messages } from './messages';
 
 const song: Song = {
-  source: { platform: 'youtubeMusic', title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null },
+  source: { kind: 'song', platform: 'youtubeMusic', title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null },
   sharePath: '/s/yt/UijW9hGpnzc',
   links: {
     youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true },
@@ -16,9 +16,19 @@ const song: Song = {
     deezer: { url: 'https://www.deezer.com/track/725299', found: true },
   },
 };
+const album: Song = {
+  source: { kind: 'album', platform: 'deezer', title: 'Random Access Memories', artist: 'Daft Punk', url: 'https://www.deezer.com/album/6575789', artworkUrl: null },
+  sharePath: '/s/album/dz/6575789',
+  links: {
+    youtubeMusic: { url: 'https://music.youtube.com/browse/MPREb_K8qWMWVqXGi', found: true },
+    appleMusic: { url: 'https://music.apple.com/de/album/617154241', found: true },
+    spotify: { url: 'https://open.spotify.com/album/4m2880jivSbbyEGAKfITCa', found: true },
+    deezer: { url: 'https://www.deezer.com/album/6575789', found: true },
+  },
+};
 const conversion: Conversion = {
   target: 'spotify',
-  source: { title: 'Savior', artist: 'Red Hot Chili Peppers', url: song.source.url },
+  source: { kind: 'song', title: 'Savior', artist: 'Red Hot Chili Peppers', url: song.source.url },
   sharePath: song.sharePath,
   candidates: [{ title: 'Savior', url: 'https://open.spotify.com/track/0O8RjwNco465s5o9Ix9IYj', artworkUrl: null, album: 'Californication' }],
 };
@@ -39,7 +49,7 @@ beforeAll(() => {
     undefined,
     async (input) => {
       looked.push(input);
-      return song;
+      return input.input.includes('/album/') ? album : song;
     },
   );
   server = Bun.serve({ port: 0, fetch: app.fetch });
@@ -73,6 +83,15 @@ test('convert shows the links on every service, as text and as JSON', async () =
   const json = await cli(['convert', 'https://youtu.be/UijW9hGpnzc', '--json']);
   expect(json.code).toBe(EXIT.ok);
   expect(json.json()).toEqual({ ...song, shareUrl: `${url}/s/yt/UijW9hGpnzc` });
+});
+
+test('convert takes albums like songs', async () => {
+  const json = await cli(['convert', 'https://www.deezer.com/de/album/6575789', '--json']);
+  expect(json.code).toBe(EXIT.ok);
+  expect(json.json()).toEqual({ ...album, shareUrl: `${url}/s/album/dz/6575789` });
+  const text = await cli(['convert', 'https://www.deezer.com/de/album/6575789']);
+  expect(text.out).toContain('Random Access Memories – Daft Punk');
+  expect(text.out).toContain('https://open.spotify.com/album/4m2880jivSbbyEGAKfITCa');
 });
 
 test('convert --to asks the converter and reads the link from stdin', async () => {

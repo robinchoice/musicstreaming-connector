@@ -165,7 +165,7 @@ String inviteText(Friend me) =>
 /// One link if everyone uses the same service, otherwise one line per
 /// service plus the share page for everyone else. Same as packages/shared.
 String friendsMessage(Song song, List<Friend> friends) {
-  final head = '🎵 ${song.title} – ${song.artist}';
+  final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
   final services = <String>[];
   for (final friend in friends) {
     if (!services.contains(friend.platform)) services.add(friend.platform);

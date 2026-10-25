@@ -54,15 +54,17 @@ class Conversion {
           .toList();
 }
 
-/// The best link on every service, for sharing with friends.
+/// The best link on every service for a song or an album, for sharing with friends.
 class Song {
+  final bool album;
   final String title;
   final String artist;
   final String? artworkUrl;
   final String sharePath;
   final Map<String, String> links;
   Song.fromJson(Map<String, dynamic> json)
-    : title = (json['source'] as Map<String, dynamic>)['title'] as String,
+    : album = (json['source'] as Map<String, dynamic>)['kind'] == 'album',
+      title = (json['source'] as Map<String, dynamic>)['title'] as String,
       artist = (json['source'] as Map<String, dynamic>)['artist'] as String,
       artworkUrl =
           (json['source'] as Map<String, dynamic>)['artworkUrl'] as String?,

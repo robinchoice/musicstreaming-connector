@@ -2,6 +2,7 @@ import Foundation
 import Combine
 
 struct SourceTrack: Decodable {
+    let kind: String?
     let title: String
     let artist: String
     let url: String
@@ -134,7 +135,7 @@ final class ShareModel: ObservableObject {
         guard let song, let apiURL else { return }
         let picked = friends.filter { chosen.contains($0.name) }
         guard !picked.isEmpty else { message = nil; return }
-        let head = "🎵 \(song.source.title) – \(song.source.artist)"
+        let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
         var services: [String] = []
         for friend in picked where !services.contains(friend.platform) { services.append(friend.platform) }
         if services.count == 1 {

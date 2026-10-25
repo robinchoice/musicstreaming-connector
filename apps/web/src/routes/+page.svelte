@@ -108,21 +108,21 @@
     <section class="intro">
       <div class="eyebrow">EIN SONG. MEHR VERBINDUNG.</div>
       <h1>Dein Musikgeschmack.<br /><span>Ihr Lieblingsplayer.</span></h1>
-      <p>Teile Songs aus YouTube Music, Apple Music, Spotify oder Deezer.<br /> Als Link für den Lieblingsplayer deiner Menschen.</p>
+      <p>Teile Songs und Alben aus YouTube Music, Apple Music, Spotify oder Deezer.<br /> Als Link für den Lieblingsplayer deiner Menschen.</p>
     </section>
 
     <section class="converter" aria-label="Musiklink umwandeln">
       <div class="route"><span>♪ Musik teilen</span><span class="arrow" aria-hidden="true">⟶</span><span>{chosen.length ? chosen.join(', ') : platforms[target]}</span></div>
       <form onsubmit={convert}>
-        <label for="song">Welchen Song möchtest du teilen?</label>
+        <label for="song">Welchen Song oder welches Album möchtest du teilen?</label>
         <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="Link aus YouTube Music, Apple Music, Spotify oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : chosen.length ? `An ${chosen.join(', ')} teilen` : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
         {#if !chosen.length}<div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>{/if}
-        <p class="hint">Ein einzelner Song reicht. Tracking-Parameter entfernen wir für dich.</p>
+        <p class="hint">Ein Song oder ein Album reicht. Tracking-Parameter entfernen wir für dich.</p>
         <Friends bind:selected={chosen} disabled={loading} />
       </form>
 
       <div aria-live="polite" aria-busy={loading}>
-        {#if loading}<div class="status"><span class="spinner"></span><strong>{chosen.length ? 'Wir suchen den Song für deine Freunde.' : `Wir suchen deine Aufnahme auf ${platforms[target]}.`}</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
+        {#if loading}<div class="status"><span class="spinner"></span><strong>{chosen.length ? 'Wir suchen die Links für deine Freunde.' : `Wir suchen deine Musik auf ${platforms[target]}.`}</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
         {:else if error}<div class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong><p>{error}</p></div>
           {#if searchUrl}<p class="hint">Teile stattdessen eine Suche nach dem Song.</p><div class="actions"><button class="primary" onclick={() => copy(searchUrl)}>{copied ? 'Suchlink kopiert ✓' : 'Suchlink kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(searchUrl)}>Weiterteilen ↗</button>{/if}<a href={searchUrl} target="_blank" rel="noreferrer">Auf {platforms[target]} suchen ↗</a></div>{/if}
         {:else if message}
@@ -134,7 +134,7 @@
         {:else if conversion}
           {@const selected = conversion.candidates.find(candidate => candidate.url === selection)!}
           <div class="results">
-            <div class="source"><span class="eyebrow">DEIN SONG</span><h2>{conversion.source.title}</h2><p>{conversion.source.artist}</p></div>
+            <div class="source"><span class="eyebrow">{conversion.source.kind === 'album' ? 'DEIN ALBUM' : 'DEIN SONG'}</span><h2>{conversion.source.title}</h2><p>{conversion.source.artist}</p></div>
             <p class="legend">Dein Vorschlag auf {platforms[conversion.target]}</p>
             <div class="candidate selected">{@render track(selected, conversion.target)}<span class="checkmark" aria-label="Ausgewählt">✓</span></div>
             {#if conversion.candidates.length > 1}

@@ -459,7 +459,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung.',
+                        'Teile Songs und Alben zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: muted,
                         ),

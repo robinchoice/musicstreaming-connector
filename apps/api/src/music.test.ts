@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import * as monitoring from './monitoring';
 import { friendsMessage } from '@app/shared';
-import { resolve, resolveAll, sharePath, songSource, type MusicSearch } from './lib/music';
+import { resolve, resolveAll, sharePath, musicSource, type MusicSearch } from './lib/music';
 import type { Fetch } from './lib/resolver';
 
 const diagnostics = spyOn(monitoring, 'captureMessage').mockImplementation(() => 'test');
@@ -43,10 +43,10 @@ test('Apple → YouTube uses source storefront and matches artist, version and d
 });
 
 test.each([apple, 'https://music.apple.com/de/song/savior/945575419', 'https://music.apple.com/de/song/945575419'])('accepts Apple song form %s', input => {
-  expect(songSource(`Hör mal: ${input}`)).toEqual({ platform: 'appleMusic', id: '945575419', country: 'DE' });
+  expect(musicSource(`Hör mal: ${input}`)).toEqual({ kind: 'song', platform: 'appleMusic', id: '945575419', country: 'DE' });
 });
-test.each(['https://music.apple.com/de/album/savior/945575406', 'https://music.apple.com/library/playlist/123', `${apple} ${youtube}`, 'https://user@music.apple.com/de/song/123'])('rejects ambiguous or non-song link %s', input => {
-  expect(() => songSource(input)).toThrow();
+test.each(['https://music.apple.com/de/album/savior/945575406?i=', 'https://music.apple.com/library/playlist/123', `${apple} ${youtube}`, 'https://user@music.apple.com/de/song/123'])('rejects ambiguous or non-song link %s', input => {
+  expect(() => musicSource(input)).toThrow();
 });
 test('rejects same source and destination before network calls', async () => {
   await expect(resolve({ input: apple, target: 'appleMusic', country: 'DE' })).rejects.toMatchObject({ code: 'UNSUPPORTED_LINK' });
@@ -88,12 +88,12 @@ const deezer = 'https://www.deezer.com/de/track/67238735';
 const deezerTrack = { id: 67238735, title: 'Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)', duration: 248, readable: true, artist: { name: 'Daft Punk' }, album: { title: 'Get Lucky', cover_medium: 'https://cdn-images.dzcdn.net/cover.jpg' } };
 
 test.each([
-  [spotify, { platform: 'spotify', id: '2Foc5Q5nqNiosCNqttzHof', country: '' }],
-  [deezer, { platform: 'deezer', id: '67238735', country: '' }],
-  ['https://deezer.com/track/67238735', { platform: 'deezer', id: '67238735', country: '' }],
-] as const)('accepts %s', (input, source) => expect(songSource(input)).toEqual(source));
-test.each(['https://open.spotify.com/album/2Foc5Q5nqNiosCNqttzHof', 'https://open.spotify.com/track/short', 'https://www.deezer.com/de/playlist/123', 'https://deezer.com.evil.example/track/1'])('rejects %s', input => {
-  expect(() => songSource(input)).toThrow();
+  [spotify, { kind: 'song', platform: 'spotify', id: '2Foc5Q5nqNiosCNqttzHof', country: '' }],
+  [deezer, { kind: 'song', platform: 'deezer', id: '67238735', country: '' }],
+  ['https://deezer.com/track/67238735', { kind: 'song', platform: 'deezer', id: '67238735', country: '' }],
+] as const)('accepts %s', (input, source) => expect(musicSource(input)).toEqual(source));
+test.each(['https://open.spotify.com/artist/2Foc5Q5nqNiosCNqttzHof', 'https://open.spotify.com/album/short', 'https://open.spotify.com/track/short', 'https://www.deezer.com/de/playlist/123', 'https://deezer.com.evil.example/track/1'])('rejects %s', input => {
+  expect(() => musicSource(input)).toThrow();
 });
 
 test('Spotify → Deezer reads the track page and matches artist, version and duration', async () => {
@@ -167,10 +167,10 @@ test('resolveAll finds every service once and falls back to search per service',
 
 test.each([
   [youtube, '/s/yt/UijW9hGpnzc'], [apple, '/s/am/de/945575419'], [spotify, '/s/sp/2Foc5Q5nqNiosCNqttzHof'], [deezer, '/s/dz/67238735'],
-])('share path for %s', (input, path) => expect(sharePath(songSource(input))).toBe(path));
+])('share path for %s', (input, path) => expect(sharePath(musicSource(input))).toBe(path));
 
 test('friends message has one link for one service and one line per service otherwise', () => {
-  const song = { source: { platform: 'youtubeMusic' as const, title: 'Savior', artist: 'RHCP', url: youtube, artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
+  const song = { source: { kind: 'song' as const, platform: 'youtubeMusic' as const, title: 'Savior', artist: 'RHCP', url: youtube, artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
     youtubeMusic: { url: youtube, found: true }, appleMusic: { url: apple, found: true },
     spotify: { url: 'https://open.spotify.com/track/x', found: true }, deezer: { url: 'https://www.deezer.com/track/1', found: true },
   } };
@@ -233,7 +233,7 @@ test('expected upstream failures and cancellation produce no diagnostic event', 
   expect(diagnostics).not.toHaveBeenCalled();
 });
 
-describe('ISRC matching with a MusicKit key', async () => {
+describe('ISRC and UPC matching with a MusicKit key', async () => {
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', pair.privateKey)).toString('base64');
   const pem = `-----BEGIN PRIVATE KEY-----\n${pkcs8.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
@@ -288,5 +288,39 @@ describe('ISRC matching with a MusicKit key', async () => {
       expect(result.candidates[0]!.url).toBe('https://music.apple.com/de/album/savior/945575406?i=945575419');
     }
     expect(diagnostics.mock.calls).toEqual([['ISRC lookup failure', { level: 'warning', tags: { provider: 'appleMusic' } }]]);
+  });
+
+  // Albums carry a UPC, which the same key reads
+  const album = 'https://music.apple.com/de/album/random-access-memories/617154241';
+  const deezerAlbumLink = 'https://www.deezer.com/de/album/6575789';
+  const collection = { wrapperType: 'collection', collectionId: 617154241, collectionName: 'Random Access Memories', artistName: 'Daft Punk', collectionViewUrl: album };
+  const deezerAlbum = { id: 6575789, title: 'Random Access Memories', upc: '886443927087', artist: { name: 'Daft Punk' }, cover_medium: 'https://cdn-images.dzcdn.net/ram/250.jpg' };
+
+  test('Apple → Deezer takes the album by its UPC and skips the text search', async () => {
+    const result = await resolve({ input: album, target: 'deezer', country: 'DE' }, undefined, async url => {
+      if (url.hostname === 'api.music.apple.com') {
+        expect(url.pathname).toBe('/v1/catalog/de/albums/617154241');
+        return Response.json({ data: [{ attributes: { name: 'Random Access Memories', artistName: 'Daft Punk', url: album, upc: '886443927087' } }] });
+      }
+      if (url.hostname === 'itunes.apple.com') return Response.json({ results: [collection] });
+      expect(url.pathname).toBe('/album/upc:886443927087');
+      return Response.json(deezerAlbum);
+    });
+    expect(result.candidates).toEqual([{ title: 'Random Access Memories', url: 'https://www.deezer.com/album/6575789', artworkUrl: 'https://cdn-images.dzcdn.net/ram/250.jpg' }]);
+  });
+
+  test('Deezer → Apple by UPC, a rejected key falls back to text and is reported', async () => {
+    for (const answer of [Response.json({ data: [{ attributes: { name: 'Random Access Memories', artistName: 'Daft Punk', url: `${album}?l=en`, playParams: { id: '617154241' } } }] }), new Response('', { status: 401 })]) {
+      const result = await resolve({ input: deezerAlbumLink, target: 'appleMusic', country: 'DE' }, undefined, async url => {
+        if (url.hostname === 'api.deezer.com') return Response.json(deezerAlbum);
+        if (url.hostname === 'api.music.apple.com') {
+          expect(url.searchParams.get('filter[upc]')).toBe('886443927087');
+          return answer;
+        }
+        return Response.json({ results: [collection] });
+      });
+      expect(result.candidates[0]!.url).toBe(album);
+    }
+    expect(diagnostics.mock.calls).toEqual([['UPC lookup failure', { level: 'warning', tags: { provider: 'appleMusic' } }]]);
   });
 });

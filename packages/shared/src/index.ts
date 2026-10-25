@@ -20,10 +20,10 @@ export const conversionInput = z.object({
 export type ConversionInput = z.infer<typeof conversionInput>;
 
 export const failureMessages = {
-  INVALID_LINK: 'Teile bitte einen einzelnen Song aus YouTube Music, Apple Music, Spotify oder Deezer mit Songgate.',
-  UNSUPPORTED_LINK: 'Teile einen Song aus YouTube Music, Apple Music, Spotify oder Deezer und wähle einen anderen Zieldienst.',
-  SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song konnten nicht geladen werden.',
-  NO_MATCH: 'Für diese Aufnahme wurde kein passender Treffer gefunden.',
+  INVALID_LINK: 'Teile bitte einen einzelnen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer mit Songgate.',
+  UNSUPPORTED_LINK: 'Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer und wähle einen anderen Zieldienst.',
+  SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song oder Album konnten nicht geladen werden.',
+  NO_MATCH: 'Es wurde kein passender Treffer gefunden.',
   RATE_LIMITED: 'Der Musikdienst erhält gerade zu viele Anfragen. Versuche es später erneut.',
   NETWORK: 'Die Musikdienste sind gerade nicht erreichbar. Versuche es erneut.',
 } as const;
@@ -68,15 +68,17 @@ export function targetsFor(input: string): Platform[] {
   return (Object.keys(platforms) as Platform[]).filter(platform => platform !== source);
 }
 
+export type Kind = 'song' | 'album';
+
 export interface Conversion {
   target: Platform;
-  source: { title: string; artist: string; url: string };
+  source: { kind: Kind; title: string; artist: string; url: string };
   sharePath: string;
   candidates: { title: string; url: string; artworkUrl: string | null; album?: string; durationSeconds?: number }[];
 }
 
 export interface Song {
-  source: { platform: Platform; title: string; artist: string; url: string; artworkUrl: string | null };
+  source: { kind: Kind; platform: Platform; title: string; artist: string; url: string; artworkUrl: string | null };
   sharePath: string;
   // found is false when only a search on that service is left
   links: Record<Platform, { url: string; found: boolean }>;
@@ -88,7 +90,7 @@ export const inviteSlugs: Record<Platform, string> = { appleMusic: 'apple', yout
 
 // One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else
 export function friendsMessage(song: Song, friends: Friend[], origin: string): string {
-  const head = `🎵 ${song.source.title} – ${song.source.artist}`;
+  const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
   const services = [...new Set(friends.map(friend => friend.platform))];
   if (services.length === 1) return `${head}\n${song.links[services[0]!].url}`;
   const lines = services.map(platform => `${platforms[platform]} (${friends.filter(friend => friend.platform === platform).map(friend => friend.name).join(', ')}): ${song.links[platform].url}`);

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createApp } from './app';
 import { ResolutionError } from './lib/resolver';
 
-const conversion = { target: 'appleMusic' as const, source: { title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc' }, sharePath: '/s/yt/UijW9hGpnzc', candidates: [{ title: 'Savior', url: 'https://open.spotify.com/track/0O8RjwNco465s5o9Ix9IYj', artworkUrl: null }] };
+const conversion = { target: 'appleMusic' as const, source: { kind: 'song' as const, title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc' }, sharePath: '/s/yt/UijW9hGpnzc', candidates: [{ title: 'Savior', url: 'https://open.spotify.com/track/0O8RjwNco465s5o9Ix9IYj', artworkUrl: null }] };
 const post = (body: unknown) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
 test('public healthcheck and conversion require no account', async () => {
@@ -49,7 +49,7 @@ test('caps upstream traffic per process regardless of spoofed forwarding headers
 });
 
 test('song lookups are cached so share pages do not hit the services again', async () => {
-  const song = { source: { platform: 'youtubeMusic' as const, title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
+  const song = { source: { kind: 'song' as const, platform: 'youtubeMusic' as const, title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
     youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true }, appleMusic: { url: 'https://music.apple.com/de/album/savior/945575406?i=945575419', found: true },
     spotify: { url: 'https://open.spotify.com/search/Savior', found: false }, deezer: { url: 'https://www.deezer.com/track/725299', found: true },
   } };

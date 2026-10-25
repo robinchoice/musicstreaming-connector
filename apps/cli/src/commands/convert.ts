@@ -3,14 +3,15 @@ import { z } from 'zod';
 import { type Command, EXIT, Failure, str } from '../command';
 import { SLUG } from '../config';
 
+const kind = z.enum(['song', 'album']);
 const songSchema = z.object({
-  source: z.object({ platform: platformSchema, title: z.string(), artist: z.string(), url: z.string(), artworkUrl: z.string().nullable() }),
+  source: z.object({ kind, platform: platformSchema, title: z.string(), artist: z.string(), url: z.string(), artworkUrl: z.string().nullable() }),
   sharePath: z.string(),
   links: z.record(platformSchema, z.object({ url: z.string(), found: z.boolean() })),
 });
 const conversionSchema = z.object({
   target: platformSchema,
-  source: z.object({ title: z.string(), artist: z.string(), url: z.string() }),
+  source: z.object({ kind, title: z.string(), artist: z.string(), url: z.string() }),
   sharePath: z.string(),
   candidates: z.array(z.object({ title: z.string(), url: z.string(), album: z.string().exactOptional() })),
 });

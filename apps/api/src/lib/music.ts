@@ -1,21 +1,9 @@
 import { platforms, type Conversion, type ConversionInput, type Platform, type Song } from '@app/shared';
-import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
-import { captureMessage } from '../monitoring';
-import { appleMusicToken } from './apple-music';
+import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
+import { appleCatalog, codeFailure, https, providerCall, recording, session, spotifyMeta, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, type Fetch } from './resolver';
 
-const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-function recording(title: string, artists: string[]) {
-  const credits = [...artists];
-  const name = title
-    .replace(/[\[(]feat(?:uring)?\.?\s+([^\])]+)[\])]/gi, (_, featured: string) => { credits.push(featured); return ''; })
-    .replace(/\s+-\s+feat(?:uring)?\.?\s+([^\])]+)(?=[\])])/gi, (_, featured: string) => { credits.push(featured); return ''; });
-  return {
-    title: normalize(name),
-    artists: [...new Set(credits.flatMap(artist => artist.split(/,| & | and /i)).map(normalize).filter(Boolean))].sort().join('|'),
-  };
-}
 const appleTrack = z.object({
   wrapperType: z.literal('track'), kind: z.literal('song'), trackId: z.number(),
   trackName: z.string(), artistName: z.string(), trackViewUrl: z.string().url(),
@@ -33,43 +21,47 @@ const appleSong = z.object({ id: z.string(), attributes: z.object({
 }) });
 const isrcCode = (value?: string) => value && /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(value) ? { isrc: value } : {};
 type Track = { title: string; artist: string; url: string; durationSeconds?: number; artworkUrl: string | null; isrc?: string };
-type Source = ReturnType<typeof songSource>;
-const https = (url?: string | null) => url?.startsWith('https://') ? url : null;
 type YouTubeSong = { id: string; title: string; artists: string[]; album?: string; durationSeconds?: number; artworkUrl: string | null };
 export type MusicSearch = (query: string, signal: AbortSignal) => Promise<YouTubeSong[]>;
 
-export function songSource(input: string) {
-  const songs = new Map<string, { platform: Platform; id: string; country: string }>();
+// A song or an album: Apple albums without ?i=, Spotify and Deezer /album/, YouTube Music album playlists and pages
+export function musicSource(input: string): MusicLink {
+  const links = new Map<string, MusicLink>();
   for (const link of input.match(/https?:\/\/[^\s<>]+/gi) ?? []) {
     let url: URL;
     try { url = new URL(link.replace(/[.,!)\]]+$/, '')); } catch { throw new ResolutionError('INVALID_LINK'); }
     if (url.hostname === 'music.apple.com') {
       const parts = url.pathname.split('/').filter(Boolean);
-      const id = parts[1] === 'album' ? url.searchParams.get('i') : parts[1] === 'song' ? parts.at(-1) : null;
+      const song = parts[1] === 'album' ? url.searchParams.get('i') : parts[1] === 'song' ? parts.at(-1) : null;
+      const album = parts[1] === 'album' && !url.searchParams.has('i') ? parts.at(-1) : null;
+      const id = song ?? album;
       if (url.username || url.password || !/^[a-z]{2}$/i.test(parts[0] ?? '') || !id || !/^\d{1,12}$/.test(id)) throw new ResolutionError('INVALID_LINK');
-      songs.set(`apple:${id}`, { platform: 'appleMusic', id, country: parts[0]!.toUpperCase() });
+      links.set(`apple:${id}`, { kind: song ? 'song' : 'album', platform: 'appleMusic', id, country: parts[0]!.toUpperCase() });
     } else if (['music.youtube.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) {
-      const id = youtubeVideoId(link);
-      songs.set(`youtube:${id}`, { platform: 'youtubeMusic', id, country: '' });
+      const album = url.pathname === '/playlist' ? url.searchParams.get('list') : url.pathname.startsWith('/browse/') ? url.pathname.slice(8) : null;
+      if (album === null) {
+        const id = youtubeVideoId(link);
+        links.set(`youtube:${id}`, { kind: 'song', platform: 'youtubeMusic', id, country: '' });
+      } else {
+        if (url.username || url.password || !/^(?:OLAK5uy_|MPREb_)[A-Za-z0-9_-]{8,40}$/.test(album)) throw new ResolutionError('INVALID_LINK');
+        links.set(`youtube:${album}`, { kind: 'album', platform: 'youtubeMusic', id: album, country: '' });
+      }
     } else if (url.hostname === 'open.spotify.com' || ['www.deezer.com', 'deezer.com'].includes(url.hostname)) {
       const spotify = url.hostname === 'open.spotify.com';
       const parts = url.pathname.split('/').filter(Boolean);
-      const id = parts.at(-2) === 'track' ? parts.at(-1) : null;
-      if (url.username || url.password || !id || !(spotify ? /^[A-Za-z0-9]{22}$/ : /^\d{1,12}$/).test(id)) throw new ResolutionError('INVALID_LINK');
-      songs.set(`${spotify ? 'spotify' : 'deezer'}:${id}`, { platform: spotify ? 'spotify' : 'deezer', id, country: '' });
+      const kind = parts.at(-2) === 'track' ? 'song' : parts.at(-2) === 'album' ? 'album' : null;
+      const id = kind ? parts.at(-1) : null;
+      if (url.username || url.password || !kind || !id || !(spotify ? /^[A-Za-z0-9]{22}$/ : /^\d{1,12}$/).test(id)) throw new ResolutionError('INVALID_LINK');
+      links.set(`${spotify ? 'spotify' : 'deezer'}:${kind}:${id}`, { kind, platform: spotify ? 'spotify' : 'deezer', id, country: '' });
     }
   }
-  if (songs.size > 1) throw new ResolutionError('INVALID_LINK');
-  if (!songs.size) throw new ResolutionError(input.match(/https?:\/\//i) ? 'UNSUPPORTED_LINK' : 'INVALID_LINK');
-  return [...songs.values()][0]!;
+  if (links.size > 1) throw new ResolutionError('INVALID_LINK');
+  if (!links.size) throw new ResolutionError(input.match(/https?:\/\//i) ? 'UNSUPPORTED_LINK' : 'INVALID_LINK');
+  return [...links.values()][0]!;
 }
 
 export const searchYouTube: MusicSearch = async (query, signal) => {
-  const youtube = await Innertube.create({
-    retrieve_player: false, enable_session_cache: false,
-    fetch: Object.assign((url: Parameters<typeof fetch>[0], init?: RequestInit) => fetch(url, { ...init, signal }), { preconnect: fetch.preconnect }),
-  });
-  const results = await youtube.music.search(query, { type: 'song' });
+  const results = await (await youtube(signal)).music.search(query, { type: 'song' });
   return (results.songs?.contents ?? []).flatMap(item =>
     item.id && item.title && item.artists ? [{
       id: item.id, title: item.title, artists: item.artists.map(artist => artist.name),
@@ -78,67 +70,20 @@ export const searchYouTube: MusicSearch = async (query, signal) => {
     }] : []);
 };
 
-// Spotify has no open metadata API; the public track page carries title, artists and duration as meta tags.
-function spotifyMeta(html: string, name: string) {
-  const value = html.match(new RegExp(`<meta (?:property|name)="${name}" content="([^"]*)"`))?.[1];
-  return value?.replace(/&(amp|quot|lt|gt|#x27|#39);/g, (_, entity: string) => ({ amp: '&', quot: '"', lt: '<', gt: '>', '#x27': "'", '#39': "'" })[entity]!);
+// Share links carry only the source song or album, so the share page needs no storage
+export function sharePath(source: MusicLink) {
+  const path = { youtubeMusic: `/yt/${source.id}`, appleMusic: `/am/${source.country.toLowerCase()}/${source.id}`, spotify: `/sp/${source.id}`, deezer: `/dz/${source.id}` }[source.platform];
+  return source.kind === 'album' ? `/s/album${path}` : `/s${path}`;
 }
 
-// Share links carry only the source song, so the share page needs no storage
-export function sharePath(source: Source) {
-  return { youtubeMusic: `/s/yt/${source.id}`, appleMusic: `/s/am/${source.country.toLowerCase()}/${source.id}`, spotify: `/s/sp/${source.id}`, deezer: `/s/dz/${source.id}` }[source.platform];
-}
-
-function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
-  const controller = new AbortController();
-  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(requestSignal ? [requestSignal] : [])]);
-  const request = async (origin: string, params: Record<string, string>, headers: Record<string, string> = { 'user-agent': 'Songgate/0.3' }) => {
-    const url = new URL(origin);
-    url.search = new URLSearchParams(params).toString();
-    const response = await fetcher(url, { signal, redirect: 'error', headers });
-    if (response.status === 429) throw new ResolutionError('RATE_LIMITED');
-    if (response.status === 404) throw new ResolutionError('SOURCE_UNAVAILABLE');
-    if (!response.ok) throw new ResolutionError('NETWORK');
-    return response;
-  };
-  const get = async (origin: string, params: Record<string, string>): Promise<unknown> => (await request(origin, params)).json();
-  return { controller, signal, request, get };
-}
-type Session = ReturnType<typeof session>;
-
-async function providerCall<T>(provider: Platform, signal: AbortSignal, call: () => Promise<T>): Promise<T> {
-  try {
-    return await call();
-  } catch (error) {
-    if (!(error instanceof ResolutionError) && !signal.aborted) {
-      const failure = error instanceof z.ZodError || error instanceof SyntaxError ? 'invalid_response'
-        : error instanceof TypeError ? 'request_failed' : 'unexpected';
-      captureMessage('Music provider failure', { level: 'warning', tags: { provider, failure } });
-    }
-    throw error;
-  }
-}
-
-// spotify.link is a Branch short link for spotify.app.link, whose page names the track it opens
+// spotify.link is a Branch short link for spotify.app.link, whose page names the track or album it opens
 async function expandShortLink(input: string, { request, signal }: Session) {
   const short = input.match(/https?:\/\/spotify\.link\/([A-Za-z0-9]{6,20})(?![A-Za-z0-9])/);
   if (!short) return input;
   const page = await providerCall('spotify', signal, async () => (await request(`https://spotify.app.link/${short[1]}`, {})).text());
-  const track = page.match(/https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/[A-Za-z0-9]{22}/)?.[0];
-  if (!track) throw new ResolutionError('INVALID_LINK');
-  return input.replace(short[0], track);
-}
-
-async function appleCatalog(path: string, params: Record<string, string>, { request }: Session) {
-  const token = await appleMusicToken();
-  if (!token) return [];
-  const body: unknown = await (await request(`https://api.music.apple.com/v1/catalog/${path}`, params, { authorization: `Bearer ${token}` })).json();
-  return z.object({ data: z.array(appleSong) }).parse(body).data;
-}
-
-// An ISRC lookup that fails leaves text matching; reported so a broken MusicKit key gets noticed
-function isrcFailure(provider: Platform, signal: AbortSignal) {
-  if (!signal.aborted) captureMessage('ISRC lookup failure', { level: 'warning', tags: { provider } });
+  const target = page.match(/https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:track|album)\/[A-Za-z0-9]{22}/)?.[0];
+  if (!target) throw new ResolutionError('INVALID_LINK');
+  return input.replace(short[0], target);
 }
 
 function appleCandidate(link: string, title: string, album: string | undefined, millis: number | undefined, artworkUrl: string | null) {
@@ -156,7 +101,7 @@ async function isrcCandidates(target: Platform, isrc: string, country: string, c
   try {
     if (target === 'appleMusic') {
       // The oldest song ID is usually the original album, compilations come later
-      return (await appleCatalog(`${country.toLowerCase()}/songs`, { 'filter[isrc]': isrc }, current))
+      return (await appleCatalog(`${country.toLowerCase()}/songs`, { 'filter[isrc]': isrc }, appleSong, current))
         .filter(song => song.attributes.playParams !== undefined).toSorted((a, b) => Number(a.id) - Number(b.id))
         .flatMap(({ attributes: song }) => appleCandidate(song.url, song.name, song.albumName, song.durationInMillis, https(song.artwork?.url.replace('{w}x{h}', '100x100'))));
     }
@@ -166,7 +111,7 @@ async function isrcCandidates(target: Platform, isrc: string, country: string, c
       return track.success && track.data.readable !== false ? [deezerCandidate(track.data)] : [];
     }
   } catch {
-    isrcFailure(target, current.signal);
+    codeFailure('ISRC', target, current.signal);
   }
   return [];
 }
@@ -176,8 +121,8 @@ const appleTracks = (body: unknown) => z.object({ results: z.array(z.unknown()) 
   return parsed.success ? [parsed.data] : [];
 });
 
-function loadSource(parsed: Source, current: Session): Promise<Track> {
-  const { request, get, signal } = current;
+function loadSource(parsed: MusicLink, current: Session): Promise<Track> {
+  const { get, signal } = current;
   return providerCall(parsed.platform, signal, async () => {
     let source: Track;
     if (parsed.platform === 'youtubeMusic') {
@@ -186,13 +131,13 @@ function loadSource(parsed: Source, current: Session): Promise<Track> {
     } else if (parsed.platform === 'appleMusic') {
       const [body, isrc] = await Promise.all([
         get('https://itunes.apple.com/lookup', { id: parsed.id, country: parsed.country, entity: 'song' }),
-        appleCatalog(`${parsed.country.toLowerCase()}/songs/${parsed.id}`, {}, current).then(songs => songs[0]?.attributes.isrc, () => { isrcFailure('appleMusic', signal); return undefined; }),
+        appleCatalog(`${parsed.country.toLowerCase()}/songs/${parsed.id}`, {}, appleSong, current).then(songs => songs[0]?.attributes.isrc, () => { codeFailure('ISRC', 'appleMusic', signal); return undefined; }),
       ]);
       const track = appleTracks(body).find(track => String(track.trackId) === parsed.id);
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
       source = { ...isrcCode(isrc), title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
     } else if (parsed.platform === 'spotify') {
-      const html = await (await request(`https://open.spotify.com/track/${parsed.id}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; Songgate/0.3)' })).text();
+      const html = await current.spotifyPage(`track/${parsed.id}`);
       const duration = Number(spotifyMeta(html, 'music:duration'));
       source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, ...(duration > 0 ? { durationSeconds: duration } : {}), artworkUrl: https(spotifyMeta(html, 'og:image')) };
     } else {
@@ -242,15 +187,25 @@ function findCandidates(target: Platform, source: Track, country: string, curren
   });
 }
 
-export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube): Promise<Conversion> {
+// Source and matcher of a song or an album, so resolve and resolveAll treat both alike
+async function lookup(parsed: MusicLink, current: Session, search: MusicSearch, albums: YouTubeAlbums) {
+  if (parsed.kind === 'album') {
+    const source = await loadAlbum(parsed, current, albums);
+    return { source, find: (target: Platform, country: string) => findAlbums(target, source, country, current, albums) };
+  }
+  const source = await loadSource(parsed, current);
+  return { source, find: (target: Platform, country: string) => findCandidates(target, source, country, current, search) };
+}
+
+export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums): Promise<Conversion> {
   const current = session(requestSignal, fetcher);
   try {
-    const parsed = songSource(await expandShortLink(input.input, current));
+    const parsed = musicSource(await expandShortLink(input.input, current));
     if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
-    const source = await loadSource(parsed, current);
-    const candidates = await findCandidates(input.target, source, input.country, current, search);
+    const { source, find } = await lookup(parsed, current, search, albums);
+    const candidates = await find(input.target, input.country);
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
-    return { source: { title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(parsed) };
+    return { source: { kind: parsed.kind, title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(parsed) };
   } catch (error) {
     if (error instanceof ResolutionError) throw error;
     throw new ResolutionError('NETWORK');
@@ -259,19 +214,19 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
 
 // The best match on every service at once, for the share page and for friends. A service
 // that finds nothing or fails gets a search link, so one slow service never blocks the rest.
-export async function resolveAll(input: { input: string; country: string }, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube): Promise<Song> {
+export async function resolveAll(input: { input: string; country: string }, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums): Promise<Song> {
   const current = session(requestSignal, fetcher);
   try {
-    const parsed = songSource(await expandShortLink(input.input, current));
-    const source = await loadSource(parsed, current);
+    const parsed = musicSource(await expandShortLink(input.input, current));
+    const { source, find } = await lookup(parsed, current, search, albums);
     const targets = Object.keys(platforms) as Platform[];
     const bests = await Promise.all(targets.map(target => target === parsed.platform ? undefined
-      : findCandidates(target, source, input.country, current, search).then(candidates => candidates[0], () => undefined)));
+      : find(target, input.country).then(candidates => candidates[0], () => undefined)));
     const links = Object.fromEntries(targets.map((target, i) => [target, target === parsed.platform ? { url: source.url, found: true }
       : bests[i] ? { url: bests[i].url, found: true } : { url: searchUrl(target, source, input.country), found: false }])) as Song['links'];
-    // YouTube thumbnails are letterboxed video frames, a square album cover from another service looks better
-    const artworkUrl = parsed.platform === 'youtubeMusic' ? bests.find(best => best?.artworkUrl)?.artworkUrl?.replace('/100x100bb.', '/600x600bb.') ?? source.artworkUrl : source.artworkUrl;
-    return { source: { platform: parsed.platform, title: source.title, artist: source.artist, url: source.url, artworkUrl }, sharePath: sharePath(parsed), links };
+    // YouTube thumbnails of songs are letterboxed video frames, a square album cover from another service looks better
+    const artworkUrl = parsed.platform === 'youtubeMusic' && parsed.kind === 'song' ? bests.find(best => best?.artworkUrl)?.artworkUrl?.replace('/100x100bb.', '/600x600bb.') ?? source.artworkUrl : source.artworkUrl;
+    return { source: { kind: parsed.kind, platform: parsed.platform, title: source.title, artist: source.artist, url: source.url, artworkUrl }, sharePath: sharePath(parsed), links };
   } catch (error) {
     if (error instanceof ResolutionError) throw error;
     throw new ResolutionError('NETWORK');

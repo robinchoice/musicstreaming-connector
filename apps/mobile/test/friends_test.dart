@@ -76,6 +76,21 @@ void main() {
       'Apple Music (Jonas): https://music.apple.com/de/song/1\n'
       'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
     );
+    final album = Song.fromJson({
+      'source': {
+        'kind': 'album',
+        'title': 'Random Access Memories',
+        'artist': 'Daft Punk',
+      },
+      'sharePath': '/s/album/dz/6575789',
+      'links': {
+        'deezer': {'url': 'https://www.deezer.com/album/6575789'},
+      },
+    });
+    expect(
+      friendsMessage(album, const [Friend('Lisa', 'deezer')]),
+      '💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789',
+    );
   });
 
   testWidgets('picking friends builds one message for all of them', (
@@ -95,7 +110,8 @@ void main() {
                           'platform': 'youtubeMusic',
                           'title': 'Savior',
                           'artist': 'RHCP',
-                          'url': 'https://music.youtube.com/watch?v=UijW9hGpnzc',
+                          'url':
+                              'https://music.youtube.com/watch?v=UijW9hGpnzc',
                           'artworkUrl': null,
                         },
                         'sharePath': '/s/yt/UijW9hGpnzc',
@@ -112,7 +128,8 @@ void main() {
                         'source': {
                           'title': 'Savior',
                           'artist': 'RHCP',
-                          'url': 'https://music.youtube.com/watch?v=UijW9hGpnzc',
+                          'url':
+                              'https://music.youtube.com/watch?v=UijW9hGpnzc',
                         },
                         'sharePath': '/s/yt/UijW9hGpnzc',
                         'candidates': [
