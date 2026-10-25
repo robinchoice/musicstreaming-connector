@@ -133,7 +133,8 @@ final class ShareModel: ObservableObject {
         }
     }
 
-    // One link if everyone uses the same service, otherwise one line per service plus the share page
+    // One link if everyone uses the same service, otherwise one line per service plus the share page.
+    // With an own invite the share page comes along for one service too, see packages/shared.
     private func buildMessage() {
         guard let song, let apiURL else { return }
         let picked = friends.filter { chosen.contains($0.name) }
@@ -141,8 +142,9 @@ final class ShareModel: ObservableObject {
         let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
         var services: [String] = []
         for friend in picked where !services.contains(friend.platform) { services.append(friend.platform) }
+        let origin = apiURL.absoluteString.hasSuffix("/") ? String(apiURL.absoluteString.dropLast()) : apiURL.absoluteString
         if services.count == 1 {
-            message = "\(head)\n\(song.links[services[0]]?.url ?? "")"
+            message = "\(head)\n\(song.links[services[0]]?.url ?? "")" + (me == nil ? "" : "\nAlle Dienste: \(Self.shareURL(origin + song.sharePath, from: me))")
             return
         }
         var lines = [head]
@@ -150,7 +152,6 @@ final class ShareModel: ObservableObject {
             let names = picked.filter { $0.platform == service }.map(\.name).joined(separator: ", ")
             lines.append("\(Self.platforms[service] ?? service) (\(names)): \(song.links[service]?.url ?? "")")
         }
-        let origin = apiURL.absoluteString.hasSuffix("/") ? String(apiURL.absoluteString.dropLast()) : apiURL.absoluteString
         lines.append("Andere: \(Self.shareURL(origin + song.sharePath, from: me))")
         message = lines.joined(separator: "\n")
     }

@@ -180,6 +180,8 @@ test('friends message has one link for one service and one line per service othe
     .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc`);
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }], 'https://songgate.app', { name: 'Robin Ö', platform: 'youtubeMusic' }).split('\n').at(-1))
     .toBe('Andere: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube');
+  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }], 'https://songgate.app', { name: 'Robin', platform: 'deezer' }))
+    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\nAlle Dienste: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer');
 });
 
 test('invalid source metadata reports only a fixed failure class and provider', async () => {

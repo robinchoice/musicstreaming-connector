@@ -85,6 +85,14 @@ void main() {
       ], from: const Friend('Robin Ö', 'youtubeMusic')).split('\n').last,
       'Andere: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube',
     );
+    expect(
+      friendsMessage(song, const [
+        Friend('Lisa', 'spotify'),
+      ], from: const Friend('Robin', 'deezer')),
+      '🎵 Savior – RHCP\n'
+      'https://open.spotify.com/track/x\n'
+      'Alle Dienste: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin&service=deezer',
+    );
     final album = Song.fromJson({
       'source': {
         'kind': 'album',

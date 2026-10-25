@@ -169,14 +169,21 @@ String shareUrl(String path, Friend? from) => from == null
     : '${_origin()}$path?from=${Uri.encodeQueryComponent(from.name)}&service=${inviteSlugs[from.platform]}';
 
 /// One link if everyone uses the same service, otherwise one line per
-/// service plus the share page for everyone else. Same as packages/shared.
+/// service plus the share page for everyone else. With an own invite the
+/// share page comes along for one service too. Same as packages/shared.
 String friendsMessage(Song song, List<Friend> friends, {Friend? from}) {
   final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
   final services = <String>[];
   for (final friend in friends) {
     if (!services.contains(friend.platform)) services.add(friend.platform);
   }
-  if (services.length == 1) return '$head\n${song.links[services.first]}';
+  if (services.length == 1) {
+    return [
+      head,
+      '${song.links[services.first]}',
+      if (from != null) 'Alle Dienste: ${shareUrl(song.sharePath, from)}',
+    ].join('\n');
+  }
   return [
     head,
     for (final platform in services)

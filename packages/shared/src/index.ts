@@ -93,11 +93,12 @@ export function shareUrl(origin: string, path: string, from: Friend | null): str
   return from ? `${origin}${path}?${new URLSearchParams({ from: from.name, service: inviteSlugs[from.platform] })}` : `${origin}${path}`;
 }
 
-// One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else
+// One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else.
+// With an own invite the share page comes along for one service too, so the recipient can save the sender.
 export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null): string {
   const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
   const services = [...new Set(friends.map(friend => friend.platform))];
-  if (services.length === 1) return `${head}\n${song.links[services[0]!].url}`;
+  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`Alle Dienste: ${shareUrl(origin, song.sharePath, from)}`] : [])].join('\n');
   const lines = services.map(platform => `${platforms[platform]} (${friends.filter(friend => friend.platform === platform).map(friend => friend.name).join(', ')}): ${song.links[platform].url}`);
   return [head, ...lines, `Andere: ${shareUrl(origin, song.sharePath, from)}`].join('\n');
 }
