@@ -119,6 +119,16 @@ class FriendsBar extends ConsumerWidget {
             ),
           ],
         ),
+        if (social.friends.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
         SizedBox(
           height: 82,
           child: ListView(

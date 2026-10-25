@@ -41,6 +41,7 @@
   <div class="head"><span>Für wen? <small>optional</small></span>
     <span class="links">{#if social.friends.length}<button type="button" onclick={() => open('edit')}>{panel === 'edit' ? 'Fertig' : 'Bearbeiten'}</button>{/if}<button type="button" onclick={() => open('invite')}>Meine Einladung</button></span>
   </div>
+  {#if !social.friends.length}<p class="empty">Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.</p>{/if}
   <div class="row">
     {#each social.friends as friend (friend.name)}
       {#if panel === 'edit'}
@@ -77,6 +78,7 @@
   .head small { color: var(--muted); font-weight: 400; }
   .links { display: flex; gap: 14px; }
   .links button { background: none; border: 0; padding: 0; color: var(--muted); font-size: 12px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+  .empty { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
   .row { display: flex; gap: 12px; overflow-x: auto; padding: 12px 2px 4px; }
   .friend { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 60px; flex-shrink: 0; background: none; border: 0; padding: 0; color: var(--text); font-size: 11.5px; }
   .avatar { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--raised); color: var(--accent); font-size: 17px; font-weight: 750; border: 2px solid transparent; }
