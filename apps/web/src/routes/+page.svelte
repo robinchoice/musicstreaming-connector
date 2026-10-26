@@ -3,12 +3,11 @@
   import Friends from '$lib/components/Friends.svelte';
   import Logo from '$lib/components/Logo.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { countries, friendsMessage, platforms, sourceOf, type Platform, type Song } from '@app/shared';
+  import { countries, friendsMessage, platforms, serviceOrder, sourceOf, type Platform, type Song } from '@app/shared';
   import { api } from '$lib/api';
   import { social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
 
-  const order: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
   let input = $state('');
   let country = 'DE';
   let loading = $state(false);
@@ -22,7 +21,7 @@
   let request: AbortController | undefined;
   const source = $derived(sourceOf(input));
   const friends = $derived(social.friends.filter(friend => chosen.includes(friend.name)));
-  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, order.filter(platform => services.includes(platform))) : '');
+  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, serviceOrder.filter(platform => services.includes(platform))) : '');
   const what = $derived(!services.length ? 'Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats.'
     : services.length === 1 ? `Direktlink für ${platforms[services[0]!]}${social.me ? ', dazu der Link für alle mit deinem Namen' : ''}.`
     : 'Eine Zeile pro Dienst, für alle anderen der Link für alle.');
@@ -119,7 +118,7 @@
           <button class="newlink" type="button" onclick={() => { reset(); input = ''; }}>Anderen Link einfügen</button>
           <Friends bind:selected={chosen} bind:services />
           <div class="tiles" role="group" aria-label="Dienste in der Nachricht">
-            {#each order as platform (platform)}
+            {#each serviceOrder as platform (platform)}
               {@const link = song.links[platform]}
               {@const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name)}
               <button type="button" class="tile" class:missing={!link.found} aria-pressed={services.includes(platform)} onclick={() => toggle(platform)}>

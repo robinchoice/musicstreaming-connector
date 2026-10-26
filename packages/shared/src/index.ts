@@ -10,6 +10,7 @@ export { bandColor, bandGradient, DEEP, GLOW } from './band';
 
 export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const;
 export type Platform = keyof typeof platforms;
+export const serviceOrder: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
 export const platformSchema = z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']);
 export const countries = ['DE', 'AT', 'CH', 'US', 'GB'] as const;
 export const conversionInput = z.object({

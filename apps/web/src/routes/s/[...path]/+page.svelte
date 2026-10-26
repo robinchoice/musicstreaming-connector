@@ -4,14 +4,14 @@
   import Logo from '$lib/components/Logo.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
   import { onMount } from 'svelte';
-  import { platforms, type Platform } from '@app/shared';
+  import { platforms, serviceOrder, type Platform } from '@app/shared';
   let { data } = $props();
   const song = $derived(data.song);
   const from = $derived(data.from);
   // The service a visitor opened last comes first next time, kept on the device only
   const KEY = 'musiclink-service';
   let mine = $state<Platform | null>(null);
-  const order = $derived((['spotify', 'appleMusic', 'youtubeMusic', 'deezer'] as Platform[]).toSorted((a, b) => Number(b === mine) - Number(a === mine)));
+  const order = $derived(serviceOrder.toSorted((a, b) => Number(b === mine) - Number(a === mine)));
   onMount(() => {
     const saved = localStorage.getItem(KEY);
     if (saved && saved in platforms) mine = saved as Platform;

@@ -43,6 +43,13 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   List<String> _chosen = [];
   List<String> _services = [];
 
+  void _setPeople(List<String> names, List<String> services) {
+    setState(() {
+      _chosen = names;
+      _services = services;
+    });
+  }
+
   String get _country {
     final region =
         WidgetsBinding.instance.platformDispatcher.locale.countryCode;
@@ -453,10 +460,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         selected: _chosen,
         services: _services,
         enabled: !_loading,
-        onChanged: (names, services) => setState(() {
-          _chosen = names;
-          _services = services;
-        }),
+        onChanged: _setPeople,
       ),
       const SizedBox(height: 28),
       if (_isIOS)
@@ -562,10 +566,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         selected: _chosen,
         services: _services,
         enabled: !_sharing,
-        onChanged: (names, services) => setState(() {
-          _chosen = names;
-          _services = services;
-        }),
+        onChanged: _setPeople,
       ),
       const SizedBox(height: 12),
       for (var row = 0; row < serviceOrder.length; row += 2)

@@ -43,6 +43,7 @@ const appleCollection = z.object({
   wrapperType: z.literal('collection'), collectionId: z.number(), collectionName: z.string(), artistName: z.string(),
   collectionViewUrl: z.string().url(), artworkUrl100: z.string().optional(),
 });
+const appleTrack = z.object({ kind: z.literal('song'), trackName: z.string() });
 const appleAlbum = z.object({ attributes: z.object({
   name: z.string(), artistName: z.string(), url: z.string(), upc: z.string().optional(),
   artwork: z.object({ url: z.string() }).optional(), playParams: z.unknown().optional(),
@@ -78,7 +79,7 @@ export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTu
       const results = z.object({ results: z.array(z.unknown()) }).parse(body).results;
       const collection = results.map(item => appleCollection.safeParse(item).data).find(item => String(item?.collectionId) === link.id);
       if (!collection) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      const firstTrack = results.map(item => z.object({ kind: z.literal('song'), trackName: z.string() }).safeParse(item).data).find(Boolean)?.trackName;
+      const firstTrack = results.values().map(item => appleTrack.safeParse(item).data).find(Boolean)?.trackName;
       album = {
         ...upcCode(upc), title: appleName(collection.collectionName), artist: collection.artistName, url: `https://music.apple.com/${link.country.toLowerCase()}/album/${link.id}`,
         artworkUrl: https(collection.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')), ...(firstTrack ? { firstTrack } : {}),
