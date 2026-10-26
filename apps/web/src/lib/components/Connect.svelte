@@ -4,6 +4,8 @@
   import { inviteSlugs, platforms, type Platform } from '@app/shared';
   import { addFriend, inviteUrl, loadFriends, setMe, social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
+  import Avatar from './Avatar.svelte';
+  import Logo from './Logo.svelte';
 
   // Someone who sent an invite or a song: save them, then send your own service back
   let { name, platform, heading = 'h1' }: { name: string; platform: Platform; heading?: 'h1' | 'h2' } = $props();
@@ -33,12 +35,16 @@
   }
 </script>
 
-<span class="avatar" aria-hidden="true">{name[0]?.toUpperCase()}<span class="dot {platform}"></span></span>
-<svelte:element this={heading} class="title">{name} hört auf {platforms[platform]}</svelte:element>
-<p>Speicher {name}, dann landen deine Songs bei {name} immer direkt in {platforms[platform]}.</p>
+<div class="who">
+  <Avatar friend={{ name, platform }} size={heading === 'h1' ? 64 : 44} />
+  <div>
+    <svelte:element this={heading} class="title">{name} hört auf {platforms[platform]}</svelte:element>
+    <p>Speicher {name}, dann landen deine Songs bei {name} immer direkt in {platforms[platform]}.</p>
+  </div>
+</div>
 <div class="actions">
   <a class="button primary" href="musiclink://app/friend?{new URLSearchParams({ name, service: inviteSlugs[platform] })}">In der Songgate-App speichern</a>
-  <button class="secondary" onclick={save} disabled={saved}>{saved ? `✓ ${name} ist gespeichert` : 'Hier im Browser speichern'}</button>
+  <button class="button ghost" onclick={save} disabled={saved}>{saved ? `✓ ${name} ist gespeichert` : 'Hier im Browser speichern'}</button>
 </div>
 <div class="answer">
   <h3>Und du?</h3>
@@ -46,25 +52,22 @@
   <input bind:value={myName} maxlength="40" placeholder="Dein Name" autocomplete="given-name" />
   <div class="services">
     {#each (Object.keys(platforms) as Platform[]) as mine}
-      <button onclick={() => answer(mine)}><span class="dot {mine}"></span>{platforms[mine]}</button>
+      <button onclick={() => answer(mine)}><Logo platform={mine} size={22} />{platforms[mine]}</button>
     {/each}
   </div>
 </div>
 
 <style>
-  .avatar { position: relative; display: inline-grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: var(--raised); color: var(--accent); font-size: 28px; font-weight: 750; }
-  .avatar .dot { position: absolute; right: -2px; bottom: -2px; width: 24px; height: 24px; border: 3px solid var(--surface); }
-  .title { font-size: 30px; margin: 16px 0 6px; overflow-wrap: anywhere; }
-  p { color: var(--muted); font-size: 13px; margin: 0; }
-  .actions { display: grid; gap: 10px; margin-top: 20px; }
-  .button, button { border: 1px solid transparent; border-radius: 10px; padding: 14px; font-size: 14px; font-weight: 650; text-decoration: none; }
-  .primary { background: var(--gradient); color: var(--ink); }
-  .secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
-  .answer { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--border); }
-  h3 { font-family: inherit; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
-  input { width: 100%; margin-top: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 12px; }
+  .who { display: flex; align-items: center; gap: 16px; text-align: left; }
+  .title { font-size: 28px; margin: 0 0 4px; overflow-wrap: anywhere; }
+  h2.title { font-size: 22px; }
+  p { color: var(--muted); font-size: 14px; margin: 0; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .actions .button { flex: 1; }
+  .answer { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); text-align: left; }
+  h3 { font-family: inherit; font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  input { width: 100%; margin-top: 14px; border: 1px solid var(--border-strong); background: rgb(0 0 0 / .2); color: var(--text); border-radius: 14px; padding: 12px 14px; }
   .services { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .services button { display: flex; align-items: center; gap: 8px; background: #1B1A20; color: var(--text); border-color: var(--border); font-weight: 500; font-size: 13px; padding: 11px; }
-  .dot { display: inline-block; width: 18px; height: 18px; border-radius: 5px; }
-  .appleMusic { background: #FA2D48; } .youtubeMusic { background: #FF0033; } .spotify { background: #1DB954; } .deezer { background: #A238FF; }
+  .services button { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 14px; background: rgb(255 255 255 / .06); color: var(--text); font-weight: 550; font-size: 14px; padding: 12px; text-align: left; }
+  .services button:hover { background: rgb(255 255 255 / .1); }
 </style>

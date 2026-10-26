@@ -35,9 +35,11 @@ const raised = Color(0xFF201F25);
 const text = Color(0xFFF2F0EA);
 const muted = Color(0xFF9A98A3);
 const hairline = Color(0x12FFFFFF);
+const hairlineStrong = Color(0x24FFFFFF);
 const ink = Color(0xFF17171A);
 const displayFont = 'Bricolage Grotesque';
-const _radius = BorderRadius.all(Radius.circular(8));
+const _radius = BorderRadius.all(Radius.circular(14));
+const _pill = BorderRadius.all(Radius.circular(999));
 
 Color bandColor(double position, List<Color> tones) {
   final p = position.clamp(1.0, 7.0);
@@ -148,16 +150,14 @@ ThemeData buildTheme() {
             fontWeight: FontWeight.w600,
           ),
         ),
-        shape: const WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: _radius),
-        ),
+        shape: const WidgetStatePropertyAll(StadiumBorder()),
         backgroundBuilder: (context, states, child) => DecoratedBox(
           decoration: BoxDecoration(
             gradient: states.contains(WidgetState.disabled)
                 ? null
                 : bandGradient(glow),
             color: states.contains(WidgetState.disabled) ? raised : null,
-            borderRadius: _radius,
+            borderRadius: _pill,
           ),
           child: child,
         ),
@@ -167,8 +167,8 @@ ThemeData buildTheme() {
       style: OutlinedButton.styleFrom(
         foregroundColor: text,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        shape: const RoundedRectangleBorder(borderRadius: _radius),
-        side: const BorderSide(color: hairline),
+        shape: const StadiumBorder(),
+        side: const BorderSide(color: hairlineStrong),
       ),
     ),
     textButtonTheme: TextButtonThemeData(

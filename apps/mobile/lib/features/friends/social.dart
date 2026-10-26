@@ -28,7 +28,9 @@ class Friend {
     if (json is! Map) return null;
     final name = json['name'];
     final platform = json['platform'];
-    if (name is! String || !platforms.containsKey(platform)) return null;
+    if (name is! String || name.isEmpty || !platforms.containsKey(platform)) {
+      return null;
+    }
     return Friend(name, platform as String);
   }
 }
@@ -168,26 +170,42 @@ String shareUrl(String path, Friend? from) => from == null
     ? '${_origin()}$path'
     : '${_origin()}$path?from=${Uri.encodeQueryComponent(from.name)}&service=${inviteSlugs[from.platform]}';
 
-/// One link if everyone uses the same service, otherwise one line per
-/// service plus the share page for everyone else. With an own invite the
-/// share page comes along for one service too. Same as packages/shared.
-String friendsMessage(Song song, List<Friend> friends, {Friend? from}) {
+/// Without services only the share page, for group chats where everyone
+/// picks their own. One service gets its link, several get one line each
+/// plus the share page for everyone else. With an own invite the share page
+/// comes along for one service too. The services default to those of the
+/// friends, who are named next to their service. Same as packages/shared.
+String friendsMessage(
+  Song song,
+  List<Friend> friends, {
+  Friend? from,
+  List<String>? services,
+}) {
   final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
-  final services = <String>[];
-  for (final friend in friends) {
-    if (!services.contains(friend.platform)) services.add(friend.platform);
-  }
-  if (services.length == 1) {
+  final everyone = shareUrl(song.sharePath, from);
+  final chosen =
+      services ?? friends.map((friend) => friend.platform).toSet().toList();
+  if (chosen.isEmpty) return [head, everyone].join('\n');
+  if (chosen.length == 1) {
     return [
       head,
-      '${song.links[services.first]}',
-      if (from != null) 'Alle Dienste: ${shareUrl(song.sharePath, from)}',
+      '${song.links[chosen.first]}',
+      if (from != null) 'Alle Dienste: $everyone',
     ].join('\n');
   }
   return [
     head,
-    for (final platform in services)
-      '${platforms[platform]} (${friends.where((friend) => friend.platform == platform).map((friend) => friend.name).join(', ')}): ${song.links[platform]}',
-    'Andere: ${shareUrl(song.sharePath, from)}',
+    for (final platform in chosen)
+      _serviceLine(
+        platform,
+        friends.where((friend) => friend.platform == platform),
+        song.links[platform],
+      ),
+    'Andere: $everyone',
   ].join('\n');
+}
+
+String _serviceLine(String platform, Iterable<Friend> friends, String? url) {
+  final names = friends.map((friend) => friend.name).join(', ');
+  return '${platforms[platform]}${names.isEmpty ? '' : ' ($names)'}: $url';
 }

@@ -1,55 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/brand.dart';
 import '../converter/conversion.dart';
 import 'friends_screen.dart';
 import 'social.dart';
 
-const serviceColors = {
-  'appleMusic': Color(0xFFFA2D48),
-  'youtubeMusic': Color(0xFFFF0033),
-  'spotify': Color(0xFF1DB954),
-  'deezer': Color(0xFFA238FF),
-};
-
+/// Initial on a steady colour per name with the friend's service as a badge,
+/// the same colour as on the web.
 class FriendAvatar extends StatelessWidget {
   final Friend friend;
-  final bool selected;
   final double size;
-  const FriendAvatar(
-    this.friend, {
-    super.key,
-    this.selected = false,
-    this.size = 50,
-  });
+  const FriendAvatar(this.friend, {super.key, this.size = 50});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final hue = friend.name.codeUnits
+        .fold(7, (sum, unit) => (sum * 31 + unit) % 360)
+        .toDouble();
+    final badge = (size * 0.38).roundToDouble();
     return SizedBox(
-      width: size + 4,
-      height: size + 4,
+      width: size + 3,
+      height: size + 3,
       child: Stack(
         children: [
           Container(
             width: size,
             height: size,
-            margin: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: scheme.primaryContainer,
-              border: Border.all(
-                color: selected ? scheme.primary : Colors.transparent,
-                width: 2.5,
-              ),
+              color: HSLColor.fromAHSL(1, hue, 0.35, 0.30).toColor(),
             ),
             alignment: Alignment.center,
             child: Text(
               friend.name.characters.first.toUpperCase(),
               style: TextStyle(
-                fontSize: size * 0.36,
+                fontSize: size * 0.4,
                 fontWeight: FontWeight.w700,
-                color: scheme.onPrimaryContainer,
+                color: HSLColor.fromAHSL(1, hue, 0.6, 0.88).toColor(),
               ),
             ),
           ),
@@ -59,40 +47,95 @@ class FriendAvatar extends StatelessWidget {
             child: Tooltip(
               message: platforms[friend.platform],
               child: Container(
-                width: size * 0.36,
-                height: size * 0.36,
-                decoration: BoxDecoration(
-                  color: serviceColors[friend.platform],
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: scheme.surface, width: 2),
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: background,
+                  shape: BoxShape.circle,
                 ),
+                child: ServiceLogo(friend.platform, size: badge),
               ),
             ),
           ),
-          if (selected)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: CircleAvatar(
-                radius: 9,
-                backgroundColor: scheme.primary,
-                child: Icon(Icons.check, size: 12, color: scheme.onPrimary),
-              ),
-            ),
         ],
       ),
     );
   }
 }
 
-/// Tap friends to pick them, tap a group to pick all its members.
+/// A rounded chip, its border turns into the gradient when picked.
+class PickChip extends StatelessWidget {
+  final bool selected;
+  final VoidCallback? onTap;
+  final Widget? leading;
+  final String label;
+  final bool dashed;
+  const PickChip({
+    super.key,
+    required this.label,
+    this.selected = false,
+    this.onTap,
+    this.leading,
+    this.dashed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Container(
+      padding: EdgeInsets.fromLTRB(leading == null ? 14 : 5, 5, 14, 5),
+      constraints: const BoxConstraints(minHeight: 38),
+      decoration: BoxDecoration(
+        color: selected ? raised : const Color(0x08FFFFFF),
+        borderRadius: BorderRadius.circular(999),
+        border: selected
+            ? null
+            : Border.all(color: dashed ? hairline : hairlineStrong),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) ...[leading!, const SizedBox(width: 8)],
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: dashed ? muted : text,
+            ),
+          ),
+        ],
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: selected
+            ? Container(
+                padding: const EdgeInsets.all(1.5),
+                decoration: BoxDecoration(
+                  gradient: bandGradient(glow),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: content,
+              )
+            : content,
+      ),
+    );
+  }
+}
+
+/// "An wen?": everyone, a group or friends. Picking people picks their
+/// services, the service tiles can change those on their own.
 class FriendsBar extends ConsumerWidget {
-  final Set<String> selected;
-  final ValueChanged<Set<String>> onChanged;
+  final List<String> selected;
+  final List<String> services;
+  final void Function(List<String> names, List<String> services) onChanged;
   final bool enabled;
   const FriendsBar({
     super.key,
     required this.selected,
+    required this.services,
     required this.onChanged,
     this.enabled = true,
   });
@@ -101,15 +144,33 @@ class FriendsBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final social = ref.watch(socialProvider);
     final theme = Theme.of(context);
+    // Read at call time: "+ Neu" picks a friend saved after this build
+    void pick(List<String> names) => onChanged(names, [
+      for (final platform in serviceOrder)
+        if (ref
+            .read(socialProvider)
+            .friends
+            .any(
+              (friend) =>
+                  names.contains(friend.name) && friend.platform == platform,
+            ))
+          platform,
+    ]);
     bool groupOn(Group group) =>
         group.members.length == selected.length &&
         group.members.every(selected.contains);
+    final anyGroup = social.groups.any(groupOn);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text('Für wen?', style: theme.textTheme.titleSmall),
+            Text(
+              'An wen?',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(
@@ -119,130 +180,117 @@ class FriendsBar extends ConsumerWidget {
             ),
           ],
         ),
-        if (social.friends.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
         SizedBox(
-          height: 82,
+          height: 44,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              for (final friend in social.friends)
-                _item(
-                  key: ValueKey('friend-${friend.name}'),
-                  label: friend.name,
+              for (final chip in [
+                PickChip(
+                  key: const ValueKey('pick-all'),
+                  label: 'Alle',
+                  selected: services.isEmpty,
+                  onTap: enabled ? () => onChanged([], []) : null,
+                ),
+                for (final group in social.groups)
+                  PickChip(
+                    key: ValueKey('group-${group.name}'),
+                    label: group.name,
+                    selected: groupOn(group),
+                    leading: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: raised,
+                      child: Text(
+                        '${group.members.length}',
+                        style: const TextStyle(fontSize: 12, color: text),
+                      ),
+                    ),
+                    onTap: enabled
+                        ? () => pick(
+                            groupOn(group)
+                                ? []
+                                : group.members
+                                      .where(
+                                        (member) => social.friends.any(
+                                          (friend) => friend.name == member,
+                                        ),
+                                      )
+                                      .toList(),
+                          )
+                        : null,
+                  ),
+                for (final friend in social.friends)
+                  PickChip(
+                    key: ValueKey('friend-${friend.name}'),
+                    label: friend.name,
+                    selected: selected.contains(friend.name) && !anyGroup,
+                    leading: FriendAvatar(friend, size: 28),
+                    onTap: enabled
+                        ? () => pick(
+                            selected.contains(friend.name)
+                                ? selected
+                                      .where((name) => name != friend.name)
+                                      .toList()
+                                : [...selected, friend.name],
+                          )
+                        : null,
+                  ),
+                PickChip(
+                  key: const ValueKey('friend-add'),
+                  label: '+ Neu',
+                  dashed: true,
                   onTap: enabled
-                      ? () => onChanged(
-                          selected.contains(friend.name)
-                              ? ({...selected}..remove(friend.name))
-                              : {...selected, friend.name},
-                        )
-                      : null,
-                  child: FriendAvatar(
-                    friend,
-                    selected: selected.contains(friend.name),
-                  ),
-                ),
-              _item(
-                key: const ValueKey('friend-add'),
-                label: 'Neu',
-                onTap: enabled
-                    ? () async {
-                        final friend = await showAddFriendDialog(context, ref);
-                        if (friend != null) {
-                          onChanged({...selected, friend.name});
-                        }
-                      }
-                    : null,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  margin: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.colorScheme.outline),
-                  ),
-                  child: const Icon(Icons.add),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (social.groups.isNotEmpty || selected.length > 1)
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final group in social.groups)
-                FilterChip(
-                  label: Text(group.name),
-                  selected: groupOn(group),
-                  onSelected: enabled
-                      ? (_) => onChanged(
-                          groupOn(group)
-                              ? {}
-                              : group.members
-                                    .where(
-                                      (member) => social.friends.any(
-                                        (friend) => friend.name == member,
-                                      ),
-                                    )
-                                    .toSet(),
-                        )
-                      : null,
-                ),
-              if (selected.length > 1)
-                ActionChip(
-                  avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Gruppe'),
-                  onPressed: enabled
                       ? () async {
-                          final name = await askText(
+                          final friend = await showAddFriendDialog(
                             context,
-                            title: 'Gruppe aus ${selected.join(', ')}',
-                            label: 'Name, z. B. WG',
+                            ref,
                           );
-                          if (name != null) {
-                            ref
-                                .read(socialProvider.notifier)
-                                .addGroup(name, selected.toList());
+                          if (friend != null) {
+                            pick([
+                              ...selected.where((name) => name != friend.name),
+                              friend.name,
+                            ]);
                           }
                         }
                       : null,
                 ),
+                if (selected.length > 1 && !anyGroup)
+                  PickChip(
+                    key: const ValueKey('group-add'),
+                    label: 'Als Gruppe speichern',
+                    dashed: true,
+                    onTap: enabled
+                        ? () async {
+                            final name = await askText(
+                              context,
+                              title: 'Gruppe aus ${selected.join(', ')}',
+                              label: 'Name, z. B. WG',
+                            );
+                            if (name != null) {
+                              ref
+                                  .read(socialProvider.notifier)
+                                  .addGroup(name, selected);
+                            }
+                          }
+                        : null,
+                  ),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Center(child: chip),
+                ),
             ],
+          ),
+        ),
+        if (social.friends.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.',
+              style: theme.textTheme.bodySmall,
+            ),
           ),
       ],
     );
   }
-
-  Widget _item({
-    required Key key,
-    required String label,
-    required VoidCallback? onTap,
-    required Widget child,
-  }) => Padding(
-    key: key,
-    padding: const EdgeInsets.only(right: 10),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: SizedBox(
-        width: 60,
-        child: Column(
-          children: [
-            child,
-            const SizedBox(height: 4),
-            Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
-          ],
-        ),
-      ),
-    ),
-  );
 }

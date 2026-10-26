@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,31 +24,24 @@ class ConverterScreen extends ConsumerStatefulWidget {
   ConsumerState<ConverterScreen> createState() => _ConverterScreenState();
 }
 
-class _ConverterScreenState extends ConsumerState<ConverterScreen>
-    with WidgetsBindingObserver {
+class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   static const _channel = MethodChannel('org.musiclink.prototype/share');
   static const _preferences = MethodChannel(
     'org.musiclink.prototype/preferences',
   );
-  String _target = 'appleMusic';
-  String _savedTarget = 'appleMusic';
   bool _ready = false;
   bool _showSetup = false;
   bool _guideOnly = false;
   bool _sharing = false;
   bool get _isIOS => !kIsWeb && isIOS;
   final _input = TextEditingController();
-  Conversion? _conversion;
-  String? _selection;
-  String? _error;
-  String? _searchUrl;
-  bool _loading = false;
-  bool _copied = false;
-  int _requestId = 0;
-  Set<String> _friends = {};
   Song? _song;
-  String? _message;
-  bool _messageLoading = false;
+  String? _error;
+  bool _loading = false;
+  int _requestId = 0;
+  // Friends fill the services, the tiles can be tapped on their own
+  List<String> _chosen = [];
+  List<String> _services = [];
 
   String get _country {
     final region =
@@ -57,38 +52,18 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _initialize();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _ready) _loadPreferences();
-  }
-
-  Future<void> _loadPreferences() async {
+  Future<void> _initialize() async {
     try {
       final saved = await _preferences.invokeMapMethod<String, String>(
         'getPreferences',
       );
-      if (!mounted) return;
-      if (!_ready) {
-        _showSetup = _isIOS && saved?['shareSetupSeen'] != 'true';
-      }
-      final previousTarget = _target;
-      if (platforms.containsKey(saved?['target']) &&
-          (!_ready || saved!['target'] != _savedTarget)) {
-        _savedTarget = saved!['target']!;
-        _target = _destinationForInput(_input.text);
-      }
-      if (_ready && previousTarget != _target) _invalidate();
+      _showSetup = _isIOS && saved?['shareSetupSeen'] != 'true';
     } on PlatformException {
       if (mounted) _notice('Einstellungen konnten nicht geladen werden.');
     }
-  }
-
-  Future<void> _initialize() async {
-    await _loadPreferences();
     if (!mounted) return;
     setState(() => _ready = true);
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
@@ -99,77 +74,13 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     }
   }
 
-  Future<void> _savePreferences() async {
-    _invalidate();
-    try {
-      await _preferences.invokeMethod('setPreferences', {'target': _target});
-      _savedTarget = _target;
-    } on PlatformException {
-      if (mounted) _notice('Einstellungen konnten nicht gespeichert werden.');
-    }
-  }
-
-  void _invalidate() {
+  void _reset() {
     ++_requestId;
     setState(() {
-      _conversion = null;
-      _selection = null;
-      _copied = false;
-      _error = null;
-      _searchUrl = null;
-      _loading = false;
-      _friends = {};
       _song = null;
-      _message = null;
-      _messageLoading = false;
+      _error = null;
+      _loading = false;
     });
-  }
-
-  Future<void> _friendsChanged(Set<String> selected) async {
-    final id = _requestId;
-    setState(() {
-      _friends = selected;
-      _copied = false;
-      _message = null;
-    });
-    if (selected.isEmpty) return;
-    if (_song == null) {
-      setState(() => _messageLoading = true);
-      try {
-        final song = await ref
-            .read(apiProvider)
-            .song(_input.text.trim(), country: _country);
-        if (!mounted || id != _requestId) return;
-        _song = song;
-      } on ApiException catch (error) {
-        if (mounted && id == _requestId) _notice(error.message);
-      } finally {
-        if (mounted && id == _requestId) {
-          setState(() => _messageLoading = false);
-        }
-      }
-    }
-    final song = _song;
-    if (song == null || !mounted || id != _requestId) return;
-    final social = ref.read(socialProvider);
-    final friends = social.friends
-        .where((friend) => _friends.contains(friend.name))
-        .toList();
-    setState(
-      () => _message = friends.isEmpty
-          ? null
-          : friendsMessage(song, friends, from: social.me),
-    );
-  }
-
-  String _destinationForInput(String input) {
-    final targets = targetsFor(input);
-    return targets.contains(_savedTarget) ? _savedTarget : targets.first;
-  }
-
-  void _sourceChanged(String input) {
-    _invalidate();
-    setState(() => _target = _destinationForInput(input));
   }
 
   Future<void> _dismissSetup() async {
@@ -186,101 +97,76 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     _showSetup = true;
   });
 
-  Future<void> _settings() async {
-    var target = _target;
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Deine Einstellungen',
-                style: Theme.of(context).textTheme.titleLarge,
+  Future<void> _settings() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Deine Einstellungen',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (_isIOS)
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _openGuide();
+                },
+                icon: const Icon(Icons.star_outline),
+                label: const Text('Favoriten-Anleitung öffnen'),
               ),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                style: Theme.of(context).textTheme.bodyMedium,
-                initialValue: target,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Zieldienst'),
-                items: _targetItems(),
-                onChanged: (value) => target = value!,
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.of(this.context).push(
+                  MaterialPageRoute(builder: (_) => const FriendsScreen()),
+                );
+              },
+              icon: const Icon(Icons.group_outlined),
+              label: const Text('Freunde und Einladung'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                showFeedbackSheet(this.context, ref, FeedbackKind.idea);
+              },
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Feedback geben'),
+            ),
+            Consumer(
+              builder: (context, ref, _) => SwitchListTile(
+                title: const Text('Testmodus'),
+                subtitle: const Text(
+                  'Zeigt den Käfer-Knopf, mit dem du Fehler samt Screenshot meldest.',
+                ),
+                value: ref.watch(testModeProvider).value ?? false,
+                onChanged: (on) => ref.read(testModeProvider.notifier).set(on),
               ),
-              if (_isIOS) ...[
-                const SizedBox(height: 20),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _openGuide();
-                  },
-                  icon: const Icon(Icons.star_outline),
-                  label: const Text('Favoriten-Anleitung öffnen'),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => _openPage('datenschutz', 'privacy'),
+                  child: const Text('Datenschutz'),
+                ),
+                TextButton(
+                  onPressed: () => _openPage('impressum', 'imprint'),
+                  child: const Text('Impressum'),
                 ),
               ],
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.of(this.context).push(
-                    MaterialPageRoute(builder: (_) => const FriendsScreen()),
-                  );
-                },
-                icon: const Icon(Icons.group_outlined),
-                label: const Text('Freunde und Einladung'),
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  showFeedbackSheet(this.context, ref, FeedbackKind.idea);
-                },
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: const Text('Feedback geben'),
-              ),
-              Consumer(
-                builder: (context, ref, _) => SwitchListTile(
-                  title: const Text('Testmodus'),
-                  subtitle: const Text(
-                    'Zeigt den Käfer-Knopf, mit dem du Fehler samt Screenshot meldest.',
-                  ),
-                  value: ref.watch(testModeProvider).value ?? false,
-                  onChanged: (on) =>
-                      ref.read(testModeProvider.notifier).set(on),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () => _openPage('datenschutz', 'privacy'),
-                    child: const Text('Datenschutz'),
-                  ),
-                  TextButton(
-                    onPressed: () => _openPage('impressum', 'imprint'),
-                    child: const Text('Impressum'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Einstellungen übernehmen'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-    if (!mounted || saved != true || target == _target) return;
-    final hadResult = _conversion != null;
-    setState(() => _target = target);
-    await _savePreferences();
-    if (mounted && hadResult) _convert();
-  }
+    ),
+  );
 
   /// Opens a page of the website, the English one unless the phone speaks German.
   void _openPage(String german, String english) {
@@ -293,11 +179,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
       mode: LaunchMode.externalApplication,
     );
   }
-
-  List<DropdownMenuItem<String>> _targetItems() => [
-    for (final target in targetsFor(_input.text))
-      DropdownMenuItem(value: target, child: Text(platforms[target]!)),
-  ];
 
   Future<void> _readSharedText() async {
     try {
@@ -315,11 +196,23 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
   void _receive(String text) {
     if (!mounted) return;
     _input.text = text;
-    _sourceChanged(text);
-    _convert();
+    _reset();
+    _find();
   }
 
-  Future<void> _convert() async {
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (!mounted) return;
+    if (text.isEmpty) {
+      _notice('In der Zwischenablage ist kein Link.');
+      return;
+    }
+    _input.text = text.length > 4096 ? text.substring(0, 4096) : text;
+    _find();
+  }
+
+  Future<void> _find() async {
     final input = _input.text.trim();
     if (input.isEmpty) return;
     FocusScope.of(context).unfocus();
@@ -327,54 +220,53 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
     setState(() {
       _loading = true;
       _error = null;
-      _searchUrl = null;
-      _conversion = null;
-      _selection = null;
-      _copied = false;
     });
     try {
-      final result = await ref
-          .read(apiProvider)
-          .convert(input, target: _target, country: _country);
+      final song = await ref.read(apiProvider).song(input, country: _country);
       if (!mounted || id != _requestId) return;
-      setState(() {
-        _conversion = result;
-        _selection = result.candidates.first.url;
-      });
+      setState(() => _song = song);
     } on ApiException catch (error) {
-      if (mounted && id == _requestId) {
-        setState(() {
-          _error = error.message;
-          _searchUrl = error.searchUrl;
-        });
-      }
+      if (mounted && id == _requestId) setState(() => _error = error.message);
     } finally {
       if (mounted && id == _requestId) setState(() => _loading = false);
     }
   }
 
-  Future<void> _copy(String url) async {
+  String _message(Song song) {
+    final social = ref.read(socialProvider);
+    return friendsMessage(
+      song,
+      social.friends.where((friend) => _chosen.contains(friend.name)).toList(),
+      from: social.me,
+      services: [
+        for (final platform in serviceOrder)
+          if (_services.contains(platform)) platform,
+      ],
+    );
+  }
+
+  Future<void> _copy(String message) async {
     try {
-      await Clipboard.setData(ClipboardData(text: url));
-      if (mounted) setState(() => _copied = true);
+      await Clipboard.setData(ClipboardData(text: message));
+      if (mounted) _notice('Nachricht kopiert.');
     } on PlatformException {
-      if (mounted) _notice('Der Link konnte nicht kopiert werden.');
+      if (mounted) _notice('Die Nachricht konnte nicht kopiert werden.');
     }
   }
 
-  Future<void> _share(BuildContext buttonContext, String url) async {
+  Future<void> _share(BuildContext buttonContext, String message) async {
     final box = buttonContext.findRenderObject()! as RenderBox;
     setState(() => _sharing = true);
     try {
       await SharePlus.instance.share(
         ShareParams(
-          text: url,
+          text: message,
           sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
         ),
       );
     } on PlatformException {
       if (mounted) {
-        _notice('Teilen nicht möglich. Kopiere stattdessen den Link.');
+        _notice('Teilen nicht möglich. Kopiere stattdessen die Nachricht.');
       }
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -387,7 +279,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _channel.setMethodCallHandler(null);
     _input.dispose();
     super.dispose();
@@ -396,26 +287,23 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
   @override
   Widget build(BuildContext context) {
     ref.watch(apiProvider);
+    ref.watch(socialProvider);
     if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_showSetup) {
       return ShareSetup(onDone: _dismissSetup, guideOnly: _guideOnly);
     }
-    final conversion = _conversion;
-    final selected = conversion?.candidates.firstWhere(
-      (candidate) => candidate.url == _selection,
-    );
-    final theme = Theme.of(context);
+    final song = _song;
     return Scaffold(
       appBar: AppBar(
         title: const SonggateBrand(),
         backgroundColor: Colors.transparent,
-        leading: conversion == null
+        leading: song == null
             ? null
             : IconButton(
                 tooltip: 'Zurück zum Musiklink',
-                onPressed: _sharing ? null : _invalidate,
+                onPressed: _sharing ? null : _reset,
                 icon: const Icon(Icons.arrow_back_ios_new, size: 18),
               ),
         actions: [
@@ -426,341 +314,484 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen>
           ),
         ],
       ),
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: ListView(
-              key: ValueKey(conversion == null ? 'input' : 'result'),
-              padding: const EdgeInsets.all(24),
-              children: conversion == null
-                  ? [
-                      Text(
-                        'EIN SONG. MEHR VERBINDUNG.',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          letterSpacing: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            const TextSpan(text: 'Dein Song.\n'),
-                            TextSpan(
-                              text: 'Ihr Lieblingsplayer.',
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        style: theme.textTheme.headlineLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Teile Songs und Alben zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: muted,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      TextField(
-                        controller: _input,
-                        enabled: !_loading,
-                        onChanged: _sourceChanged,
-                        maxLength: 4096,
-                        maxLines: 2,
-                        minLines: 1,
-                        keyboardType: TextInputType.url,
-                        textInputAction: TextInputAction.go,
-                        autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Link aus YouTube Music, Apple Music, Spotify oder Deezer',
-                          counterText: '',
-                        ),
-                        onSubmitted: (_) => _convert(),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        style: theme.textTheme.bodyMedium,
-                        isExpanded: true,
-                        key: ValueKey('target-$_target'),
-                        initialValue: _target,
-                        decoration: const InputDecoration(
-                          labelText: 'Teilen als',
-                        ),
-                        items: _targetItems(),
-                        onChanged: _loading
-                            ? null
-                            : (value) {
-                                if (value == _target) return;
-                                setState(() => _target = value!);
-                                _savePreferences();
-                              },
-                      ),
-                      const SizedBox(height: 24),
-                      if (_searchUrl != null)
-                        OutlinedButton.icon(
-                          onPressed: _loading ? null : _convert,
-                          icon: const Icon(Icons.arrow_forward),
-                          label: const Text('Link umwandeln'),
-                        )
-                      else
-                        FilledButton.icon(
-                          onPressed: _loading ? null : _convert,
-                          icon: const Icon(Icons.arrow_forward),
-                          label: Text(
-                            _loading ? 'Suche läuft …' : 'Link umwandeln',
-                          ),
-                        ),
-                      if (_loading)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          child: Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              _error!,
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ),
-                        ),
-                      if (_searchUrl != null) ...[
-                        const Text(
-                          'Teile stattdessen eine Suche nach dem Song.',
-                        ),
-                        const SizedBox(height: 12),
-                        Builder(
-                          builder: (context) => FilledButton.icon(
-                            onPressed: _sharing
-                                ? null
-                                : () => _share(context, _searchUrl!),
-                            icon: const Icon(Icons.search),
-                            label: Text(
-                              'Suche auf ${platforms[_target]} teilen',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: _sharing ? null : () => _copy(_searchUrl!),
-                          icon: const Icon(Icons.copy),
-                          label: Text(
-                            _copied ? 'Suchlink kopiert' : 'Suchlink kopieren',
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-                      if (_isIOS)
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Nächstes Mal direkt teilen',
-                                style: theme.textTheme.titleSmall,
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Hole Songgate nach vorne ins Teilen-Menü. Dann sparst du dir das Einfügen.',
-                              ),
-                              TextButton.icon(
-                                onPressed: _loading ? null : _openGuide,
-                                icon: const Icon(Icons.star_outline),
-                                label: const Text('So richtest du es ein'),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        const Text(
-                          'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.',
-                        ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Ohne gespeicherte Song-Historie. Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const PleasanceFooter(),
-                    ]
-                  : [
-                      Text(
-                        'BEREIT ZUM TEILEN',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          letterSpacing: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Center(child: _artwork(selected!, 150)),
-                      const SizedBox(height: 24),
-                      Text(
-                        selected.title,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        conversion.artist,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: muted,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: _sharing ? null : _settings,
-                          icon: const Icon(Icons.music_note, size: 18),
-                          label: Text('${platforms[conversion.target]} ⌄'),
-                        ),
-                      ),
-                      if (selected.details.isNotEmpty)
-                        Text(
-                          selected.details,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      if (conversion.candidates.length > 1)
-                        ExpansionTile(
-                          title: Text(
-                            'Andere Fassungen (${conversion.candidates.length - 1})',
-                          ),
-                          children: [
-                            for (final candidate in conversion.candidates)
-                              if (candidate != selected)
-                                ListTile(
-                                  leading: _artwork(candidate, 48),
-                                  title: Text(candidate.title),
-                                  subtitle: candidate.details.isEmpty
-                                      ? null
-                                      : Text(candidate.details),
-                                  onTap: _sharing
-                                      ? null
-                                      : () => setState(() {
-                                          _selection = candidate.url;
-                                          _copied = false;
-                                        }),
-                                ),
-                          ],
-                        ),
-                      const SizedBox(height: 20),
-                      FriendsBar(
-                        selected: _friends,
-                        onChanged: _friendsChanged,
-                        enabled: !_sharing,
-                      ),
-                      if (_messageLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (_message != null)
-                        Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: SelectableText(_message!),
-                        ),
-                      const SizedBox(height: 24),
-                      if (_friends.isNotEmpty) ...[
-                        Builder(
-                          builder: (context) => FilledButton.icon(
-                            onPressed: _sharing || _message == null
-                                ? null
-                                : () => _share(context, _message!),
-                            icon: const Icon(Icons.ios_share),
-                            label: Text(
-                              'An ${_friends.join(', ')} teilen',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: _sharing || _message == null
-                              ? null
-                              : () => _copy(_message!),
-                          icon: const Icon(Icons.copy),
-                          label: Text(
-                            _copied
-                                ? 'Nachricht kopiert'
-                                : 'Nachricht kopieren',
-                          ),
-                        ),
-                      ] else ...[
-                        Builder(
-                          builder: (context) => FilledButton.icon(
-                            onPressed: _sharing
-                                ? null
-                                : () => _share(context, selected.url),
-                            icon: const Icon(Icons.ios_share),
-                            label: Text(
-                              'Als ${platforms[conversion.target]}-Link teilen',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: _sharing
-                              ? null
-                              : () => _copy(selected.url),
-                          icon: const Icon(Icons.copy),
-                          label: Text(
-                            _copied ? 'Link kopiert' : 'Link kopieren',
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Text(
-                        'Prüfe die gewünschte Aufnahme vor dem Teilen.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const PleasanceFooter(),
-                    ],
+      body: Stack(
+        children: [
+          if (song?.artworkUrl != null) _Backdrop(song!.artworkUrl!),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: ListView(
+                  key: ValueKey(song == null ? 'input' : 'result'),
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  children: song == null ? _start(context) : _result(song),
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _artwork(Candidate candidate, double size) => ClipRRect(
-    borderRadius: BorderRadius.circular(14),
-    child: candidate.artworkUrl == null
-        ? SizedBox(
-            width: size,
-            height: size,
-            child: const ColoredBox(
-              color: Color(0xFF302E36),
-              child: Icon(Icons.music_note, size: 32),
+  List<Widget> _start(BuildContext context) {
+    final theme = Theme.of(context);
+    final source = sourceOf(_input.text);
+    final empty = _input.text.trim().isEmpty;
+    return [
+      Text(
+        'Teil Musik. Jeder hört sie in seinem Dienst.',
+        style: theme.textTheme.headlineLarge,
+      ),
+      const SizedBox(height: 14),
+      Text(
+        'Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music und Deezer.',
+        style: theme.textTheme.bodyLarge,
+      ),
+      const SizedBox(height: 26),
+      Container(
+        padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: const Color(0x0DFFFFFF),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: hairlineStrong),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 26,
+              child: source == null
+                  ? const Icon(Icons.link, color: muted, size: 22)
+                  : ServiceLogo(source, size: 24),
             ),
-          )
-        : Image.network(
-            candidate.artworkUrl!,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => SizedBox(
-              width: size,
-              height: size,
-              child: const Icon(Icons.music_note),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _input,
+                enabled: !_loading,
+                onChanged: (_) => setState(() => _error = null),
+                maxLength: 4096,
+                maxLines: 2,
+                minLines: 1,
+                keyboardType: TextInputType.url,
+                textInputAction: TextInputAction.go,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  hintText: 'Song- oder Albumlink',
+                  hintStyle: TextStyle(color: Color(0xFF6E6C76), fontSize: 15),
+                  counterText: '',
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                ),
+                onSubmitted: (_) => _find(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            empty
+                ? OutlinedButton(
+                    onPressed: _loading ? null : _paste,
+                    child: const Text('Einfügen'),
+                  )
+                : FilledButton(
+                    onPressed: _loading ? null : _find,
+                    child: const Text('Finden'),
+                  ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
+        child: Semantics(
+          liveRegion: true,
+          child: _loading
+              ? const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Suche bei allen vier Diensten …',
+                        style: TextStyle(color: muted),
+                      ),
+                    ),
+                  ],
+                )
+              : _error != null
+              ? Text(_error!, style: const TextStyle(color: errorGlow))
+              : source != null
+              ? Text.rich(
+                  TextSpan(
+                    text: 'Link aus ',
+                    children: [
+                      TextSpan(
+                        text: platforms[source],
+                        style: const TextStyle(
+                          color: text,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: const TextStyle(color: muted),
+                )
+              : const SizedBox(height: 20),
+        ),
+      ),
+      const SizedBox(height: 10),
+      const Divider(color: hairline),
+      const SizedBox(height: 8),
+      FriendsBar(
+        selected: _chosen,
+        services: _services,
+        enabled: !_loading,
+        onChanged: (names, services) => setState(() {
+          _chosen = names;
+          _services = services;
+        }),
+      ),
+      const SizedBox(height: 28),
+      if (_isIOS)
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0x0AFFFFFF),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: hairline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nächstes Mal direkt teilen',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Hole Songgate nach vorne ins Teilen-Menü. Dann sparst du dir das Einfügen.',
+              ),
+              TextButton.icon(
+                onPressed: _loading ? null : _openGuide,
+                icon: const Icon(Icons.star_outline),
+                label: const Text('So richtest du es ein'),
+              ),
+            ],
+          ),
+        )
+      else
+        const Text(
+          'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.',
+        ),
+      const SizedBox(height: 24),
+      Text(
+        'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer und ListenBrainz.',
+        style: theme.textTheme.bodySmall,
+      ),
+      const PleasanceFooter(),
+    ];
+  }
+
+  List<Widget> _result(Song song) {
+    final theme = Theme.of(context);
+    final social = ref.read(socialProvider);
+    final message = _message(song);
+    final services = _services.length;
+    return [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox.square(
+            dimension: 220,
+            child: song.artworkUrl == null
+                ? const ColoredBox(
+                    color: raised,
+                    child: Icon(Icons.music_note, size: 64, color: muted),
+                  )
+                : Image.network(
+                    song.artworkUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const ColoredBox(color: raised),
+                  ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 18),
+      Text(
+        '${song.album ? 'Album' : 'Song'}${platforms[song.platform] == null ? '' : ' aus ${platforms[song.platform]}'}',
+        style: const TextStyle(color: muted),
+      ),
+      const SizedBox(height: 4),
+      Text(song.title, style: theme.textTheme.headlineMedium),
+      const SizedBox(height: 4),
+      Text(
+        song.artist,
+        style: const TextStyle(fontSize: 17, color: Color(0xCCF2F0EA)),
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: muted,
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: _sharing
+              ? null
+              : () {
+                  _input.clear();
+                  _reset();
+                },
+          child: const Text(
+            'Anderen Link einfügen',
+            style: TextStyle(decoration: TextDecoration.underline),
+          ),
+        ),
+      ),
+      const SizedBox(height: 4),
+      FriendsBar(
+        selected: _chosen,
+        services: _services,
+        enabled: !_sharing,
+        onChanged: (names, services) => setState(() {
+          _chosen = names;
+          _services = services;
+        }),
+      ),
+      const SizedBox(height: 12),
+      for (var row = 0; row < serviceOrder.length; row += 2)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final platform in serviceOrder.skip(row).take(2)) ...[
+                  Expanded(
+                    child: _ServiceTile(
+                      key: ValueKey('service-$platform'),
+                      platform: platform,
+                      selected: _services.contains(platform),
+                      found: song.found[platform] ?? false,
+                      detail: _tileDetail(song, platform, social),
+                      onTap: _sharing
+                          ? null
+                          : () => setState(() {
+                              _services = _services.contains(platform)
+                                  ? _services
+                                        .where((other) => other != platform)
+                                        .toList()
+                                  : [..._services, platform];
+                              // No service left means everyone again
+                              if (_services.isEmpty) _chosen = [];
+                            }),
+                    ),
+                  ),
+                  if (platform != serviceOrder.skip(row).take(2).last)
+                    const SizedBox(width: 10),
+                ],
+              ],
             ),
           ),
+        ),
+      Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0x40000000),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: hairline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              services == 0
+                  ? 'Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats.'
+                  : services == 1
+                  ? 'Direktlink für ${platforms[_services.first]}${social.me == null ? '' : ', dazu der Link für alle mit deinem Namen'}.'
+                  : 'Eine Zeile pro Dienst, für alle anderen der Link für alle.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            SelectableText(message),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Builder(
+                    builder: (context) => FilledButton.icon(
+                      onPressed: _sharing
+                          ? null
+                          : () => _share(context, message),
+                      icon: const Icon(Icons.ios_share, size: 18),
+                      label: const Text('Teilen'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _sharing ? null : () => _copy(message),
+                    icon: const Icon(Icons.copy, size: 18),
+                    label: const Text('Kopieren'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const PleasanceFooter(),
+    ];
+  }
+
+  String _tileDetail(Song song, String platform, Social social) {
+    if (song.found[platform] != true) return 'Nur Suche';
+    final names = social.friends
+        .where(
+          (friend) =>
+              _chosen.contains(friend.name) && friend.platform == platform,
+        )
+        .map((friend) => friend.name);
+    if (names.isNotEmpty) return names.join(', ');
+    return platform == song.platform ? 'Quelle' : 'Gefunden';
+  }
+}
+
+/// The cover, blurred far behind the result, tints the page.
+class _Backdrop extends StatelessWidget {
+  final String url;
+  const _Backdrop(this.url);
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: IgnorePointer(
+      child: Opacity(
+        opacity: 0.26,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+          child: Image.network(
+            url,
+            // A tiny decode is enough under this much blur
+            cacheWidth: 96,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => const SizedBox(),
+          ),
+        ),
+      ),
+    ),
   );
+}
+
+/// A service in the message: tapped on its own or picked through friends.
+class _ServiceTile extends StatelessWidget {
+  final String platform;
+  final bool selected;
+  final bool found;
+  final String detail;
+  final VoidCallback? onTap;
+  const _ServiceTile({
+    super.key,
+    required this.platform,
+    required this.selected,
+    required this.found,
+    required this.detail,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = Container(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xEB24232A) : const Color(0x0FFFFFFF),
+        borderRadius: BorderRadius.circular(selected ? 16.5 : 18),
+        border: selected ? null : Border.all(color: hairline),
+      ),
+      child: Row(
+        children: [
+          ServiceLogo(platform, size: 26),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: Text(
+                    platforms[platform]!,
+                    maxLines: 2,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: muted),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    final checked = Stack(
+      fit: StackFit.expand,
+      children: [
+        tile,
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: selected ? bandGradient(glow) : null,
+              border: selected ? null : Border.all(color: hairlineStrong),
+            ),
+            child: selected
+                ? const Icon(Icons.check, size: 13, color: ink)
+                : null,
+          ),
+        ),
+      ],
+    );
+    return Opacity(
+      opacity: found ? 1 : 0.6,
+      child: Semantics(
+        button: true,
+        toggled: selected,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: selected
+              ? Container(
+                  padding: const EdgeInsets.all(1.5),
+                  decoration: BoxDecoration(
+                    gradient: bandGradient(glow),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: checked,
+                )
+              : checked,
+        ),
+      ),
+    );
+  }
 }

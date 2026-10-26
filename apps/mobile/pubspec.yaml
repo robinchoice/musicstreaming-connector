@@ -29,6 +29,7 @@ flutter:
   assets:
     - assets/musiclink.svg
     - assets/pleasance-wordmark.svg
+    - assets/logos/
   fonts:
     - family: Bricolage Grotesque
       fonts:

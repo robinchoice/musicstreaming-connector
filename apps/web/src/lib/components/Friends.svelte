@@ -4,8 +4,10 @@
   import { platforms, type Platform } from '@app/shared';
   import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
+  import Avatar from './Avatar.svelte';
 
-  let { selected = $bindable([]), disabled = false }: { selected: string[]; disabled?: boolean } = $props();
+  // Picking friends or a group also picks their services, the page can change those on its own
+  let { selected = $bindable([]), services = $bindable([]), disabled = false }: { selected: string[]; services: Platform[]; disabled?: boolean } = $props();
   let panel = $state<'' | 'add' | 'group' | 'invite' | 'edit'>('');
   let name = $state('');
   let platform = $state<Platform>('spotify');
@@ -13,15 +15,20 @@
   // Face to face the invite is scanned instead of sent
   const qr = $derived(panel === 'invite' && name.trim() ? renderSVG(inviteUrl(location.origin, { name: name.trim().slice(0, 40), platform }), { border: 2 }) : '');
 
-  const toggle = (friend: string) => selected = selected.includes(friend) ? selected.filter(other => other !== friend) : [...selected, friend];
+  function pick(names: string[]) {
+    selected = names;
+    services = [...new Set(social.friends.filter(friend => names.includes(friend.name)).map(friend => friend.platform))];
+  }
+  const toggle = (friend: string) => pick(selected.includes(friend) ? selected.filter(other => other !== friend) : [...selected, friend]);
   const groupOn = (members: string[]) => members.length === selected.length && members.every(member => selected.includes(member));
+  const anyGroup = $derived(social.groups.some(group => groupOn(group.members)));
   const open = (next: typeof panel) => { panel = panel === next ? '' : next; name = next === 'invite' ? social.me?.name ?? '' : ''; platform = next === 'invite' ? social.me?.platform ?? 'spotify' : 'spotify'; };
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
     const value = name.trim().slice(0, 40);
     if (!value) return;
-    if (panel === 'add') { addFriend({ name: value, platform }); selected = [...selected.filter(other => other !== value), value]; }
+    if (panel === 'add') { addFriend({ name: value, platform }); pick([...selected.filter(other => other !== value), value]); }
     if (panel === 'group') addGroup(value, selected);
     if (panel === 'invite') { invite(value); return; }
     panel = '';
@@ -41,65 +48,63 @@
 </script>
 
 <div class="friends">
-  <div class="head"><span>Für wen? <small>optional</small></span>
+  <div class="head"><span>An wen? <small>{social.friends.length ? 'Gruppe, Freunde oder einfach Dienste antippen' : 'Alle, oder einfach Dienste antippen'}</small></span>
     <span class="links">{#if social.friends.length}<button type="button" onclick={() => open('edit')}>{panel === 'edit' ? 'Fertig' : 'Bearbeiten'}</button>{/if}<button type="button" onclick={() => open('invite')}>Meine Einladung</button></span>
   </div>
-  {#if !social.friends.length}<p class="empty">Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.</p>{/if}
-  <div class="row">
-    {#each social.friends as friend (friend.name)}
-      {#if panel === 'edit'}
-        <button type="button" class="friend" onclick={() => { removeFriend(friend.name); selected = selected.filter(other => other !== friend.name); }} aria-label="{friend.name} entfernen"><span class="avatar">{friend.name[0]?.toUpperCase()}<span class="remove">×</span></span>{friend.name}</button>
-      {:else}
-        <button type="button" class="friend" class:on={selected.includes(friend.name)} aria-pressed={selected.includes(friend.name)} {disabled} onclick={() => toggle(friend.name)} title={platforms[friend.platform]}>
-          <span class="avatar">{friend.name[0]?.toUpperCase()}<span class="dot {friend.platform}"></span></span>{friend.name}
-        </button>
-      {/if}
-    {/each}
-    <button type="button" class="friend add" {disabled} onclick={() => open('add')}><span class="avatar">+</span>Neu</button>
-  </div>
-  {#if social.groups.length || selected.length > 1}
-    <div class="groups">
-      {#each social.groups as group (group.name)}
-        <button type="button" class="chip" class:on={groupOn(group.members)} {disabled} onclick={() => selected = groupOn(group.members) ? [] : group.members.filter(member => social.friends.some(friend => friend.name === member))}>{group.name}</button>
+  <div class="row" role="group" aria-label="An wen?">
+    {#if panel === 'edit'}
+      {#each social.friends as friend (friend.name)}
+        <button type="button" class="pick" onclick={() => { removeFriend(friend.name); pick(selected.filter(other => other !== friend.name)); }} aria-label="{friend.name} entfernen"><Avatar {friend} />{friend.name}<span class="remove" aria-hidden="true">×</span></button>
       {/each}
-      {#if selected.length > 1}<button type="button" class="chip" onclick={() => open('group')}>+ Gruppe aus Auswahl</button>{/if}
-    </div>
-  {/if}
+    {:else}
+      <button type="button" class="pick text" aria-pressed={!services.length} {disabled} onclick={() => { selected = []; services = []; }}>Alle</button>
+      {#each social.groups as group (group.name)}
+        <button type="button" class="pick" aria-pressed={groupOn(group.members)} {disabled} onclick={() => pick(groupOn(group.members) ? [] : group.members.filter(member => social.friends.some(friend => friend.name === member)))}><span class="count" aria-hidden="true">{group.members.length}</span>{group.name}</button>
+      {/each}
+      {#each social.friends as friend (friend.name)}
+        <button type="button" class="pick" aria-pressed={selected.includes(friend.name) && !anyGroup} {disabled} onclick={() => toggle(friend.name)} title={platforms[friend.platform]}><Avatar {friend} />{friend.name}</button>
+      {/each}
+      <button type="button" class="pick text add" {disabled} onclick={() => open('add')}>+ Neu</button>
+      {#if selected.length > 1 && !anyGroup}<button type="button" class="pick text add" onclick={() => open('group')}>Als Gruppe speichern</button>{/if}
+    {/if}
+  </div>
+  {#if !social.friends.length && !panel}<p class="empty">Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.</p>{/if}
   {#if panel === 'add' || panel === 'group' || panel === 'invite'}
     <form class="panel" onsubmit={submit}>
       <p>{panel === 'add' ? 'Freund von Hand anlegen. Schneller geht es, wenn er dir seinen Einladungslink schickt.' : panel === 'group' ? `Gruppe aus ${selected.join(', ')}` : 'Dein Dienst und Name für deinen Einladungslink.'}</p>
       <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? 'Name der Gruppe, z. B. WG' : panel === 'invite' ? 'Dein Name' : 'Name'} required />
       {#if panel !== 'group'}<select bind:value={platform}>{#each (Object.keys(platforms) as Platform[]) as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
-      <button type="submit">{panel === 'invite' ? 'Einladung teilen ↗' : 'Speichern'}</button>
+      <button type="submit" class="button primary">{panel === 'invite' ? 'Einladung teilen ↗' : 'Speichern'}</button>
       {#if qr}<figure class="qr"><span role="img" aria-label="QR-Code deiner Einladung">{@html qr}</span><figcaption>Oder lass den Code mit der Kamera scannen.</figcaption></figure>{/if}
     </form>
   {/if}
 </div>
 
 <style>
-  .friends { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
-  .head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 650; }
-  .head small { color: var(--muted); font-weight: 400; }
-  .links { display: flex; gap: 14px; }
-  .links button { background: none; border: 0; padding: 0; color: var(--muted); font-size: 12px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
-  .empty { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
-  .row { display: flex; gap: 12px; overflow-x: auto; padding: 12px 2px 4px; }
-  .friend { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 60px; flex-shrink: 0; background: none; border: 0; padding: 0; color: var(--text); font-size: 11.5px; }
-  .avatar { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--raised); color: var(--accent); font-size: 17px; font-weight: 750; border: 2px solid transparent; }
-  .friend.on .avatar { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-  .add .avatar { border: 1.5px dashed var(--muted); color: var(--muted); }
-  .dot, .remove { position: absolute; right: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--surface); }
-  .remove { display: grid; place-items: center; background: var(--error); color: var(--ink); font-size: 12px; border-radius: 50%; }
-  .appleMusic { background: #FA2D48; } .youtubeMusic { background: #FF0033; } .spotify { background: #1DB954; } .deezer { background: #A238FF; }
-  .groups { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .chip { border: 1px solid var(--border); background: var(--raised); color: var(--text); border-radius: 99px; padding: 6px 11px; font-size: 12px; }
-  .chip.on { border-color: var(--accent); color: var(--accent); }
-  .panel { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
-  .panel p { width: 100%; margin: 0; font-size: 12px; color: var(--muted); }
-  .panel input, .panel select { flex: 1; min-width: 140px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px; padding: 10px; }
+  .friends { margin-bottom: 14px; }
+  .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .head small { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .links { display: flex; gap: 14px; flex-shrink: 0; }
+  .links button { background: none; border: 0; padding: 0; color: var(--muted); font-size: 13px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+  .empty { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pick { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 5px; border-radius: 999px; border: 1px solid var(--border-strong); background: rgb(255 255 255 / .03); color: var(--text); font-size: 14px; font-weight: 550; }
+  .pick:hover:not(:disabled) { background: var(--raised); }
+  .pick.text { padding: 9px 14px; }
+  .pick.add { border-style: dashed; color: var(--muted); }
+  .pick[aria-pressed="true"] { background: linear-gradient(var(--raised), var(--raised)) padding-box, var(--gradient) border-box; border: 1px solid transparent; }
+  .count { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--raised); font-size: 12px; }
+  .remove { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--error); color: var(--ink); font-size: 12px; }
+  .panel { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; padding: 14px; border-radius: 18px; border: 1px solid var(--border); background: rgb(0 0 0 / .2); }
+  .panel p { width: 100%; margin: 0; font-size: 13px; color: var(--muted); }
+  .panel input, .panel select { flex: 1; min-width: 140px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); border-radius: 12px; padding: 10px 12px; }
   .qr { width: 100%; margin: 4px 0 0; display: flex; align-items: center; gap: 14px; }
   .qr span { width: 132px; flex-shrink: 0; line-height: 0; border-radius: 8px; overflow: hidden; }
   .qr :global(svg) { display: block; width: 100%; height: auto; }
-  .qr figcaption { font-size: 12px; color: var(--muted); }
-  .panel button { border: 0; border-radius: 8px; padding: 10px 14px; background: var(--gradient); color: var(--ink); font-weight: 650; }
+  .qr figcaption { font-size: 13px; color: var(--muted); }
+  @media(max-width: 650px) {
+    .head small { display: none; }
+    .row { flex-wrap: nowrap; overflow-x: auto; margin-right: -18px; padding-right: 18px; scrollbar-width: none; }
+    .pick { flex-shrink: 0; }
+  }
 </style>

@@ -182,6 +182,11 @@ test('friends message has one link for one service and one line per service othe
     .toBe('Andere: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube');
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }], 'https://songgate.app', { name: 'Robin', platform: 'deezer' }))
     .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\nAlle Dienste: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer');
+  // Group chats: no service means the share page only, tapped services need no friends
+  expect(friendsMessage(song, [], 'https://songgate.app', { name: 'Robin', platform: 'deezer' }, []))
+    .toBe('🎵 Savior – RHCP\nhttps://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer');
+  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }], 'https://songgate.app', null, ['spotify', 'appleMusic']))
+    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa): https://open.spotify.com/track/x\nApple Music: ${apple}\nAndere: https://songgate.app/s/yt/UijW9hGpnzc`);
 });
 
 test('invalid source metadata reports only a fixed failure class and provider', async () => {

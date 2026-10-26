@@ -108,12 +108,31 @@ void main() {
       friendsMessage(album, const [Friend('Lisa', 'deezer')]),
       '💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789',
     );
+    // Group chats: no service means the share page only, tapped services need no friends
+    expect(
+      friendsMessage(song, const [], services: const []),
+      '🎵 Savior – RHCP\nhttp://localhost:3000/s/yt/UijW9hGpnzc',
+    );
+    expect(
+      friendsMessage(
+        song,
+        const [Friend('Lisa', 'spotify')],
+        services: const ['spotify', 'appleMusic'],
+      ),
+      '🎵 Savior – RHCP\n'
+      'Spotify (Lisa): https://open.spotify.com/track/x\n'
+      'Apple Music: https://music.apple.com/de/song/1\n'
+      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+    );
   });
 
-  testWidgets('picking friends builds one message for all of them', (
+  testWidgets('picking friends picks their services for one message', (
     tester,
   ) async {
     final requests = <String>[];
+    tester.view.physicalSize = const Size(1170, 4500);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -121,42 +140,24 @@ void main() {
             (ref) => Api(
               MockClient((request) async {
                 requests.add(request.url.path);
-                final body = request.url.path.endsWith('/song')
-                    ? {
-                        'source': {
-                          'platform': 'youtubeMusic',
-                          'title': 'Savior',
-                          'artist': 'RHCP',
-                          'url':
-                              'https://music.youtube.com/watch?v=UijW9hGpnzc',
-                          'artworkUrl': null,
-                        },
-                        'sharePath': '/s/yt/UijW9hGpnzc',
-                        'links': {
-                          for (final platform in platforms.keys)
-                            platform: {
-                              'url': 'https://$platform.example/1',
-                              'found': true,
-                            },
-                        },
-                      }
-                    : {
-                        'target': 'appleMusic',
-                        'source': {
-                          'title': 'Savior',
-                          'artist': 'RHCP',
-                          'url':
-                              'https://music.youtube.com/watch?v=UijW9hGpnzc',
-                        },
-                        'sharePath': '/s/yt/UijW9hGpnzc',
-                        'candidates': [
-                          {
-                            'title': 'Savior',
-                            'url': 'https://music.apple.com/de/song/1',
-                            'artworkUrl': null,
-                          },
-                        ],
-                      };
+                final body = {
+                  'source': {
+                    'kind': 'song',
+                    'platform': 'youtubeMusic',
+                    'title': 'Savior',
+                    'artist': 'RHCP',
+                    'url': 'https://music.youtube.com/watch?v=UijW9hGpnzc',
+                    'artworkUrl': null,
+                  },
+                  'sharePath': '/s/yt/UijW9hGpnzc',
+                  'links': {
+                    for (final platform in platforms.keys)
+                      platform: {
+                        'url': 'https://$platform.example/1',
+                        'found': true,
+                      },
+                  },
+                };
                 return http.Response.bytes(utf8.encode(jsonEncode(body)), 200);
               }),
               'https://example.com',
@@ -171,18 +172,15 @@ void main() {
       find.byType(TextField),
       'https://youtu.be/UijW9hGpnzc',
     );
-    await tester.tap(find.text('Link umwandeln'));
+    await tester.pump();
+    await tester.tap(find.text('Finden'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('friend-Lisa')),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
     await tester.tap(find.byKey(const ValueKey('friend-Lisa')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('friend-Jonas')));
     await tester.pumpAndSettle();
-    expect(requests.where((path) => path.endsWith('/song')), hasLength(1));
+    expect(requests, ['/api/v1/song']);
+    expect(find.text('Lisa'), findsWidgets);
     expect(
       find.textContaining('Spotify (Lisa): https://spotify.example/1'),
       findsOneWidget,
@@ -192,11 +190,14 @@ void main() {
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
-      find.text('An Lisa, Jonas teilen'),
-      200,
-      scrollable: find.byType(Scrollable).first,
+      find.text('Als Gruppe speichern'),
+      100,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.right,
+      ),
     );
-    expect(find.text('An Lisa, Jonas teilen'), findsOneWidget);
+    expect(find.text('Als Gruppe speichern'), findsOneWidget);
   });
 
   testWidgets('an invite link saves the friend', (tester) async {

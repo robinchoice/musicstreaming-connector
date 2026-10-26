@@ -14,7 +14,7 @@
 </svelte:head>
 
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="38" height="38" /> Songgate</a><span class="badge">Ohne Anmeldung</span></header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a></header>
   <main>
     {#if !platform || !name}
       <section class="card"><h1>Diese Einladung ist unvollständig.</h1><p>Bitte um einen neuen Einladungslink.</p></section>
@@ -27,11 +27,10 @@
 
 <style>
   .shell { max-width: 560px; min-height: 100dvh; margin: auto; padding: 0 22px; display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid var(--border); }
-  .brand { display: flex; align-items: center; gap: 10px; font-size: 26px; text-decoration: none; color: var(--text); }
-  .badge { font-size: 11px; border: 1px solid var(--border); border-radius: 99px; padding: 5px 10px; }
+  header { padding: 22px 0; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 24px; text-decoration: none; color: var(--text); }
   main { flex: 1; padding: 30px 0; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 22px; text-align: center; }
+  .card { background: rgb(255 255 255 / .04); border: 1px solid var(--border); border-radius: 22px; padding: 26px 22px; }
   h1 { font-size: 30px; margin: 16px 0 6px; overflow-wrap: anywhere; }
   p { color: var(--muted); font-size: 13px; margin: 0; }
 </style>

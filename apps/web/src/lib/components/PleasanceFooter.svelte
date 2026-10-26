@@ -23,7 +23,7 @@
   footer { display: flex; align-items: center; gap: 24px; padding: 22px 0; border-top: 1px solid var(--border); color: var(--text); font-size: 12px; }
   a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; color: inherit; }
   .wordmark { width: 76px; height: 14px; background: currentColor; mask: url('/pleasance-wordmark.svg') left center / contain no-repeat; }
-  .feedback { padding: 0; border: none; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .feedback { white-space: nowrap; padding: 0; border: none; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .legal { color: var(--muted); }
   label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
   input { margin: 0; accent-color: var(--accent); }

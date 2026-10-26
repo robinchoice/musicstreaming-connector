@@ -63,10 +63,8 @@ const sources: [RegExp, Platform][] = [
   [/open\.spotify\.com\/|spotify\.link\//, 'spotify'], [/deezer\.com\//, 'deezer'],
 ];
 
-export function targetsFor(input: string): Platform[] {
-  const source = sources.find(([pattern]) => pattern.test(input))?.[1];
-  return (Object.keys(platforms) as Platform[]).filter(platform => platform !== source);
-}
+// The service a pasted link comes from, before the API has looked at it
+export const sourceOf = (input: string): Platform | undefined => sources.find(([pattern]) => pattern.test(input))?.[1];
 
 export type Kind = 'song' | 'album';
 
@@ -93,12 +91,18 @@ export function shareUrl(origin: string, path: string, from: Friend | null): str
   return from ? `${origin}${path}?${new URLSearchParams({ from: from.name, service: inviteSlugs[from.platform] })}` : `${origin}${path}`;
 }
 
-// One link if everyone uses the same service, otherwise one line per service plus the share page for everyone else.
+// Without services only the share page, for group chats where everyone picks their own.
+// One service gets its link, several get one line each plus the share page for everyone else.
 // With an own invite the share page comes along for one service too, so the recipient can save the sender.
-export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null): string {
+// The services default to those of the friends, who are named next to their service.
+export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null, services: Platform[] = [...new Set(friends.map(friend => friend.platform))]): string {
   const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
-  const services = [...new Set(friends.map(friend => friend.platform))];
-  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`Alle Dienste: ${shareUrl(origin, song.sharePath, from)}`] : [])].join('\n');
-  const lines = services.map(platform => `${platforms[platform]} (${friends.filter(friend => friend.platform === platform).map(friend => friend.name).join(', ')}): ${song.links[platform].url}`);
-  return [head, ...lines, `Andere: ${shareUrl(origin, song.sharePath, from)}`].join('\n');
+  const everyone = shareUrl(origin, song.sharePath, from);
+  if (!services.length) return [head, everyone].join('\n');
+  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`Alle Dienste: ${everyone}`] : [])].join('\n');
+  const lines = services.map(platform => {
+    const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name);
+    return `${platforms[platform]}${names.length ? ` (${names.join(', ')})` : ''}: ${song.links[platform].url}`;
+  });
+  return [head, ...lines, `Andere: ${everyone}`].join('\n');
 }

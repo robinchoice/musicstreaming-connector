@@ -26,8 +26,7 @@ void _noteError(String path, Object status) {
 
 class ApiException implements Exception {
   final String message;
-  final String? searchUrl;
-  const ApiException(this.message, {this.searchUrl});
+  const ApiException(this.message);
   @override
   String toString() => message;
 }
@@ -45,7 +44,7 @@ class Api {
   final http.Client client;
   final String baseUrl;
   Api(this.client, String baseUrl)
-      : baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
+    : baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
 
   Uri _url(String path) => Uri.parse('$baseUrl/api/v1$path');
 
@@ -59,59 +58,6 @@ class Api {
       return response.statusCode == 426;
     } on Exception {
       return false;
-    }
-  }
-
-  Future<Conversion> convert(
-    String input, {
-    String target = 'appleMusic',
-    String country = 'DE',
-  }) async {
-    try {
-      final response = await client
-          .post(
-            _url('/convert'),
-            headers: {
-              'content-type': 'application/json',
-              'accept': 'application/json',
-              ..._appHeaders,
-            },
-            body: jsonEncode({
-              'input': input,
-              'target': target,
-              'country': country,
-            }),
-          )
-          .timeout(const Duration(seconds: 25));
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      if (response.statusCode >= 400) {
-        _noteError('/convert', response.statusCode);
-        throw ApiException(
-          body['error'] as String? ?? 'Der Dienst ist gerade nicht erreichbar.',
-          searchUrl: body['searchUrl'] as String?,
-        );
-      }
-      return Conversion.fromJson(body);
-    } on ApiException {
-      rethrow;
-    } on TimeoutException {
-      throw const ApiException(
-        'Die Suche dauert zu lange. Versuche es erneut.',
-      );
-    } on http.ClientException {
-      _noteError('/convert', 'offline');
-      throw const ApiException(
-        'Keine Verbindung zum Server. Versuche es erneut.',
-      );
-    } on FormatException {
-      throw const ApiException(
-        'Der Dienst hat eine ungültige Antwort gesendet.',
-      );
-    } on TypeError {
-      throw const ApiException(
-        'Der Dienst hat eine ungültige Antwort gesendet.',
-      );
     }
   }
 

@@ -1,231 +1,211 @@
 <script lang="ts">
-  import { z } from 'zod';
   import { onDestroy, onMount } from 'svelte';
   import Friends from '$lib/components/Friends.svelte';
+  import Logo from '$lib/components/Logo.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { countries, friendsMessage, platforms, platformSchema, shareUrl, targetsFor, type Conversion, type Platform, type Song } from '@app/shared';
-  import { api, ApiError } from '$lib/api';
+  import { countries, friendsMessage, platforms, sourceOf, type Platform, type Song } from '@app/shared';
+  import { api } from '$lib/api';
   import { social } from '$lib/friends.svelte';
   import { toast, toastError } from '$lib/toast.svelte';
 
+  const order: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
   let input = $state('');
-  let target = $state<Platform>('appleMusic');
   let country = 'DE';
-  let savedTarget: Platform = 'appleMusic';
-  const duration = (seconds?: number) => seconds === undefined ? '' : `${Math.floor(seconds / 60)}:${String(Math.round(seconds) % 60).padStart(2, '0')}`;
-  function reset() { request?.abort(); loading = false; conversion = null; selection = ''; copied = false; error = ''; searchUrl = ''; message = ''; }
-  function save() { reset(); savedTarget = target; try { localStorage.setItem('musiclink-preferences', JSON.stringify({ target: savedTarget })); } catch {} }
-  function pickTarget() {
-    const targets = targetsFor(input);
-    target = targets.includes(savedTarget) ? savedTarget : targets[0]!;
-  }
-  function sourceChanged(event: Event) {
-    input = (event.currentTarget as HTMLInputElement).value;
-    reset();
-    pickTarget();
-  }
   let loading = $state(false);
-  let conversion = $state<Conversion | null>(null);
-  let selection = $state('');
+  let song = $state<Song | null>(null);
   let error = $state('');
-  let searchUrl = $state('');
-  let copied = $state(false);
   let canShare = $state(false);
+  let canPaste = $state(false);
+  // Friends fill the services, the tiles can be tapped on their own
   let chosen = $state<string[]>([]);
-  let message = $state('');
-  // A message is only valid for the friends it was built for
-  $effect(() => { if (chosen) message = ''; });
+  let services = $state<Platform[]>([]);
   let request: AbortController | undefined;
+  const source = $derived(sourceOf(input));
+  const friends = $derived(social.friends.filter(friend => chosen.includes(friend.name)));
+  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, order.filter(platform => services.includes(platform))) : '');
+  const what = $derived(!services.length ? 'Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats.'
+    : services.length === 1 ? `Direktlink für ${platforms[services[0]!]}${social.me ? ', dazu der Link für alle mit deinem Namen' : ''}.`
+    : 'Eine Zeile pro Dienst, für alle anderen der Link für alle.');
+
   onMount(() => {
     canShare = typeof navigator.share === 'function';
-    try {
-      const saved = z.object({ target: platformSchema }).safeParse(JSON.parse(localStorage.getItem('musiclink-preferences') ?? '{}')).data;
-      if (saved) target = savedTarget = saved.target;
-    } catch {}
+    canPaste = typeof navigator.clipboard?.readText === 'function';
     const region = navigator.language.split('-')[1]?.toUpperCase();
     if (countries.some(code => code === region)) country = region!;
     // Bookmarklets and shortcuts open /?q=<link> to convert right away
     const shared = new URL(location.href).searchParams.get('q')?.trim();
     if (shared) {
       input = shared.slice(0, 4096);
-      pickTarget();
-      convert();
+      find();
     }
   });
   onDestroy(() => request?.abort());
 
-  async function convert(event?: SubmitEvent) {
+  function reset() { request?.abort(); loading = false; song = null; error = ''; }
+
+  async function find(event?: SubmitEvent) {
     event?.preventDefault();
+    if (!input.trim()) return;
     request?.abort();
     const current = new AbortController();
     request = current;
     loading = true;
     error = '';
-    conversion = null;
-    selection = '';
-    copied = false;
-    searchUrl = '';
-    message = '';
     try {
-      if (chosen.length) {
-        const song = await api.get<Song>(`/song?${new URLSearchParams({ input, country })}`, current.signal);
-        if (current.signal.aborted) return;
-        message = friendsMessage(song, social.friends.filter(friend => chosen.includes(friend.name)), location.origin, social.me);
-        return;
-      }
-      const result = await api.post<Conversion>('/convert', { input, target, country }, current.signal);
+      const result = await api.get<Song>(`/song?${new URLSearchParams({ input, country })}`, current.signal);
       if (current.signal.aborted) return;
-      conversion = result;
-      selection = result.candidates[0]!.url;
+      song = result;
+      scrollTo({ top: 0 });
     } catch (e) {
       if (current.signal.aborted) return;
       error = e instanceof Error ? e.message : 'Die Anfrage ist fehlgeschlagen.';
-      searchUrl = e instanceof ApiError ? e.searchUrl ?? '' : '';
     } finally {
       if (!current.signal.aborted) loading = false;
     }
   }
 
-  async function copy(url: string) {
-    try { await navigator.clipboard.writeText(url); copied = true; }
-    catch { toastError('Kopieren nicht möglich. Öffne den Musiklink und kopiere ihn dort.'); }
+  async function paste() {
+    try { input = (await navigator.clipboard.readText()).trim().slice(0, 4096); }
+    catch { toastError('Einfügen nicht möglich. Füge den Link von Hand ein.'); return; }
+    if (input) find();
   }
 
-  async function share(url: string) {
-    try { await navigator.share(url.startsWith('http') ? { url } : { text: url }); }
-    catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich. Kopiere stattdessen den Link.'); }
+  function toggle(platform: Platform) {
+    services = services.includes(platform) ? services.filter(other => other !== platform) : [...services, platform];
+    // No service left means everyone again
+    if (!services.length) chosen = [];
+  }
+
+  async function copy() {
+    try { await navigator.clipboard.writeText(message); toast('Nachricht kopiert.'); }
+    catch { toastError('Kopieren nicht möglich.'); }
+  }
+
+  async function share() {
+    try { await navigator.share({ text: message }); }
+    catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich. Kopiere stattdessen die Nachricht.'); }
   }
 </script>
 
-{#snippet track(candidate: Conversion['candidates'][number], target: Platform)}
-  {#if candidate.artworkUrl}<img src={candidate.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="artwork" aria-hidden="true">♪</span>{/if}
-  <span class="track"><strong>{candidate.title}</strong><small>{candidate.album ?? platforms[target]} {duration(candidate.durationSeconds)}</small></span>
-{/snippet}
-
+{#if song?.source.artworkUrl}<div class="backdrop" aria-hidden="true" style:background-image="url({JSON.stringify(song.source.artworkUrl)})"></div>{/if}
 <div class="shell">
-  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> Songgate</a><span class="header-note">Gute Musik kennt keine Plattform.</span><span class="badge">Ohne Anmeldung</span></header>
+  <header><a href="/" class="brand" onclick={reset}><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a></header>
   <main>
-    <section class="intro">
-      <div class="eyebrow">EIN SONG. MEHR VERBINDUNG.</div>
-      <h1>Dein Musikgeschmack.<br /><span>Ihr Lieblingsplayer.</span></h1>
-      <p>Teile Songs und Alben aus YouTube Music, Apple Music, Spotify oder Deezer.<br /> Als Link für den Lieblingsplayer deiner Menschen.</p>
-    </section>
-
-    <section class="converter" aria-label="Musiklink umwandeln">
-      <div class="route"><span>♪ Musik teilen</span><span class="arrow" aria-hidden="true">⟶</span><span>{chosen.length ? chosen.join(', ') : platforms[target]}</span></div>
-      <form onsubmit={convert}>
-        <label for="song">Welchen Song oder welches Album möchtest du teilen?</label>
-        <div class="input-row"><input id="song" name="song" bind:value={input} oninput={sourceChanged} required maxlength="4096" placeholder="Link aus YouTube Music, Apple Music, Spotify oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} /><button class={conversion || searchUrl ? 'secondary' : 'primary'} type="submit" disabled={loading || !input.trim()}>{loading ? 'Suche läuft …' : chosen.length ? `An ${chosen.join(', ')} teilen` : 'Link umwandeln'} <span aria-hidden="true">↗</span></button></div>
-        {#if !chosen.length}<div class="settings"><label>Zieldienst <select bind:value={target} onchange={save} disabled={loading}>{#each targetsFor(input) as key}<option value={key}>{platforms[key]}</option>{/each}</select></label></div>{/if}
-        <p class="hint">Ein Song oder ein Album reicht. Tracking-Parameter entfernen wir für dich.</p>
-        <Friends bind:selected={chosen} disabled={loading} />
-      </form>
-
-      <div aria-live="polite" aria-busy={loading}>
-        {#if loading}<div class="status"><span class="spinner"></span><strong>{chosen.length ? 'Wir suchen die Links für deine Freunde.' : `Wir suchen deine Musik auf ${platforms[target]}.`}</strong><p>Das dauert manchmal einen kleinen Moment.</p></div>
-        {:else if error}<div class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong><p>{error}</p></div>
-          {#if searchUrl}<p class="hint">Teile stattdessen eine Suche nach dem Song.</p><div class="actions"><button class="primary" onclick={() => copy(searchUrl)}>{copied ? 'Suchlink kopiert ✓' : 'Suchlink kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(searchUrl)}>Weiterteilen ↗</button>{/if}<a href={searchUrl} target="_blank" rel="noreferrer">Auf {platforms[target]} suchen ↗</a></div>{/if}
-        {:else if message}
-          <div class="results">
-            <p class="legend">Deine Nachricht</p>
-            <pre class="message">{message}</pre>
-            <div class="actions"><button class="primary" onclick={() => copy(message)}>{copied ? 'Nachricht kopiert ✓' : 'Nachricht kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(message)}>Weiterteilen ↗</button>{/if}</div>
+    {#if !song}
+      <section class="start">
+        <h1>Teil Musik. Jeder hört sie in seinem Dienst.</h1>
+        <p class="lede">Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music und Deezer.</p>
+        <form class="field" onsubmit={find}>
+          <span class="src">{#if source}<Logo platform={source} size={24} />{:else}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>{/if}</span>
+          <input id="song" name="song" aria-label="Song- oder Albumlink" bind:value={input} oninput={() => (error = '')} required maxlength="4096" placeholder="Link aus Spotify, Apple Music, YouTube Music oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} />
+          {#if input.trim() || !canPaste}<button class="button primary" type="submit" disabled={loading || !input.trim()}>Finden</button>
+          {:else}<button class="button ghost" type="button" onclick={paste}>Einfügen</button>{/if}
+        </form>
+        <div class="detected" aria-live="polite">
+          {#if loading}<span class="loading"><span class="spinner"></span>Suche bei allen vier Diensten …</span>
+          {:else if error}<span class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong> {error}</span>
+          {:else if source}Link aus <b>{platforms[source]}</b>{/if}
+        </div>
+        <div class="people"><Friends bind:selected={chosen} bind:services disabled={loading} /></div>
+        <p class="note">Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer und ListenBrainz.</p>
+      </section>
+    {:else}
+      <section class="record">
+        {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
+        <div>
+          <div class="meta">{song.source.kind === 'album' ? 'Album' : 'Song'} aus {platforms[song.source.platform]}</div>
+          <h1>{song.source.title}</h1>
+          <p class="artist">{song.source.artist}</p>
+          <button class="newlink" type="button" onclick={() => { reset(); input = ''; }}>Anderen Link einfügen</button>
+          <Friends bind:selected={chosen} bind:services />
+          <div class="tiles" role="group" aria-label="Dienste in der Nachricht">
+            {#each order as platform (platform)}
+              {@const link = song.links[platform]}
+              {@const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name)}
+              <button type="button" class="tile" class:missing={!link.found} aria-pressed={services.includes(platform)} onclick={() => toggle(platform)}>
+                <Logo {platform} size={32} />
+                <span><strong>{platforms[platform]}</strong><small>{!link.found ? 'Nur Suche' : names.length ? names.join(', ') : platform === song.source.platform ? 'Quelle' : 'Gefunden'}</small></span>
+                <span class="check" aria-hidden="true">{services.includes(platform) ? '✓' : ''}</span>
+              </button>
+            {/each}
           </div>
-        {:else if conversion}
-          {@const selected = conversion.candidates.find(candidate => candidate.url === selection)!}
-          <div class="results">
-            <div class="source"><span class="eyebrow">{conversion.source.kind === 'album' ? 'DEIN ALBUM' : 'DEIN SONG'}</span><h2>{conversion.source.title}</h2><p>{conversion.source.artist}</p></div>
-            <p class="legend">Dein Vorschlag auf {platforms[conversion.target]}</p>
-            <div class="candidate selected">{@render track(selected, conversion.target)}<span class="checkmark" aria-label="Ausgewählt">✓</span></div>
-            {#if conversion.candidates.length > 1}
-              <details><summary>Andere Fassungen ({conversion.candidates.length - 1})</summary>
-                {#each conversion.candidates.filter(candidate => candidate.url !== selection) as candidate}
-                  <button type="button" class="candidate other" onclick={() => { selection = candidate.url; copied = false; }}>{@render track(candidate, conversion.target)}</button>
-                {/each}
-              </details>
-            {/if}
-            <p class="hint">Prüfe die gewünschte Aufnahme vor dem Teilen.</p>
-            <div class="actions"><button class="primary" onclick={() => copy(selection)}>{copied ? 'Link kopiert ✓' : 'Link kopieren'}</button>{#if canShare}<button class="secondary" onclick={() => share(selection)}>Weiterteilen ↗</button>{/if}<a href={selection} target="_blank" rel="noreferrer">Auf {platforms[conversion.target]} prüfen ↗</a></div>
-            <p class="everyone">Oder ein Link für alle, jeder wählt seinen Dienst: <button type="button" onclick={() => navigator.clipboard.writeText(shareUrl(location.origin, conversion!.sharePath, social.me)).then(() => toast('Link für alle kopiert.'), () => toastError('Kopieren nicht möglich.'))}>{location.origin.replace(/^https?:\/\//, '')}{conversion.sharePath} kopieren</button></p>
+          <div class="out" aria-live="polite">
+            <p class="what">{what}</p>
+            <pre>{message}</pre>
+            <div class="actions">
+              {#if canShare}<button class="button primary" type="button" onclick={share}>Teilen</button>{/if}
+              <button class="button {canShare ? 'ghost' : 'primary'}" type="button" onclick={copy}>Kopieren</button>
+            </div>
           </div>
-        {/if}
-      </div>
-    </section>
-
-    <section class="steps" aria-label="So funktioniert’s"><div><span class="step-number">01</span><h2>Song mitbringen</h2><p>Den Link in deiner Musik-App über „Teilen“ kopieren.</p></div><div><span class="step-number">02</span><h2>Aufnahme finden</h2><p>Wir suchen den passenden Song und zeigen dir die Treffer.</p></div><div><span class="step-number">03</span><h2>Freude weitergeben</h2><p>Passenden Link kopieren und mit deinen Menschen teilen.</p></div></section>
-    <p class="privacy"><strong>Ohne Konto. Ohne gespeicherte Song-Historie. Deine Freunde bleiben in deinem Browser.</strong><br />Dein Link geht an unseren Dienst. Apple, YouTube, Spotify und Deezer liefern Song-Metadaten; für Spotify-Treffer zusätzlich ListenBrainz.</p>
+        </div>
+      </section>
+    {/if}
   </main>
   <PleasanceFooter />
 </div>
 
 <style>
-  .shell { max-width: 1120px; min-height: 100dvh; margin: auto; padding: 0 40px; display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; border-bottom: 1px solid var(--border); gap: 20px; }
-  .brand { display: flex; align-items: center; gap: 11px; font-size: 28px; text-decoration: none; color: var(--text); }
-  .brand-icon { width: 42px; height: 42px; }
-  .header-note { color: var(--muted); font-size: 12px; }
-  .badge { font-size: 11px; border: 1px solid var(--border); border-radius: 99px; padding: 5px 10px; white-space: nowrap; }
-  main { width: 100%; max-width: 850px; margin: 0 auto; flex: 1; }
-  .intro { padding: 52px 0 25px; }
-  .eyebrow { font-size: 11px; letter-spacing: 1.4px; font-weight: 650; color: var(--accent); }
-  h1 { font-size: clamp(40px, 5.8vw, 65px); margin: 14px 0 18px; }
-  h1 span { color: var(--accent); }
-  .intro p { color: var(--muted); font-size: 15px; line-height: 1.65; }
-  .converter { background: var(--surface); border: 1px solid var(--border); padding: 30px; border-radius: 12px; }
-  .route { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; margin-bottom: 21px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
-  .route .arrow { color: var(--muted); font-size: 20px; font-weight: 400; }
-  .settings { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 13px; font-size: 12px; }
-  .settings label { display: flex; gap: 12px; align-items: center; }
-  select { max-width: 100%; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px; background: var(--bg); }
-  form > label { display: block; font-size: 13px; font-weight: 650; margin-bottom: 9px; }
-  .input-row { display: flex; gap: 10px; }
-  #song { min-width: 0; flex: 1; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 14px 12px; background: var(--bg); font-size: 13px; }
-  #song::placeholder { color: var(--muted); }
-  button { border: 1px solid transparent; border-radius: 8px; padding: 14px 18px; font-size: 13px; font-weight: 650; }
-  .primary { background: var(--gradient); color: var(--ink); }
-  .primary:hover:not(:disabled) { filter: brightness(1.04); }
-  .primary:disabled { background: var(--raised); color: var(--muted); opacity: 1; }
-  .input-row button span { margin-left: 10px; }
-  .secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
-  .hint { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin: 30px 0; }
-  .step-number { color: var(--accent); font-size: 28px; display: block; margin-bottom: 12px; }
-  .steps h2 { font-size: 20px; margin: 0 0 7px; }
-  .steps p { color: var(--muted); font-size: 12px; margin: 0; line-height: 1.65; }
-  .privacy { margin: 26px 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
-  .privacy strong { color: var(--text); font-weight: 550; }
-  .status { padding: 30px 10px 8px; text-align: center; font-size: 14px; }
-  .status p { font-size: 12px; color: var(--muted); }
-  .spinner { display: block; width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 14px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-  .error { padding: 5px 15px; border-left: 3px solid var(--error); margin-top: 25px; font-size: 13px; }
-  .error p { color: var(--muted); margin: 6px 0 0; }
-  .results { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 22px; }
-  .source h2 { font-size: 32px; margin: 8px 0 4px; overflow-wrap: anywhere; }
-  .source p { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
-  .legend { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
-  .candidate { display: flex; align-items: center; gap: 13px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; background: #1B1A20; }
-  .candidate.selected { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
-  .checkmark { color: var(--accent); font-size: 16px; }
-  .candidate.other { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-  .candidate.other:hover { background: var(--raised); }
-  details { margin-top: 8px; }
-  summary { font-size: 12px; color: var(--muted); cursor: pointer; padding: 6px 0 10px; }
-  .candidate img, .artwork { width: 50px; height: 50px; flex-shrink: 0; object-fit: cover; border-radius: 6px; }
-  .artwork { display: grid; place-items: center; background: #302E36; color: var(--text); font-size: 26px; }
-  .track { display: flex; flex: 1; min-width: 0; flex-direction: column; font-size: 14px; overflow-wrap: anywhere; }
-  .track small { color: var(--muted); font-size: 11px; }
-  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
-  .actions a { font-size: 12px; margin-left: auto; text-underline-offset: 3px; }
-  .message { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 10px; padding: 14px; margin: 0; }
-  .everyone { font-size: 12px; color: var(--muted); margin: 18px 0 0; }
-  .everyone button { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; text-align: left; }
-  @media(max-width: 650px) {
-    .shell { padding: 0 22px; } header { padding: 20px 0; } .brand { font-size: 26px; } .brand-icon { width: 38px; height: 38px; } .header-note { display: none; } .badge { font-size: 9px; }
-    .intro { padding: 34px 0 20px; } h1 { font-size: clamp(34px, 9.8vw, 42px); } .intro p { font-size: 13px; }
-    .converter { padding: 20px; } .input-row { flex-direction: column; } .route { gap: 12px; font-size: 12px; }
-    .steps { gap: 16px; margin: 27px 0; } .steps h2 { font-size: 17px; } .steps p { font-size: 11px; } .step-number { font-size: 25px; }
-    .source h2 { font-size: 27px; } .actions .primary { flex: 1; } .actions a { width: 100%; margin: 6px 0 0; }
+  .backdrop { position: fixed; inset: -10%; background: center / cover; filter: blur(90px) saturate(1.3); opacity: .26; pointer-events: none; animation: fade .8s ease-out; }
+  @keyframes fade { from { opacity: 0; } }
+  .shell { position: relative; max-width: 1040px; min-height: 100dvh; margin: auto; padding: 0 32px; display: flex; flex-direction: column; }
+  header { padding: 22px 0; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 24px; text-decoration: none; color: var(--text); }
+  .brand-icon { width: 34px; height: 34px; }
+  main { flex: 1; padding: 48px 0 64px; }
+
+  .start { max-width: 700px; }
+  .start h1 { font-size: clamp(40px, 7vw, 64px); margin: 0 0 14px; max-width: 13ch; }
+  .lede { color: var(--muted); margin: 0 0 34px; font-size: 17px; }
+  .field { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px; border-radius: 22px; background: rgb(255 255 255 / .05); border: 1px solid var(--border-strong); }
+  .field:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .src { width: 26px; height: 26px; display: grid; place-items: center; color: var(--muted); flex-shrink: 0; }
+  #song { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 17px; padding: 14px 0; }
+  #song::placeholder { color: #6E6C76; }
+  .detected { margin: 10px 0 0 18px; font-size: 14px; color: var(--muted); min-height: 22px; }
+  .detected b { color: var(--text); font-weight: 600; }
+  .loading { display: inline-flex; align-items: center; gap: 10px; }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 25%, #80CD84, #57C6BB); mask: radial-gradient(circle, transparent 6px, #000 7px); animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  .error { display: block; padding-left: 12px; border-left: 3px solid var(--error); color: var(--muted); }
+  .error strong { color: var(--text); font-weight: 600; }
+  .people { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
+  .note { margin-top: 32px; color: var(--muted); font-size: 13px; }
+
+  .record { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 44px; align-items: start; animation: rise .45s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  .record > div { min-width: 0; }
+  .cover { width: 340px; height: 340px; border-radius: 16px; object-fit: cover; box-shadow: 0 40px 80px -30px rgb(0 0 0 / .9); position: sticky; top: 24px; }
+  .placeholder { display: grid; place-items: center; background: var(--raised); font-size: 72px; color: var(--muted); }
+  .meta { color: var(--muted); font-size: 14px; }
+  .record h1 { font-size: clamp(40px, 5.6vw, 64px); margin: 6px 0 4px; overflow-wrap: anywhere; }
+  .artist { font-size: 18px; margin: 0 0 18px; color: rgb(242 240 234 / .8); }
+  .newlink { border: 0; background: none; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 0; margin-bottom: 22px; }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 18px; background: rgb(255 255 255 / .06); border: 1px solid var(--border); color: var(--text); text-align: left; min-width: 0; }
+  .tile:hover { background: rgb(255 255 255 / .1); }
+  .tile > span:not(.check) { min-width: 0; }
+  .tile strong { display: block; font-weight: 650; padding-right: 18px; }
+  .tile small { display: block; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile[aria-pressed="true"] { background: linear-gradient(rgb(36 35 42 / .92), rgb(36 35 42 / .92)) padding-box, var(--gradient) border-box; border-color: transparent; }
+  .tile.missing { opacity: .6; }
+  .check { position: absolute; top: 10px; right: 12px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; font-size: 12px; color: var(--ink); }
+  .tile[aria-pressed="true"] .check { background: var(--gradient); border-color: transparent; }
+
+  .out { margin-top: 18px; padding: 16px 18px; border-radius: 18px; background: rgb(0 0 0 / .25); border: 1px solid var(--border); }
+  .what { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  pre { margin: 0 0 14px; font: inherit; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  @media(max-width: 860px) {
+    .shell { padding: 0 18px; }
+    main { padding: 24px 0 40px; }
+    .lede { font-size: 16px; margin-bottom: 26px; }
+    #song { font-size: 16px; }
+    .record { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .cover { position: static; width: 100%; height: auto; aspect-ratio: 1; max-width: 220px; }
+    .record h1 { font-size: 36px; }
+    .tile { padding: 14px; gap: 10px; }
+    .actions .button { flex: 1; }
   }
 </style>

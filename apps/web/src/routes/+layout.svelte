@@ -56,6 +56,7 @@
     --surface: #16151B;
     --raised: #201F25;
     --border: rgb(255 255 255 / 0.07);
+    --border-strong: rgb(255 255 255 / 0.14);
     --text: #F2F0EA;
     --muted: #9A98A3;
     --error: #F2545B;
@@ -72,5 +73,11 @@
   :global(button) { cursor: pointer; }
   :global(button:disabled) { cursor: default; opacity: .5; }
   :global(a) { color: var(--accent); }
+  /* Pill buttons: the gradient only on the one main action of an area */
+  :global(.button) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 999px; padding: 12px 22px; font-size: 15px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+  :global(.button.primary) { background: var(--gradient); color: var(--ink); }
+  :global(.button.primary:hover:not(:disabled)) { filter: brightness(1.05); }
+  :global(.button.ghost) { background: transparent; color: var(--text); border-color: var(--border-strong); font-weight: 550; }
+  :global(.button.ghost:hover:not(:disabled)) { background: var(--raised); }
   :global(:focus-visible) { outline: 3px solid var(--accent); outline-offset: 4px; }
 </style>
