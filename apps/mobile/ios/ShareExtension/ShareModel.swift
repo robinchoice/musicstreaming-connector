@@ -1,25 +1,13 @@
 import Foundation
 import Combine
 
-struct SourceTrack: Decodable {
-    let kind: String?
+struct SongSource: Decodable {
+    let kind: String
+    let platform: String
     let title: String
     let artist: String
     let url: String
-}
-
-struct SongCandidate: Decodable {
-    let title: String
-    let url: String
     let artworkUrl: String?
-    let album: String?
-    let durationSeconds: Int?
-}
-
-struct Conversion: Decodable {
-    let target: String
-    let source: SourceTrack
-    let candidates: [SongCandidate]
 }
 
 struct SongLink: Decodable {
@@ -28,7 +16,7 @@ struct SongLink: Decodable {
 }
 
 struct Song: Decodable {
-    let source: SourceTrack
+    let source: SongSource
     let sharePath: String
     let links: [String: SongLink]
 }
@@ -52,17 +40,13 @@ private struct Social: Decodable {
 
 private struct APIError: Decodable {
     let error: String
-    let code: String?
-    let searchUrl: String?
 }
 
 @MainActor
 final class ShareModel: ObservableObject {
     static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify", "deezer": "Deezer"]
+    static let serviceOrder = ["spotify", "appleMusic", "youtubeMusic", "deezer"]
     private let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype")
-    @Published var target = "appleMusic"
-    var targetName: String { Self.platforms[conversion?.target ?? target] ?? target }
-    var targets: [String] { Self.targets(for: input ?? "") }
     private let country: String = {
         let region = Locale.current.region?.identifier ?? ""
         return ["DE", "AT", "CH", "US", "GB"].contains(region) ? region : "DE"
@@ -71,24 +55,35 @@ final class ShareModel: ObservableObject {
     let friends: [Friend]
     let groups: [FriendGroup]
     let me: Friend?
+    @Published private(set) var song: Song?
+    @Published private(set) var error: String?
+    @Published private(set) var isLoading = true
+    @Published private(set) var canRetry = false
+    // Picking friends picks their services, the tiles change the services on their own
     @Published private(set) var chosen: [String] = []
-    @Published private(set) var message: String?
-    @Published private(set) var isLoadingMessage = false
-    @Published private(set) var messageFailed = false
-    private var song: Song?
-    private var songRequest: Task<Void, Never>?
+    @Published private(set) var services: [String] = []
+
+    private var request: Task<Void, Never>?
+    private(set) var input: String?
+    private var isClosed = false
 
     init() {
-        if let saved = preferences?.string(forKey: "target"), Self.platforms[saved] != nil { target = saved }
         let social = preferences?.string(forKey: "social")
             .flatMap { try? JSONDecoder().decode(Social.self, from: Data($0.utf8)) }
-        friends = (social?.friends ?? []).filter { Self.platforms[$0.platform] != nil }
+        friends = (social?.friends ?? []).filter { !$0.name.isEmpty && Self.platforms[$0.platform] != nil }
         groups = social?.groups ?? []
         me = social?.me.flatMap { Self.platforms[$0.platform] == nil ? nil : $0 }
     }
 
+    func pick(_ names: [String]) {
+        chosen = names
+        services = Self.serviceOrder.filter { platform in
+            friends.contains { names.contains($0.name) && $0.platform == platform }
+        }
+    }
+
     func toggle(_ name: String) {
-        choose(chosen.contains(name) ? chosen.filter { $0 != name } : chosen + [name])
+        pick(chosen.contains(name) ? chosen.filter { $0 != name } : chosen + [name])
     }
 
     func isGroupChosen(_ group: FriendGroup) -> Bool {
@@ -96,64 +91,44 @@ final class ShareModel: ObservableObject {
     }
 
     func toggle(group: FriendGroup) {
-        choose(isGroupChosen(group) ? [] : group.members.filter { member in friends.contains { $0.name == member } })
+        pick(isGroupChosen(group) ? [] : group.members.filter { member in friends.contains { $0.name == member } })
     }
 
-    private func choose(_ names: [String]) {
-        chosen = names
-        message = nil
-        messageFailed = false
-        guard !names.isEmpty else { return }
-        if song != nil { buildMessage(); return }
-        guard let apiURL, let input, songRequest == nil else { return }
-        isLoadingMessage = true
-        let country = self.country
-        songRequest = Task { [weak self] in
-            var components = URLComponents(url: apiURL.appendingPathComponent("api/v1/song"), resolvingAgainstBaseURL: false)
-            components?.queryItems = [URLQueryItem(name: "input", value: input), URLQueryItem(name: "country", value: country)]
-            var song: Song?
-            if let url = components?.url {
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 25
-                Self.identify(&request)
-                if let result = try? await URLSession.shared.data(for: request),
-                   (result.1 as? HTTPURLResponse)?.statusCode == 200 {
-                    song = try? JSONDecoder().decode(Song.self, from: result.0)
-                }
-            }
-            guard let self, !self.isClosed, !Task.isCancelled else { return }
-            self.songRequest = nil
-            self.isLoadingMessage = false
-            self.song = song
-            if song == nil {
-                self.chosen = []
-                self.messageFailed = true
-            }
-            self.buildMessage()
-        }
+    func toggle(service: String) {
+        let next = services.contains(service) ? services.filter { $0 != service } : services + [service]
+        services = Self.serviceOrder.filter(next.contains)
+        // No service left means everyone again
+        if services.isEmpty { chosen = [] }
     }
 
-    // One link if everyone uses the same service, otherwise one line per service plus the share page.
-    // With an own invite the share page comes along for one service too, see packages/shared.
-    private func buildMessage() {
-        guard let song, let apiURL else { return }
-        let picked = friends.filter { chosen.contains($0.name) }
-        guard !picked.isEmpty else { message = nil; return }
-        let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
-        var services: [String] = []
-        for friend in picked where !services.contains(friend.platform) { services.append(friend.platform) }
+    // Small text on a tile, the same as _tileDetail in the app
+    func detail(_ platform: String) -> String {
+        guard let song, song.links[platform]?.found == true else { return "Nur Suche" }
+        let names = friends.filter { chosen.contains($0.name) && $0.platform == platform }.map(\.name)
+        if !names.isEmpty { return names.joined(separator: ", ") }
+        return platform == song.source.platform ? "Quelle" : "Gefunden"
+    }
+
+    var message: String? {
+        guard let song, let apiURL else { return nil }
         let origin = apiURL.absoluteString.hasSuffix("/") ? String(apiURL.absoluteString.dropLast()) : apiURL.absoluteString
+        return Self.friendsMessage(song, friends: friends.filter { chosen.contains($0.name) }, origin: origin, from: me, services: services)
+    }
+
+    // Same as friendsMessage in packages/shared: no service gives the share page only,
+    // one its link, several one line each plus the share page for everyone else.
+    static func friendsMessage(_ song: Song, friends: [Friend], origin: String, from: Friend?, services: [String]) -> String {
+        let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
+        let everyone = shareURL(origin + song.sharePath, from: from)
+        guard let first = services.first else { return [head, everyone].joined(separator: "\n") }
         if services.count == 1 {
-            message = "\(head)\n\(song.links[services[0]]?.url ?? "")" + (me == nil ? "" : "\nAlle Dienste: \(Self.shareURL(origin + song.sharePath, from: me))")
-            return
+            return ([head, song.links[first]?.url ?? ""] + (from == nil ? [] : ["Alle Dienste: \(everyone)"])).joined(separator: "\n")
         }
-        var lines = [head]
-        for service in services {
-            let names = picked.filter { $0.platform == service }.map(\.name).joined(separator: ", ")
-            lines.append("\(Self.platforms[service] ?? service) (\(names)): \(song.links[service]?.url ?? "")")
+        let lines = services.map { platform in
+            let names = friends.filter { $0.platform == platform }.map(\.name).joined(separator: ", ")
+            return "\(platforms[platform] ?? platform)\(names.isEmpty ? "" : " (\(names))"): \(song.links[platform]?.url ?? "")"
         }
-        lines.append("Andere: \(Self.shareURL(origin + song.sharePath, from: me))")
-        message = lines.joined(separator: "\n")
+        return ([head] + lines + ["Andere: \(everyone)"]).joined(separator: "\n")
     }
 
     // A share page may name its sender, same as shareUrl in packages/shared
@@ -166,29 +141,13 @@ final class ShareModel: ObservableObject {
         return components.string ?? url
     }
 
-    static func targets(for input: String) -> [String] {
-        let source = input.contains("music.apple.com/") ? "appleMusic"
+    // The service a shared link comes from, before the API has looked at it
+    static func sourceOf(_ input: String) -> String? {
+        input.contains("music.apple.com/") ? "appleMusic"
             : input.contains("youtube.com/") || input.contains("youtu.be/") ? "youtubeMusic"
             : input.contains("open.spotify.com/") || input.contains("spotify.link/") ? "spotify"
             : input.contains("deezer.com/") ? "deezer" : nil
-        return ["appleMusic", "youtubeMusic", "spotify", "deezer"].filter { $0 != source }
     }
-
-    func targetChanged() {
-        preferences?.set(target, forKey: "target")
-        retry()
-    }
-
-    @Published private(set) var conversion: Conversion?
-    @Published private(set) var error: String?
-    @Published private(set) var searchUrl: String?
-    @Published private(set) var isLoading = true
-    @Published private(set) var canRetry = false
-    @Published var selection: String?
-
-    private var request: Task<Void, Never>?
-    private var input: String?
-    private var isClosed = false
 
     // Lets the API ask outdated builds to update (status 426), see apps/api/src/app.ts
     private static func identify(_ request: inout URLRequest) {
@@ -219,22 +178,10 @@ final class ShareModel: ObservableObject {
 
     func resolve(_ input: String) {
         guard !isClosed else { return }
-        if self.input == nil {
-            let targets = Self.targets(for: input)
-            if !targets.contains(target) { target = targets[0] }
-        }
         self.input = input
         request?.cancel()
-        songRequest?.cancel()
-        songRequest = nil
         song = nil
-        chosen = []
-        message = nil
-        isLoadingMessage = false
-        conversion = nil
-        selection = nil
         error = nil
-        searchUrl = nil
         canRetry = false
         isLoading = true
         guard let apiURL else {
@@ -242,29 +189,24 @@ final class ShareModel: ObservableObject {
             error = "Die Server-Adresse fehlt in dieser App-Version."
             return
         }
-        let target = self.target
         let country = self.country
         request = Task { [weak self] in
             do {
-                var request = URLRequest(url: apiURL.appendingPathComponent("api/v1/convert"))
-                request.httpMethod = "POST"
+                var components = URLComponents(url: apiURL.appendingPathComponent("api/v1/song"), resolvingAgainstBaseURL: false)
+                components?.queryItems = [URLQueryItem(name: "input", value: input), URLQueryItem(name: "country", value: country)]
+                guard let url = components?.url else { throw URLError(.badURL) }
+                var request = URLRequest(url: url)
                 request.timeoutInterval = 25
                 Self.identify(&request)
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.httpBody = try JSONEncoder().encode(["input": input, "target": target, "country": country])
                 let (data, response) = try await URLSession.shared.data(for: request)
                 guard let self, !self.isClosed, !Task.isCancelled else { return }
                 self.isLoading = false
                 guard let response = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
                 if response.statusCode >= 400 {
-                    let failure = try JSONDecoder().decode(APIError.self, from: data)
-                    self.error = failure.error
-                    self.searchUrl = failure.searchUrl
+                    self.error = try JSONDecoder().decode(APIError.self, from: data).error
                     self.canRetry = response.statusCode == 429 || response.statusCode >= 500
                 } else {
-                    let conversion = try JSONDecoder().decode(Conversion.self, from: data)
-                    self.conversion = conversion
-                    self.selection = conversion.candidates.first?.url
+                    self.song = try JSONDecoder().decode(Song.self, from: data)
                 }
             } catch {
                 guard let self, !self.isClosed, !Task.isCancelled else { return }
@@ -277,7 +219,7 @@ final class ShareModel: ObservableObject {
 
     func failToReadInput() {
         isLoading = false
-        error = "Der geteilte Link konnte nicht gelesen werden. Teile einen Song aus YouTube Music oder Apple Music erneut."
+        error = "Der geteilte Link konnte nicht gelesen werden. Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer erneut."
     }
 
     func retry() {
@@ -287,11 +229,9 @@ final class ShareModel: ObservableObject {
     func close() {
         isClosed = true
         request?.cancel()
-        songRequest?.cancel()
     }
 
     deinit {
         request?.cancel()
-        songRequest?.cancel()
     }
 }
