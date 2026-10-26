@@ -762,11 +762,15 @@ class _ServiceTile extends StatelessWidget {
             height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: selected ? bandGradient(glow) : null,
-              border: selected ? null : Border.all(color: hairlineStrong),
+              color: selected ? raised : null,
+              border: Border.all(
+                color: selected
+                    ? bandColor((appBand.from + appBand.to) / 2, glow)
+                    : hairlineStrong,
+              ),
             ),
             child: selected
-                ? const Icon(Icons.check, size: 13, color: ink)
+                ? const Icon(Icons.check, size: 13, color: text)
                 : null,
           ),
         ),

@@ -67,7 +67,7 @@
   }
   :global(*) { box-sizing: border-box; }
   :global(body) { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.55; }
-  :global(h1), :global(h2), :global(.brand), :global(.step-number) { font-family: var(--font-display); font-weight: 780; font-stretch: 80%; font-variation-settings: 'wdth' 80, 'wght' 780; letter-spacing: -0.035em; line-height: 1.03; }
+  :global(h1), :global(h2), :global(h3), :global(.brand), :global(.step-number) { font-family: var(--font-display); font-weight: 780; font-stretch: 80%; font-variation-settings: 'wdth' 80, 'wght' 780; letter-spacing: -0.035em; line-height: 1.03; }
   :global(button), :global(input), :global(select) { font: inherit; }
   :global(button), :global(a), :global(input), :global(select) { -webkit-tap-highlight-color: transparent; }
   :global(button) { cursor: pointer; }

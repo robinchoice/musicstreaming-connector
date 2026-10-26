@@ -68,7 +68,7 @@
   .from b { color: var(--text); font-weight: 600; }
   h1 { font-size: clamp(40px, 5.6vw, 64px); margin: 0 0 4px; overflow-wrap: anywhere; }
   .artist { font-size: 18px; margin: 0 0 26px; color: rgb(242 240 234 / .8); }
-  h2 { font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); margin: 0 0 10px; }
+  h2 { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .open { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 18px; background: rgb(255 255 255 / .06); border: 1px solid var(--border); color: var(--text); text-decoration: none; min-width: 0; }
   .open:hover { background: rgb(255 255 255 / .1); }

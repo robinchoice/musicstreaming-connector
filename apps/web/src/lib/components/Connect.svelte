@@ -65,7 +65,7 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
   .actions .button { flex: 1; }
   .answer { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); text-align: left; }
-  h3 { font-family: inherit; font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 0 0 4px; }
   input { width: 100%; margin-top: 14px; border: 1px solid var(--border-strong); background: rgb(0 0 0 / .2); color: var(--text); border-radius: 14px; padding: 12px 14px; }
   .services { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
   .services button { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 14px; background: rgb(255 255 255 / .06); color: var(--text); font-weight: 550; font-size: 14px; padding: 12px; text-align: left; }

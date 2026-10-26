@@ -190,7 +190,7 @@
   .tile[aria-pressed="true"] { background: linear-gradient(rgb(36 35 42 / .92), rgb(36 35 42 / .92)) padding-box, var(--gradient) border-box; border-color: transparent; }
   .tile.missing { opacity: .6; }
   .check { position: absolute; top: 10px; right: 12px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; font-size: 12px; color: var(--ink); }
-  .tile[aria-pressed="true"] .check { background: var(--gradient); border-color: transparent; }
+  .tile[aria-pressed="true"] .check { background: var(--raised); color: var(--text); border-color: var(--accent); }
 
   .out { margin-top: 18px; padding: 16px 18px; border-radius: 18px; background: rgb(0 0 0 / .25); border: 1px solid var(--border); }
   .what { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
