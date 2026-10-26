@@ -22,8 +22,8 @@ test('the language follows ?lang= before Accept-Language, and links keep it', as
   const text = await (await get('/llms.txt?lang=en', { 'accept-language': 'de' })).text();
   expect(text).toContain('https://app.test/index.md?lang=en');
   expect(text).toContain('https://app.test/privacy.md?lang=en');
-  expect(await (await get('/index.md', { 'accept-language': 'en-GB,en;q=0.9' })).text()).toContain('How it works');
-  expect(await (await get('/index.md', { 'accept-language': 'fr' })).text()).toContain('So funktioniert’s');
+  expect(await (await get('/index.md', { 'accept-language': 'en-GB,en;q=0.9' })).text()).toContain('## Bring a song');
+  expect(await (await get('/index.md', { 'accept-language': 'fr' })).text()).toContain('## Song mitbringen');
 });
 
 test('every page is Markdown at <path>.md in either language, and llms-full.txt holds all of them', async () => {

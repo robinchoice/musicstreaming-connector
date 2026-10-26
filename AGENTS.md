@@ -66,7 +66,7 @@ The browser tests start the API and the production build of the web on their own
 - The repo is public, its CI logs too. `secrets.yml` scans every push and PR with gitleaks („Secret scan“). Catch false alarms narrowly, by fingerprint in `.gitleaksignore` or by path and rule in `.gitleaks.toml`, never turn a rule off. A real finding is public already: rotate the secret right away.
 - No secrets in the client: everything in the web bundle and the app can be read, with LLMs from compiled apps too. Only the server decides what is allowed. Release builds of the app run with `--obfuscate --split-debug-info`, which makes them smaller and strips class and function names but protects nothing. No further obfuscation (string encryption, commercial tools). Symbolizing stack traces: „Release builds“.
 - CLI („CLI“): every core feature gets a command in `apps/cli/src/commands` in the same change, like `convert.ts`, with text, `--json` and a test in `cli.test.ts`. The CLI talks only to the HTTP API, never to the database, so the converter throttle holds for it too.
-- Readable for agents („For agents“): every static public page is in `publicPages` in `apps/api/src/lib/public-pages.ts`, in German and English, with its content as Markdown in `body`. A new public page goes in with the same change; the browser test checks that every listed page exists. Only what anyone sees without a shared link: no share pages (`/s/…`), no invites (`/f/…`).
+- Readable for agents („For agents“): every static public page is in `publicPages` in `apps/api/src/lib/public-pages.ts`, in German and English, with its content as Markdown in `body`. A new public page goes in with the same change; the browser test checks that every listed page exists and that every `<h2>` of the page is a `## ` line in its German Markdown. Only what anyone sees without a shared link: no share pages (`/s/…`), no invites (`/f/…`).
 
 ## Secret scan
 
@@ -117,6 +117,7 @@ Android symbols are separated into `aab/` for Play installations and `apk/` for 
 - Signal colours: only the error signal, Songgate has no „your turn“ or „new“ states.
 - No README: the sections „Secret scan“, „For agents“, „CLI“ and „Release builds“, which starter keeps in its README, are here.
 - The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum and Datenschutz.
+  The `<h2>` check therefore leaves them out, and it compares only the German Markdown: the web is German only, the English Markdown translates it.
 - Magic-link verification limits and ALTCHA before login mails do not apply: Songgate has no accounts or login routes and sends only feedback notifications.
 - The CLI has no `login`, `whoami`, `logout`, session file or exit code 3: Songgate has no accounts, `convert` needs none. Its tests need no database, they run with plain `bun test`.
 - The CLI's texts live in `apps/cli/src/messages.ts`, not in `packages/shared`: there is no shared `messages.ts`, web and API speak German only.
