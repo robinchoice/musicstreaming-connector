@@ -1,8 +1,8 @@
 name: Mobile
 
 # Every change to the app gets analyze and test. On main: iOS → TestFlight group
-# „MusicLink Internal“, Android → signed AAB/APK as artifacts and optional internal Play upload. Release tags `v*` also reach
-# the external group „MusicLink V1“ (AGENTS.md, "Deploy"). macOS minutes are free only for public repos.
+# „MusicLink Internal“, Android → signed AAB/APK as artifacts and optional internal Play upload. Pushed release tags `v*` also reach
+# the external group „MusicLink V1“, manual runs never (AGENTS.md, "Deploy"). macOS minutes are free only for public repos.
 # Release builds are obfuscated, the symbols for `flutter symbolize` are kept as an artifact for
 # 90 days (AGENTS.md, "Release builds"). They never go into the bundle or the repo.
 
@@ -38,6 +38,10 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tool/testflight.test.mjs
 
   android-build:
     needs: check
@@ -217,20 +221,24 @@ jobs:
             "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-App.mobileprovision" \
             "$HOME/Library/MobileDevice/Provisioning Profiles/MusicLink-Share.mobileprovision"
 
-  # Every build goes to the internal group. Only release tags reach the external group
-  # and its beta review: every build given to a group mails its testers.
+  # Every build goes to the internal group. Only pushed release tags reach the external group
+  # and its beta review: every build given to a group mails its testers. Manual runs stay
+  # internal, even when started on a tag.
   testflight:
     needs: ios
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Build an TestFlight-Gruppen geben
         env:
           ASC_KEY_ID: ${{ vars.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ vars.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-          RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: |
           groups=("MusicLink Internal")
           [ "$RELEASE" = true ] && groups+=("MusicLink V1")
