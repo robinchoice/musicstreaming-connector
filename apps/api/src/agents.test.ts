@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { APP_NAME, APP_TAGLINE } from '@app/shared';
+import { APP_NAME, messages } from '@app/shared';
 import { createApp } from './app';
 import { publicPages } from './lib/public-pages';
 
@@ -11,10 +11,10 @@ test('llms.txt lists every public page as Markdown', async () => {
   const res = await get('/llms.txt');
   expect(res.headers.get('content-type')).toBe('text/plain; charset=utf-8');
   const text = await res.text();
-  expect(text).toStartWith(`# ${APP_NAME}\n\n> ${APP_TAGLINE}`);
+  expect(text).toStartWith(`# ${APP_NAME}\n\n> ${messages.de.tagline}`);
   expect(text).toContain('https://app.test/llms-full.txt');
   expect(text).toContain('https://app.test/llms.txt?lang=en');
-  expect(text).toContain(`- [${APP_NAME}](https://app.test/index.md): ${APP_TAGLINE}`);
+  expect(text).toContain(`- [${APP_NAME}](https://app.test/index.md): ${messages.de.tagline}`);
   expect(text).toContain('https://app.test/datenschutz.md');
 });
 

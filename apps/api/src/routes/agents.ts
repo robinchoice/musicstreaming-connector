@@ -1,6 +1,6 @@
-import { APP_NAME } from '@app/shared';
+import { APP_NAME, type Locale, messages } from '@app/shared';
 import { type Context, Hono } from 'hono';
-import { type Locale, type PublicPage, publicPages } from '../lib/public-pages';
+import { type PublicPage, publicPages } from '../lib/public-pages';
 
 // Public content for other people's agents, after llms.txt (https://llmstxt.org):
 // /llms.txt lists the pages, /llms-full.txt holds all of them, every page is
@@ -60,6 +60,6 @@ export const agentRoutes = new Hono()
     const url = process.env.APP_URL!;
     const pages = [...publicPages(locale, url), ...publicPages(locale === 'de' ? 'en' : 'de', url)];
     const page = pages.find(p => markdownPath(p.path) === c.req.path);
-    if (!page) return c.json({ error: 'Nicht gefunden' }, 404);
+    if (!page) return c.json({ error: messages[locale].notFound }, 404);
     return reply(c, markdown(page), 'text/markdown');
   });

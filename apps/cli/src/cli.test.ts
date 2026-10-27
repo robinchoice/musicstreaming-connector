@@ -1,10 +1,9 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
-import type { Conversion, ConversionInput, Song } from '@app/shared';
+import { type Conversion, type ConversionInput, messages, type Song } from '@app/shared';
 import { createApp } from '../../api/src/app';
 import { ResolutionError } from '../../api/src/lib/resolver';
 import { run } from './cli';
 import { EXIT } from './command';
-import { messages } from './messages';
 
 const song: Song = {
   source: { kind: 'song', platform: 'youtubeMusic', title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null },

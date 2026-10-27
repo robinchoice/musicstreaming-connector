@@ -1,17 +1,22 @@
 <script lang="ts">
   import { APP_BAND } from '@app/shared';
+  import { page } from '$app/state';
   import { openFeedback, setTestMode, testMode } from '$lib/feedback.svelte';
+  import { setLocale, t } from '$lib/i18n';
+
+  const other = $derived(page.data.locale === 'de' ? 'en' : 'de');
 </script>
 
 <footer>
-  <a href="https://pleasance.org">ein Werkzeug von <span class="wordmark" role="img" aria-label="Pleasance"></span></a>
-  <button type="button" class="feedback" onclick={() => openFeedback('idea')}>Feedback geben</button>
-  <a class="legal" href="/impressum">Impressum</a>
-  <a class="legal" href="/datenschutz">Datenschutz</a>
-  <label class="legal" title="Zeigt den Käfer-Knopf, mit dem du Fehler samt Screenshot meldest.">
+  <a href="https://pleasance.org">{t().madeBy} <span class="wordmark" role="img" aria-label="Pleasance"></span></a>
+  <button type="button" class="feedback" onclick={() => openFeedback('idea')}>{t().giveFeedback}</button>
+  <a class="legal" href={t().imprintPath}>{t().imprint}</a>
+  <a class="legal" href={t().privacyPath}>{t().privacy}</a>
+  <label class="legal" title={t().testModeHint}>
     <input type="checkbox" checked={testMode.on} onchange={e => setTestMode(e.currentTarget.checked)} />
-    Testmodus
+    {t().testMode}
   </label>
+  <button type="button" class="legal language" lang={other} onclick={() => setLocale(other)}>{t().otherLanguage}</button>
   <span class="band" aria-hidden="true"><span
     class="marker"
     style:left="{((APP_BAND.from - 1) / 6) * 100}%"
@@ -25,6 +30,7 @@
   .wordmark { width: 76px; height: 14px; background: currentColor; mask: url('/pleasance-wordmark.svg') left center / contain no-repeat; }
   .feedback { white-space: nowrap; padding: 0; border: none; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .legal { color: var(--muted); }
+  .language { white-space: nowrap; padding: 0; border: none; background: none; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
   label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
   input { margin: 0; accent-color: var(--accent); }
   .band { position: relative; width: 136px; height: 3px; margin-left: auto; border-radius: 2px; background: linear-gradient(rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.55)), var(--spectrum); }

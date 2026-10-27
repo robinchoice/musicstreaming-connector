@@ -3,6 +3,7 @@
   import { renderSVG } from 'uqr';
   import { platforms, type Platform } from '@app/shared';
   import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '$lib/friends.svelte';
+  import { t } from '$lib/i18n';
   import { toast, toastError } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
 
@@ -38,44 +39,44 @@
     const me = { name: value, platform };
     setMe(me);
     const url = inviteUrl(location.origin, me);
-    const text = `Ich höre auf ${platforms[platform]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:`;
+    const text = t().inviteText(platforms[platform]);
     try {
       if (typeof navigator.share === 'function') await navigator.share({ text, url });
-      else { await navigator.clipboard.writeText(`${text}\n${url}`); toast('Einladung kopiert.'); }
+      else { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t().inviteCopied); }
       panel = '';
-    } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich.'); }
+    } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError(t().shareFailed); }
   }
 </script>
 
 <div class="friends">
-  <div class="head"><span>An wen? <small>{social.friends.length ? 'Gruppe, Freunde oder einfach Dienste antippen' : 'Alle, oder einfach Dienste antippen'}</small></span>
-    <span class="links">{#if social.friends.length}<button type="button" onclick={() => open('edit')}>{panel === 'edit' ? 'Fertig' : 'Bearbeiten'}</button>{/if}<button type="button" onclick={() => open('invite')}>Meine Einladung</button></span>
+  <div class="head"><span>{t().toWhom} <small>{social.friends.length ? t().toWhomHint : t().toWhomHintEmpty}</small></span>
+    <span class="links">{#if social.friends.length}<button type="button" onclick={() => open('edit')}>{panel === 'edit' ? t().done : t().edit}</button>{/if}<button type="button" onclick={() => open('invite')}>{t().myInvite}</button></span>
   </div>
-  <div class="row" role="group" aria-label="An wen?">
+  <div class="row" role="group" aria-label={t().toWhom}>
     {#if panel === 'edit'}
       {#each social.friends as friend (friend.name)}
-        <button type="button" class="pick" onclick={() => { removeFriend(friend.name); pick(selected.filter(other => other !== friend.name)); }} aria-label="{friend.name} entfernen"><Avatar {friend} />{friend.name}<span class="remove" aria-hidden="true">×</span></button>
+        <button type="button" class="pick" onclick={() => { removeFriend(friend.name); pick(selected.filter(other => other !== friend.name)); }} aria-label={t().remove(friend.name)}><Avatar {friend} />{friend.name}<span class="remove" aria-hidden="true">×</span></button>
       {/each}
     {:else}
-      <button type="button" class="pick text" aria-pressed={!services.length} {disabled} onclick={() => { selected = []; services = []; }}>Alle</button>
+      <button type="button" class="pick text" aria-pressed={!services.length} {disabled} onclick={() => { selected = []; services = []; }}>{t().everyone}</button>
       {#each social.groups as group (group.name)}
         <button type="button" class="pick" aria-pressed={groupOn(group.members)} {disabled} onclick={() => pick(groupOn(group.members) ? [] : group.members.filter(member => social.friends.some(friend => friend.name === member)))}><span class="count" aria-hidden="true">{group.members.length}</span>{group.name}</button>
       {/each}
       {#each social.friends as friend (friend.name)}
         <button type="button" class="pick" aria-pressed={selected.includes(friend.name) && !anyGroup} {disabled} onclick={() => toggle(friend.name)} title={platforms[friend.platform]}><Avatar {friend} />{friend.name}</button>
       {/each}
-      <button type="button" class="pick text add" {disabled} onclick={() => open('add')}>+ Neu</button>
-      {#if selected.length > 1 && !anyGroup}<button type="button" class="pick text add" onclick={() => open('group')}>Als Gruppe speichern</button>{/if}
+      <button type="button" class="pick text add" {disabled} onclick={() => open('add')}>{t().addNew}</button>
+      {#if selected.length > 1 && !anyGroup}<button type="button" class="pick text add" onclick={() => open('group')}>{t().saveAsGroup}</button>{/if}
     {/if}
   </div>
-  {#if !social.friends.length && !panel}<p class="empty">Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.</p>{/if}
+  {#if !social.friends.length && !panel}<p class="empty">{t().friendsEmpty}</p>{/if}
   {#if panel === 'add' || panel === 'group' || panel === 'invite'}
     <form class="panel" onsubmit={submit}>
-      <p>{panel === 'add' ? 'Freund von Hand anlegen. Schneller geht es, wenn er dir seinen Einladungslink schickt.' : panel === 'group' ? `Gruppe aus ${selected.join(', ')}` : 'Dein Dienst und Name für deinen Einladungslink.'}</p>
-      <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? 'Name der Gruppe, z. B. WG' : panel === 'invite' ? 'Dein Name' : 'Name'} required />
+      <p>{panel === 'add' ? t().addFriendHint : panel === 'group' ? t().groupOf(selected.join(', ')) : t().inviteHint}</p>
+      <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? t().groupName : panel === 'invite' ? t().yourName : t().name} required />
       {#if panel !== 'group'}<select bind:value={platform}>{#each (Object.keys(platforms) as Platform[]) as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
-      <button type="submit" class="button primary">{panel === 'invite' ? 'Einladung teilen ↗' : 'Speichern'}</button>
-      {#if qr}<figure class="qr"><span role="img" aria-label="QR-Code deiner Einladung">{@html qr}</span><figcaption>Oder lass den Code mit der Kamera scannen.</figcaption></figure>{/if}
+      <button type="submit" class="button primary">{panel === 'invite' ? t().shareInvite : t().save}</button>
+      {#if qr}<figure class="qr"><span role="img" aria-label={t().inviteQr}>{@html qr}</span><figcaption>{t().scanHint}</figcaption></figure>{/if}
     </form>
   {/if}
 </div>

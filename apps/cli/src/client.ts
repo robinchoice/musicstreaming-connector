@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EXIT, Failure } from './command';
-import type { Locale, Messages } from './messages';
+import type { Locale, Messages } from '@app/shared';
 
 // A missing match brings the search on the target service along
 const errorSchema = z.object({ error: z.string(), searchUrl: z.string().optional() });

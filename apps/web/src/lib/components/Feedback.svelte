@@ -11,6 +11,7 @@
     takeScreenshot,
     testMode,
   } from '$lib/feedback.svelte';
+  import { t } from '$lib/i18n';
   import { toast } from '$lib/toast.svelte';
 
   const SIZE = 44;
@@ -87,7 +88,7 @@
       await sendFeedback(message.trim(), email.trim());
       localStorage.setItem(EMAIL_KEY, email.trim());
       closeFeedback();
-      toast(email.trim() ? 'Danke! Wir melden uns per Mail.' : 'Danke für dein Feedback!');
+      toast(email.trim() ? t().thanksMail : t().thanks);
     } catch {
       // The API client already shows the error as a toast
     } finally {
@@ -145,10 +146,10 @@
   const contextRows = $derived(
     feedback.context
       ? [
-          ['Seite', feedback.context.page],
-          ['Gerät', feedback.context.device],
-          ['Fenster', feedback.context.viewport],
-          ['Letzte Fehler', feedback.context.errors.join(', ') || '–'],
+          [t().contextPage, feedback.context.page],
+          [t().contextDevice, feedback.context.device],
+          [t().contextWindow, feedback.context.viewport],
+          [t().contextErrors, feedback.context.errors.join(', ') || '–'],
         ]
       : [],
   );
@@ -163,8 +164,8 @@
     data-feedback-ignore
     style:left="{x}px"
     style:top="{y}px"
-    aria-label="Fehler melden"
-    title="Fehler melden"
+    aria-label={t().reportBug}
+    title={t().reportBug}
     onpointerdown={down}
     onpointermove={move}
     onpointerup={up}
@@ -180,29 +181,29 @@
 {#if flash}<div class="flash" data-feedback-ignore></div>{/if}
 
 {#if feedback.kind}
-  <button type="button" class="scrim" data-feedback-ignore tabindex="-1" aria-label="Schließen" onclick={closeFeedback}
+  <button type="button" class="scrim" data-feedback-ignore tabindex="-1" aria-label={t().close} onclick={closeFeedback}
   ></button>
   <div class="panel" data-feedback-ignore role="dialog" aria-modal="true" aria-labelledby="feedback-title">
-    <button type="button" class="close" aria-label="Schließen" onclick={closeFeedback}>×</button>
-    <h2 id="feedback-title">{feedback.kind === 'bug' ? 'Fehler melden' : 'Feedback geben'}</h2>
+    <button type="button" class="close" aria-label={t().close} onclick={closeFeedback}>×</button>
+    <h2 id="feedback-title">{feedback.kind === 'bug' ? t().reportBug : t().giveFeedback}</h2>
     <form onsubmit={send}>
       <textarea
         bind:this={textarea}
         bind:value={message}
         aria-labelledby="feedback-title"
-        placeholder={feedback.kind === 'bug' ? 'Was ist passiert? Was hast du erwartet?' : 'Was fehlt dir, was wünschst du dir, was gefällt dir?'}
+        placeholder={feedback.kind === 'bug' ? t().bugPlaceholder : t().ideaPlaceholder}
         maxlength="5000"
       ></textarea>
       {#if feedback.screenshot}
         <img class="shot" src={feedback.screenshot} alt="Screenshot" />
         <div class="links">
-          <button type="button" onclick={() => (feedback.screenshot = null)}>Screenshot entfernen</button>
+          <button type="button" onclick={() => (feedback.screenshot = null)}>{t().removeScreenshot}</button>
           <span aria-hidden="true">·</span>
-          <button type="button" onclick={() => (marking = true)}>Stelle markieren</button>
+          <button type="button" onclick={() => (marking = true)}>{t().markSpot}</button>
         </div>
       {/if}
       <details>
-        <summary>Was mitgeschickt wird</summary>
+        <summary>{t().whatIsSent}</summary>
         <dl>
           {#each contextRows as [label, value] (label)}
             <dt>{label}</dt>
@@ -211,10 +212,10 @@
         </dl>
       </details>
       <label class="email">
-        <span>Deine Mail, falls wir uns melden dürfen <small>(freiwillig)</small></span>
-        <input type="email" bind:value={email} maxlength="255" autocomplete="email" placeholder="name@beispiel.de" />
+        <span>{t().emailLabel} <small>{t().optional}</small></span>
+        <input type="email" bind:value={email} maxlength="255" autocomplete="email" placeholder={t().emailPlaceholder} />
       </label>
-      <button type="submit" class="primary" disabled={sending || message.trim().length < 5}>{sending ? 'Wird gesendet …' : 'Senden'}</button>
+      <button type="submit" class="primary" disabled={sending || message.trim().length < 5}>{sending ? t().sending : t().send}</button>
     </form>
   </div>
 {/if}
@@ -222,9 +223,9 @@
 {#if marking && feedback.screenshot}
   <div class="mark" data-feedback-ignore>
     <div class="toolbar">
-      <span>Zieh einen Rahmen um die Stelle, die nicht stimmt.</span>
-      <button type="button" class="secondary" onclick={() => (marking = false)}>Abbrechen</button>
-      <button type="button" class="primary" disabled={!rect} onclick={finishMark}>Fertig</button>
+      <span>{t().markHint}</span>
+      <button type="button" class="secondary" onclick={() => (marking = false)}>{t().cancel}</button>
+      <button type="button" class="primary" disabled={!rect} onclick={finishMark}>{t().done}</button>
     </div>
     <div
       class="canvas"

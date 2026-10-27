@@ -1,10 +1,9 @@
 import { parseArgs } from 'node:util';
-import { APP_NAME } from '@app/shared';
+import { APP_NAME, type Messages, messages, pickLocale } from '@app/shared';
 import { createClient } from './client';
 import { type Command, EXIT, Failure, type Io, type Result } from './command';
 import { convert } from './commands/convert';
 import { DEFAULT_URL, SLUG } from './config';
-import { type Messages, messages, pickLocale } from './messages';
 
 // Every command of the CLI. A new one goes in here (AGENTS.md, „CLI“).
 export const commands: Record<string, Command> = { convert };

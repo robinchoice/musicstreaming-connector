@@ -1,4 +1,5 @@
 import { captureException } from './monitoring.server';
+import { type Locale, pickLocale } from '@app/shared';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import dns from 'node:dns';
@@ -17,6 +18,9 @@ const AGENT_PATH = /^\/llms(-full)?\.txt$|\.md$/;
 
 // From starter. The CSP comes from svelte.config.js. Browsers ignore HSTS over
 // plain HTTP, so it is harmless in dev.
+// The legal pages have one URL per language
+const LEGAL: Record<string, Locale> = { '/impressum': 'de', '/datenschutz': 'de', '/imprint': 'en', '/privacy': 'en' };
+
 const SECURITY_HEADERS = {
   'strict-transport-security': 'max-age=31536000',
   'x-content-type-options': 'nosniff',
@@ -25,9 +29,13 @@ const SECURITY_HEADERS = {
 
 export const handle: Handle = async ({ event, resolve }) => {
   const { pathname, search } = event.url;
+  // ?lang= from a link, else the language chosen in the footer (see $lib/i18n.ts), else the browser's
+  const locale = LEGAL[pathname] ?? pickLocale(event.url.searchParams.get('lang') ?? event.cookies.get('locale') ?? event.request.headers.get('accept-language'));
+  event.locals.locale = locale;
   const response = pathname.startsWith('/api/') || AGENT_PATH.test(pathname)
     ? await proxy(event.request, `${API_ORIGIN}${pathname}${search}`)
-    : ((await markdown(event.request, event.url)) ?? (await resolve(event)));
+    : ((await markdown(event.request, event.url)) ??
+      (await resolve(event, { transformPageChunk: ({ html }) => html.replace('<html lang="de">', `<html lang="${locale}">`) })));
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);
   return response;
 };

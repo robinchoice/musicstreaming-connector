@@ -9,8 +9,7 @@ const BASE = process.argv[2] ?? 'http://localhost:5173';
 const OUT = new URL('../../docs/screenshots/', import.meta.url);
 
 const PAGES: Record<string, string> = { home: '/' };
-// Add 'en' when the English pictures show more than the same screens in another language
-const LOCALES = ['de'];
+const LOCALES = ['de', 'en'];
 const DEVICES: Record<string, BrowserContextOptions> = {
   desktop: { viewport: { width: 1440, height: 900 } },
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },

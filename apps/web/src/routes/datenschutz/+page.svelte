@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Datenschutz" lang="de" other={{ href: '/privacy', label: 'English' }}>
+<LegalPage title="Datenschutz" lang="de">
   <p>Songgate funktioniert ohne Anmeldung, ohne Werbung und ohne Tracking. Diese Erklärung gilt für die Website und die Apps für iOS und Android.</p>
 
   <h2>Verantwortlicher</h2>
@@ -23,7 +23,7 @@
   <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
 
   <h2>Einstellungen auf deinem Gerät</h2>
-  <p>Deine bevorzugte Zielplattform, den Dienst, den du auf einer geteilten Song-Seite zuletzt geöffnet hast, deine Freunde und Gruppen (Name und Musikdienst) und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich Songgate lokal auf deinem Gerät. Freunde erreichen unseren Server nicht. Ein Einladungslink enthält nur den Namen und den Dienst, die du selbst angibst. Cookies setzen wir nicht.</p>
+  <p>Deine bevorzugte Zielplattform, den Dienst, den du auf einer geteilten Song-Seite zuletzt geöffnet hast, deine Freunde und Gruppen (Name und Musikdienst) und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich Songgate lokal auf deinem Gerät. Freunde erreichen unseren Server nicht. Ein Einladungslink enthält nur den Namen und den Dienst, die du selbst angibst. Ein Cookie setzen wir nur, wenn du in der Fußzeile die Sprache umschaltest: Es merkt sich deine Wahl ein Jahr lang.</p>
 
   <h2>Feedback</h2>
   <p>Über „Feedback geben“ kannst du uns Fehler und Ideen schicken. Dabei übertragen wir deine Nachricht, auf Wunsch einen Screenshot und deine E-Mail-Adresse sowie technische Angaben (Seite, Plattform, Gerät, Fenstergröße, letzte Fehlermeldungen). Die Meldung wird auf unserem Server gespeichert und per E-Mail über die Proton AG (Schweiz) an uns weitergeleitet. Für die Schweiz besteht ein Angemessenheitsbeschluss der EU-Kommission. Gegen Missbrauch zählen wir Meldungen pro IP-Adresse, dieser Zähler wird nach einer Stunde gelöscht.</p>

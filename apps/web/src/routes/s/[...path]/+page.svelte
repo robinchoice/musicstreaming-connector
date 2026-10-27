@@ -5,6 +5,7 @@
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
   import { onMount } from 'svelte';
   import { platforms, serviceOrder, type Platform } from '@app/shared';
+  import { t } from '$lib/i18n';
   let { data } = $props();
   const song = $derived(data.song);
   const from = $derived(data.from);
@@ -30,23 +31,23 @@
     <section class="record">
       {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
       <div>
-        {#if from}<div class="from"><Avatar friend={from} size={30} /><span><b>{from.name}</b> hat dir {song.source.kind === 'album' ? 'ein Album' : 'einen Song'} geschickt</span></div>
-        {:else}<div class="from">{song.source.kind === 'album' ? 'Ein Album für dich' : 'Ein Song für dich'}</div>{/if}
+        {#if from}<div class="from"><Avatar friend={from} size={30} /><span><b>{from.name}</b> {t().sentYou(song.source.kind)}</span></div>
+        {:else}<div class="from">{t().forYou(song.source.kind)}</div>{/if}
         <h1>{song.source.title}</h1>
         <p class="artist">{song.source.artist}</p>
-        <h2>Wo hörst du Musik?</h2>
+        <h2>{t().whereListen}</h2>
         <div class="tiles">
           {#each order as platform (platform)}
             {@const link = song.links[platform]}
             <a class="open" class:missing={!link.found} class:mine={platform === mine} href={link.url} rel="noreferrer" onclick={() => remember(platform)}>
               <Logo {platform} size={platform === mine ? 38 : 32} />
               <strong>{platforms[platform]}</strong>
-              <small>{!link.found ? 'Suchen' : platform === mine ? 'Zuletzt genutzt' : 'Öffnen'}</small>
+              <small>{!link.found ? t().search : platform === mine ? t().lastUsed : t().open}</small>
             </a>
           {/each}
         </div>
         {#if from}<section class="back"><Connect name={from.name} platform={from.platform} heading="h2" /></section>{/if}
-        <p class="more">Selbst Musik teilen? <a href="/">Songgate öffnen</a></p>
+        <p class="more">{t().shareYourself} <a href="/">{t().openSonggate}</a></p>
       </div>
     </section>
   </main>

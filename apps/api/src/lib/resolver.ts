@@ -1,9 +1,9 @@
-import { failureMessages, type Conversion, type FailureCode, type Platform } from '@app/shared';
+import { messages, type Conversion, type FailureCode, type Platform } from '@app/shared';
 import { z } from 'zod';
 
 export class ResolutionError extends Error {
   constructor(public code: FailureCode, public searchUrl: string | undefined = undefined) {
-    super(failureMessages[code]);
+    super(messages.de.failures[code]);
   }
 }
 

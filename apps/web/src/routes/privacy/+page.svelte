@@ -2,7 +2,7 @@
   import LegalPage from '$lib/components/LegalPage.svelte';
 </script>
 
-<LegalPage title="Privacy policy" lang="en" other={{ href: '/datenschutz', label: 'Deutsch' }}>
+<LegalPage title="Privacy policy" lang="en">
   <p>Songgate works without sign-up, without ads and without tracking. This policy applies to the website and the apps for iOS and Android.</p>
 
   <h2>Controller</h2>
@@ -23,10 +23,10 @@
   <p>Your device loads the cover images of the results directly from the platforms' servers (Apple, Google, Spotify, Deezer), which see your IP address. When you open a song in a music app or on a platform, its privacy policy applies.</p>
 
   <h2>Settings on your device</h2>
-  <p>Songgate stores your preferred target platform, the service you last opened on a shared song page, your friends and groups (name and music service) and, if given, your email address for feedback locally on your device. Friends never reach our server. An invite link only contains the name and service you enter yourself. We don't set cookies.</p>
+  <p>Songgate stores your preferred target platform, the service you last opened on a shared song page, your friends and groups (name and music service) and, if given, your email address for feedback locally on your device. Friends never reach our server. An invite link only contains the name and service you enter yourself. We only set a cookie when you switch the language in the footer: it keeps your choice for a year.</p>
 
   <h2>Feedback</h2>
-  <p>With „Feedback geben“ you can send us bugs and ideas. We transmit your message, a screenshot if you like, your email address and technical details (page, platform, device, window size, latest error messages). The report is stored on our server and forwarded to us by email via Proton AG (Switzerland). The European Commission has issued an adequacy decision for Switzerland. Against abuse we count reports per IP address; this counter is deleted after one hour.</p>
+  <p>With “Give feedback” you can send us bugs and ideas. We transmit your message, a screenshot if you like, your email address and technical details (page, platform, device, window size, latest error messages). The report is stored on our server and forwarded to us by email via Proton AG (Switzerland). The European Commission has issued an adequacy decision for Switzerland. Against abuse we count reports per IP address; this counter is deleted after one hour.</p>
   <p>We only use these details to handle the report and to reply to you. We delete them once the report is done, or on your request. Legal basis is Art. 6(1)(f) GDPR, for the optional email address Art. 6(1)(a) GDPR.</p>
 
   <h2>Error reports</h2>

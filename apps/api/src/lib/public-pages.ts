@@ -1,6 +1,4 @@
-import { APP_NAME, APP_TAGLINE } from '@app/shared';
-
-export type Locale = 'de' | 'en';
+import { APP_NAME, type Locale, messages } from '@app/shared';
 
 // A page anyone sees without a shared link. Agents get it as <path>.md,
 // listed in llms.txt and joined in llms-full.txt (routes/agents.ts). body is
@@ -18,9 +16,9 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
       {
         path: '/',
         title: APP_NAME,
-        description: 'One link for a song that opens in everyone’s own streaming service.',
+        description: messages.en.tagline,
         body: [
-          'Share songs and albums from YouTube Music, Apple Music, Spotify or Deezer as a link for your people’s favourite player. No account, no stored song history. The website is in German.',
+          'Share songs and albums from YouTube Music, Apple Music, Spotify or Deezer as a link for your people’s favourite player. No account, no stored song history.',
           '## Paste a link',
           'Copy a song or album link in your music app via “Share” and paste it. Songgate finds it on all four services at once.',
           '## One link for everyone',
@@ -37,7 +35,7 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
     {
       path: '/',
       title: APP_NAME,
-      description: APP_TAGLINE,
+      description: messages.de.tagline,
       body: [
         'Teile Songs und Alben aus YouTube Music, Apple Music, Spotify oder Deezer als Link für den Lieblingsplayer deiner Menschen. Ohne Konto, ohne gespeicherte Song-Historie.',
         '## Link einfügen',

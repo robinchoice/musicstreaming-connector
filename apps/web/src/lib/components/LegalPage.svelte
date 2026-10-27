@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
   import PleasanceFooter from './PleasanceFooter.svelte';
 
-  let { title, lang, other, children }: { title: string; lang: 'de' | 'en'; other: { href: string; label: string }; children: Snippet } = $props();
+  let { title, lang, children }: { title: string; lang: 'de' | 'en'; children: Snippet } = $props();
 </script>
 
 <svelte:head><title>{title} · Songgate</title></svelte:head>
@@ -10,7 +10,6 @@
 <div class="shell">
   <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="42" height="42" /> Songgate</a></header>
   <main {lang}>
-    <a class="other" href={other.href} hreflang={lang === 'de' ? 'en' : 'de'}>{other.label}</a>
     <h1>{title}</h1>
     {@render children()}
   </main>
@@ -24,7 +23,6 @@
   .brand-icon { width: 42px; height: 42px; }
   main { width: 100%; max-width: 720px; margin: 0 auto; flex: 1; padding: 48px 0 64px; font-size: 15px; }
   h1 { font-size: 44px; margin: 0 0 28px; }
-  .other { float: right; margin-top: 12px; font-size: 14px; }
   main :global(h2) { font-size: 22px; margin: 36px 0 10px; }
   main :global(p), main :global(li) { color: var(--muted); line-height: 1.7; }
   main :global(strong) { color: var(--text); font-weight: 600; }

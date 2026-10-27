@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { type Locale, messages } from './messages';
 
 export const APP_NAME = 'Songgate';
 export const APP_BAND = { from: 3.85, to: 4.55 };
-export const APP_TAGLINE = 'Ein Link für einen Song, der bei allen im eigenen Streamingdienst aufgeht.';
 // True once Songgate is live as 1.0 (starter README, "Live als 1.0"). From then on
 // the bug button waits for the test mode switch, see testMode in the web's feedback.svelte.ts.
 export const LIVE = false;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
+export { type Locale, type Messages, messages, pickLocale } from './messages';
 
 export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const;
 export type Platform = keyof typeof platforms;
@@ -20,16 +21,7 @@ export const conversionInput = z.object({
 });
 export type ConversionInput = z.infer<typeof conversionInput>;
 
-export const failureMessages = {
-  INVALID_LINK: 'Teile bitte einen einzelnen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer mit Songgate.',
-  UNSUPPORTED_LINK: 'Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer und wähle einen anderen Zieldienst.',
-  SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song oder Album konnten nicht geladen werden.',
-  NO_MATCH: 'Es wurde kein passender Treffer gefunden.',
-  RATE_LIMITED: 'Der Musikdienst erhält gerade zu viele Anfragen. Versuche es später erneut.',
-  NETWORK: 'Die Musikdienste sind gerade nicht erreichbar. Versuche es erneut.',
-} as const;
-
-export type FailureCode = keyof typeof failureMessages;
+export type FailureCode = keyof (typeof messages)['de']['failures'];
 
 // What web and app send along with feedback. The API adds its own version.
 export const feedbackContextSchema = z.object({
@@ -43,17 +35,12 @@ export const feedbackContextSchema = z.object({
 
 export type FeedbackContext = z.infer<typeof feedbackContextSchema>;
 
-// Shown to the tester as they are; zod's own messages are not
-export const feedbackErrors = {
-  tooShort: 'Schreib bitte mindestens 5 Zeichen.',
-  invalidEmail: 'Die Mail-Adresse stimmt nicht.',
-} as const;
-
 export const feedbackSchema = z.object({
   kind: z.enum(['bug', 'idea']),
-  message: z.string().trim().min(5, feedbackErrors.tooShort).max(5000),
+  // Messages are keys from messages.ts, the API shows them in the client's language
+  message: z.string().trim().min(5, 'feedbackTooShort').max(5000),
   // Optional, there are no accounts. Only testers who leave it can be thanked.
-  email: z.email(feedbackErrors.invalidEmail).max(255).toLowerCase().optional(),
+  email: z.email('invalidEmail').max(255).toLowerCase().optional(),
   // PNG or JPEG, up to about 5 MB
   screenshot: z.base64().max(7_000_000).optional(),
   context: feedbackContextSchema,
@@ -96,14 +83,15 @@ export function shareUrl(origin: string, path: string, from: Friend | null): str
 // One service gets its link, several get one line each plus the share page for everyone else.
 // With an own invite the share page comes along for one service too, so the recipient can save the sender.
 // The services default to those of the friends, who are named next to their service.
-export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null, services: Platform[] = [...new Set(friends.map(friend => friend.platform))]): string {
+export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null, services: Platform[] = [...new Set(friends.map(friend => friend.platform))], locale: Locale = 'de'): string {
+  const m = messages[locale];
   const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
   const everyone = shareUrl(origin, song.sharePath, from);
   if (!services.length) return [head, everyone].join('\n');
-  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`Alle Dienste: ${everyone}`] : [])].join('\n');
+  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`${m.allServices}: ${everyone}`] : [])].join('\n');
   const lines = services.map(platform => {
     const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name);
     return `${platforms[platform]}${names.length ? ` (${names.join(', ')})` : ''}: ${song.links[platform].url}`;
   });
-  return [head, ...lines, `Andere: ${everyone}`].join('\n');
+  return [head, ...lines, `${m.others}: ${everyone}`].join('\n');
 }

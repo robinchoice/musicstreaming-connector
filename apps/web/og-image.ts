@@ -1,17 +1,17 @@
 // Renders the link preview that WhatsApp, Signal and co. show for shared links,
-// 1200×630 into static/og-image-de.png (starter DESIGN.md, "Vorschaubild").
-// Rerun after changing APP_NAME, APP_BAND, APP_TAGLINE or the tile in
-// static/favicon.svg, and commit the picture.
+// 1200×630 per language into static/og-image-<locale>.png (starter DESIGN.md,
+// "Vorschaubild"). Rerun after changing APP_NAME, APP_BAND, the tagline or the
+// tile in static/favicon.svg, and commit the pictures.
 // Run: bun run og-image
 import { readFileSync } from 'node:fs';
-import { APP_BAND, APP_NAME, APP_TAGLINE, bandGradient, GLOW } from '@app/shared';
+import { APP_BAND, APP_NAME, bandGradient, GLOW, type Locale, messages } from '@app/shared';
 import { chromium } from '@playwright/test';
 
 const STATIC = new URL('static/', import.meta.url);
 const dataUrl = (file: string, type: string) =>
   `data:${type};base64,${readFileSync(new URL(file, STATIC)).toString('base64')}`;
 
-const html = `<!doctype html>
+const html = (locale: Locale) => `<!doctype html>
 <style>
   @font-face {
     font-family: Display;
@@ -48,21 +48,24 @@ const html = `<!doctype html>
   <div>
     <h1>${APP_NAME}</h1>
     <div class="line"></div>
-    <p>${APP_TAGLINE}</p>
+    <p>${messages[locale].tagline}</p>
   </div>
 </main>
 <footer>
-  ein Werkzeug von
+  ${messages[locale].madeBy}
   <div class="signature"><div class="wordmark"></div><div class="band"><div class="marker"></div></div></div>
 </footer>`;
 
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-  await page.setContent(html);
-  await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: new URL('og-image-de.png', STATIC).pathname });
-  console.log('og-image-de.png');
+  for (const locale of Object.keys(messages) as Locale[]) {
+    await page.setContent(html(locale));
+    await page.evaluate(() => document.fonts.ready);
+    const file = `og-image-${locale}.png`;
+    await page.screenshot({ path: new URL(file, STATIC).pathname });
+    console.log(file);
+  }
 } finally {
   await browser.close();
 }

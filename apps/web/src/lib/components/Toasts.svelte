@@ -1,12 +1,13 @@
 <script lang="ts">
+  import { t } from '$lib/i18n';
   import { removeToast, toasts } from '$lib/toast.svelte';
 </script>
 
 <div class="toasts">
-  {#each toasts as t (t.id)}
-    <div class="toast {t.type}" role="alert">
-      <span>{t.message}</span>
-      <button onclick={() => removeToast(t.id)} aria-label="Schließen">×</button>
+  {#each toasts as toast (toast.id)}
+    <div class="toast {toast.type}" role="alert">
+      <span>{toast.message}</span>
+      <button onclick={() => removeToast(toast.id)} aria-label={t().close}>×</button>
     </div>
   {/each}
 </div>

@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import type { Database } from '@app/db';
-import { conversionInput, countries, failureMessages, type Song } from '@app/shared';
+import { conversionInput, countries, type Song } from '@app/shared';
 import { z } from 'zod';
+import { t } from './lib/i18n';
 import { ResolutionError } from './lib/resolver';
 import { resolve, resolveAll } from './lib/music';
 import { captureException } from './monitoring';
@@ -11,7 +12,6 @@ import { agentRoutes } from './routes/agents';
 import { feedbackRoutes } from './routes/feedback';
 
 // Without a database there is no feedback, the converter needs none.
-const updateRequired = 'Diese Version von Songgate ist zu alt. Aktualisiere die App, um weiter Songs zu teilen.';
 const songInput = z.object({ input: z.string().trim().min(1).max(4096), country: z.enum(countries).default('DE') });
 
 export function createApp(resolver = resolve, db?: Database, resolveSong = resolveAll) {
@@ -34,11 +34,11 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
     .onError((error, c) => {
       if (error instanceof ResolutionError) {
         const status = error.code === 'RATE_LIMITED' ? 429 : error.code === 'NETWORK' ? 502 : 422;
-        return c.json({ error: error.message, code: error.code, searchUrl: error.searchUrl }, status);
+        return c.json({ error: t(c).failures[error.code], code: error.code, searchUrl: error.searchUrl }, status);
       }
       if (error instanceof HTTPException) return c.json({ error: error.message }, error.status);
       captureException(error);
-      return c.json({ error: 'Interner Fehler' }, 500);
+      return c.json({ error: t(c).internalError }, 500);
     })
     // The CI compares revision with the deployed commit
     .get('/api/health', c => c.json({ status: 'ok', revision: process.env.APP_VERSION || 'dev' }))
@@ -51,25 +51,25 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
       const minimum = Number(platform === 'ios' ? process.env.MIN_BUILD_IOS : platform === 'android' ? process.env.MIN_BUILD_ANDROID : 0) || 0;
       const build = Number(c.req.header('x-app-build'));
       if (c.req.path !== '/api/v1/feedback' && Number.isInteger(build) && build > 0 && build < minimum) {
-        return c.json({ error: updateRequired, code: 'UPDATE_REQUIRED' }, 426);
+        return c.json({ error: t(c).updateRequired, code: 'UPDATE_REQUIRED' }, 426);
       }
       await next();
     })
     // The app asks this at launch, the check above answers it
     .get('/api/v1/app', c => c.json({ ok: true }))
-    .use('/api/v1/convert', bodyLimit({ maxSize: 8192, onError: c => c.json({ error: 'Der geteilte Text ist zu lang.' }, 413) }))
+    .use('/api/v1/convert', bodyLimit({ maxSize: 8192, onError: c => c.json({ error: t(c).textTooLong }, 413) }))
     .post('/api/v1/convert', async c => {
       let body: unknown;
-      try { body = await c.req.json(); } catch { return c.json({ error: failureMessages.INVALID_LINK }, 400); }
+      try { body = await c.req.json(); } catch { return c.json({ error: t(c).failures.INVALID_LINK }, 400); }
       const parsed = conversionInput.safeParse(body);
-      if (!parsed.success) return c.json({ error: failureMessages.INVALID_LINK }, 400);
+      if (!parsed.success) return c.json({ error: t(c).failures.INVALID_LINK }, 400);
       limit(c);
       c.header('Cache-Control', 'no-store');
       return c.json(await resolver(parsed.data, c.req.raw.signal));
     })
     .get('/api/v1/song', async c => {
       const parsed = songInput.safeParse(c.req.query());
-      if (!parsed.success) return c.json({ error: failureMessages.INVALID_LINK }, 400);
+      if (!parsed.success) return c.json({ error: t(c).failures.INVALID_LINK }, 400);
       const key = `${parsed.data.country} ${parsed.data.input}`;
       const cached = songs.get(key);
       if (cached && Date.now() - cached.at < 86_400_000) return c.json(cached.song);
@@ -79,7 +79,7 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
       songs.set(key, { at: Date.now(), song });
       return c.json(song);
     })
-    .use('/api/v1/feedback', bodyLimit({ maxSize: 8 * 1024 * 1024, onError: c => c.json({ error: 'Der Screenshot ist zu groß.' }, 413) }))
+    .use('/api/v1/feedback', bodyLimit({ maxSize: 8 * 1024 * 1024, onError: c => c.json({ error: t(c).screenshotTooLarge }, 413) }))
     .route('/api/v1/feedback', db ? feedbackRoutes(db) : new Hono())
-    .notFound(c => c.json({ error: 'Nicht gefunden' }, 404));
+    .notFound(c => c.json({ error: t(c).notFound }, 404));
 }

@@ -16,7 +16,8 @@ const WEB = `http://localhost:${WEB_PORT}`;
 export default defineConfig({
   testDir: 'tests',
   forbidOnly: !!process.env.CI,
-  use: { baseURL: WEB },
+  // German like most testers, English is tested on purpose (tests/language.test.ts)
+  use: { baseURL: WEB, locale: 'de-DE' },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   webServer: [
     {

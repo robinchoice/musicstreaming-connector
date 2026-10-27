@@ -1,5 +1,5 @@
 import type { Client } from './client';
-import type { Locale, Messages } from './messages';
+import type { Locale, Messages } from '@app/shared';
 
 export type Env = Record<string, string | undefined>;
 

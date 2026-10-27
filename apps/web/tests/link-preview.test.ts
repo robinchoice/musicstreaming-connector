@@ -10,6 +10,21 @@ test('the start page links a preview image that exists', async ({ request }) => 
   expect(response.headers()['content-type']).toBe('image/png');
 });
 
+test('English visitors get the English preview, ?lang= picks it too', async ({ request }) => {
+  for (const html of [
+    await (await request.get('/', { headers: { 'accept-language': 'en-US,en;q=0.9' } })).text(),
+    await (await request.get('/?lang=en', { headers: { 'accept-language': 'de-DE' } })).text(),
+  ]) {
+    expect(html).toContain('<html lang="en">');
+    expect(html).toMatch(/<meta property="og:image" content="[^"]+\/og-image-en\.png"/);
+    expect(html).toContain('<meta property="og:locale" content="en_US"');
+  }
+  const image = await request.get('/og-image-en.png');
+  expect(image.headers()['content-type']).toBe('image/png');
+  const invite = await (await request.get('/f/spotify?name=Lea&lang=en')).text();
+  expect(invite).toContain('<meta property="og:title" content="Lea listens on Spotify"');
+});
+
 test('an invite overrides the preview instead of adding a second one', async ({ request }) => {
   const html = await (await request.get('/f/spotify?name=Lea')).text();
   expect(html.match(/<meta property="og:title"/g)).toHaveLength(1);

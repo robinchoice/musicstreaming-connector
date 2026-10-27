@@ -1,6 +1,7 @@
 import { type Database, feedback } from '@app/db';
-import { type FeedbackContext, feedbackErrors, feedbackSchema } from '@app/shared';
+import { type FeedbackContext, feedbackSchema } from '@app/shared';
 import { Hono } from 'hono';
+import { t } from '../lib/i18n';
 import { sendMail } from '../lib/mail';
 import { clientIp, rateLimit } from '../lib/rate-limit';
 import { captureException } from '../monitoring';
@@ -55,16 +56,16 @@ export const feedbackRoutes = (db: Database) =>
     .post('/', async (c) => {
       const parsed = feedbackSchema.safeParse(await c.req.json().catch(() => null));
       if (!parsed.success) {
-        const message = parsed.error.issues[0]?.message as string;
-        const known = (Object.values(feedbackErrors) as string[]).includes(message);
-        return c.json({ error: known ? message : 'Die Meldung ist unvollständig.' }, 400);
+        const key = parsed.error.issues[0]?.message;
+        const error = key === 'feedbackTooShort' || key === 'invalidEmail' ? t(c)[key] : t(c).feedbackIncomplete;
+        return c.json({ error }, 400);
       }
       if (!(await reportsPerIp.hit(db, clientIp(c)))) {
-        return c.json({ error: 'Zu viele Meldungen. Versuche es später erneut.' }, 429);
+        return c.json({ error: t(c).feedbackTooMany }, 429);
       }
       const { kind, message, email, context, screenshot: base64 } = parsed.data;
       const screenshot = base64 ? Buffer.from(base64, 'base64') : null;
-      if (screenshot && !imageType(screenshot)) return c.json({ error: 'Der Screenshot muss ein PNG oder JPEG sein.' }, 400);
+      if (screenshot && !imageType(screenshot)) return c.json({ error: t(c).invalidImage }, 400);
 
       const fullContext = { ...context, api: process.env.APP_VERSION || 'dev' };
       const [row] = await db

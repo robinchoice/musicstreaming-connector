@@ -1,30 +1,32 @@
 <script lang="ts">
-  import { APP_BAND, APP_NAME, APP_TAGLINE, bandColor, bandGradient, GLOW } from '@app/shared';
+  import { APP_BAND, APP_NAME, bandColor, bandGradient, GLOW } from '@app/shared';
   import { browser } from '$app/environment';
   import { page } from '$app/state';
   import Feedback from '$lib/components/Feedback.svelte';
   import Toasts from '$lib/components/Toasts.svelte';
+  import { t } from '$lib/i18n';
   let { children } = $props();
 
   // Link previews. Public pages override them with meta in their load,
   // pages with ssr = false don't get any (link crawlers run no JavaScript).
-  const meta = $derived({ title: APP_NAME, description: APP_TAGLINE, image: '', ...page.data.meta });
+  const meta = $derived({ title: APP_NAME, description: t().tagline, image: '', ...page.data.meta });
 </script>
 
 <svelte:head>
-  <title>Songgate · Musik verbindet</title>
-  <meta name="description" content="Teile Songs zwischen YouTube Music, Apple Music, Spotify und Deezer. Ohne Anmeldung." />
+  <title>{t().pageTitle}</title>
+  <meta name="description" content={meta.description} />
   <meta property="og:site_name" content={APP_NAME} />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content={page.data.locale === 'de' ? 'de_DE' : 'en_US'} />
   <meta property="og:title" content={meta.title} />
   <meta property="og:description" content={meta.description} />
   {#if meta.image}
     <meta property="og:image" content={meta.image} />
   {:else}
-    <meta property="og:image" content="{page.url.origin}/og-image-de.png" />
+    <meta property="og:image" content="{page.url.origin}/og-image-{page.data.locale}.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="{APP_NAME}: {APP_TAGLINE}" />
+    <meta property="og:image:alt" content="{APP_NAME}: {t().tagline}" />
   {/if}
   <meta name="twitter:card" content="summary_large_image" />
 </svelte:head>

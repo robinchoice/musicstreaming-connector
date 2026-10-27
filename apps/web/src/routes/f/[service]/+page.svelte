@@ -4,20 +4,21 @@
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
   import { platformForSlug } from '$lib/friends.svelte';
   import { platforms } from '@app/shared';
+  import { t } from '$lib/i18n';
 
   const platform = platformForSlug(page.params.service ?? '');
   const name = (page.url.searchParams.get('name') ?? '').trim().slice(0, 40);
 </script>
 
 <svelte:head>
-  <title>{platform && name ? `${name} hört auf ${platforms[platform]}` : 'Einladung'} · Songgate</title>
+  <title>{platform && name ? t().listensOn(name, platforms[platform]) : t().invite} · Songgate</title>
 </svelte:head>
 
 <div class="shell">
   <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a></header>
   <main>
     {#if !platform || !name}
-      <section class="card"><h1>Diese Einladung ist unvollständig.</h1><p>Bitte um einen neuen Einladungslink.</p></section>
+      <section class="card"><h1>{t().inviteIncomplete}</h1><p>{t().askNewInvite}</p></section>
     {:else}
       <section class="card"><Connect {name} {platform} /></section>
     {/if}

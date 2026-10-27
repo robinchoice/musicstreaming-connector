@@ -4,8 +4,10 @@
   import Logo from '$lib/components/Logo.svelte';
   import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
   import { countries, friendsMessage, platforms, serviceOrder, sourceOf, type Platform, type Song } from '@app/shared';
+  import { page } from '$app/state';
   import { api } from '$lib/api';
   import { social } from '$lib/friends.svelte';
+  import { t } from '$lib/i18n';
   import { toast, toastError } from '$lib/toast.svelte';
 
   let input = $state('');
@@ -21,10 +23,10 @@
   let request: AbortController | undefined;
   const source = $derived(sourceOf(input));
   const friends = $derived(social.friends.filter(friend => chosen.includes(friend.name)));
-  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, serviceOrder.filter(platform => services.includes(platform))) : '');
-  const what = $derived(!services.length ? 'Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats.'
-    : services.length === 1 ? `Direktlink für ${platforms[services[0]!]}${social.me ? ', dazu der Link für alle mit deinem Namen' : ''}.`
-    : 'Eine Zeile pro Dienst, für alle anderen der Link für alle.');
+  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, serviceOrder.filter(platform => services.includes(platform)), page.data.locale) : '');
+  const what = $derived(!services.length ? t().forEveryone
+    : services.length === 1 ? t().directLink(platforms[services[0]!], !!social.me)
+    : t().linePerService);
 
   onMount(() => {
     canShare = typeof navigator.share === 'function';
@@ -57,7 +59,7 @@
       scrollTo({ top: 0 });
     } catch (e) {
       if (current.signal.aborted) return;
-      error = e instanceof Error ? e.message : 'Die Anfrage ist fehlgeschlagen.';
+      error = e instanceof Error ? e.message : t().requestFailed;
     } finally {
       if (!current.signal.aborted) loading = false;
     }
@@ -65,7 +67,7 @@
 
   async function paste() {
     try { input = (await navigator.clipboard.readText()).trim().slice(0, 4096); }
-    catch { toastError('Einfügen nicht möglich. Füge den Link von Hand ein.'); return; }
+    catch { toastError(t().pasteFailed); return; }
     if (input) find();
   }
 
@@ -76,13 +78,13 @@
   }
 
   async function copy() {
-    try { await navigator.clipboard.writeText(message); toast('Nachricht kopiert.'); }
-    catch { toastError('Kopieren nicht möglich.'); }
+    try { await navigator.clipboard.writeText(message); toast(t().copied); }
+    catch { toastError(t().copyFailed); }
   }
 
   async function share() {
     try { await navigator.share({ text: message }); }
-    catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich. Kopiere stattdessen die Nachricht.'); }
+    catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError(t().shareFailedCopy); }
   }
 </script>
 
@@ -92,38 +94,38 @@
   <main>
     {#if !song}
       <section class="start">
-        <h1>Teil Musik. Jeder hört sie in seinem Dienst.</h1>
-        <p class="lede">Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music und Deezer.</p>
+        <h1>{t().headline}</h1>
+        <p class="lede">{t().lede}</p>
         <form class="field" onsubmit={find}>
           <span class="src">{#if source}<Logo platform={source} size={24} />{:else}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>{/if}</span>
-          <input id="song" name="song" aria-label="Song- oder Albumlink" bind:value={input} oninput={() => (error = '')} required maxlength="4096" placeholder="Link aus Spotify, Apple Music, YouTube Music oder Deezer" autocomplete="off" spellcheck="false" disabled={loading} />
-          {#if input.trim() || !canPaste}<button class="button primary" type="submit" disabled={loading || !input.trim()}>Finden</button>
-          {:else}<button class="button ghost" type="button" onclick={paste}>Einfügen</button>{/if}
+          <input id="song" name="song" aria-label={t().linkLabel} bind:value={input} oninput={() => (error = '')} required maxlength="4096" placeholder={t().linkPlaceholder} autocomplete="off" spellcheck="false" disabled={loading} />
+          {#if input.trim() || !canPaste}<button class="button primary" type="submit" disabled={loading || !input.trim()}>{t().find}</button>
+          {:else}<button class="button ghost" type="button" onclick={paste}>{t().paste}</button>{/if}
         </form>
         <div class="detected" aria-live="polite">
-          {#if loading}<span class="loading"><span class="spinner"></span>Suche bei allen vier Diensten …</span>
-          {:else if error}<span class="error" role="alert"><strong>Das hat noch nicht geklappt.</strong> {error}</span>
-          {:else if source}Link aus <b>{platforms[source]}</b>{/if}
+          {#if loading}<span class="loading"><span class="spinner"></span>{t().searching}</span>
+          {:else if error}<span class="error" role="alert"><strong>{t().notYet}</strong> {error}</span>
+          {:else if source}{t().linkFrom} <b>{platforms[source]}</b>{/if}
         </div>
         <div class="people"><Friends bind:selected={chosen} bind:services disabled={loading} /></div>
-        <p class="note">Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer und ListenBrainz.</p>
+        <p class="note">{t().privacyNote}</p>
       </section>
     {:else}
       <section class="record">
         {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
         <div>
-          <div class="meta">{song.source.kind === 'album' ? 'Album' : 'Song'} aus {platforms[song.source.platform]}</div>
+          <div class="meta">{t().kindFrom(song.source.kind, platforms[song.source.platform])}</div>
           <h1>{song.source.title}</h1>
           <p class="artist">{song.source.artist}</p>
-          <button class="newlink" type="button" onclick={() => { reset(); input = ''; }}>Anderen Link einfügen</button>
+          <button class="newlink" type="button" onclick={() => { reset(); input = ''; }}>{t().otherLink}</button>
           <Friends bind:selected={chosen} bind:services />
-          <div class="tiles" role="group" aria-label="Dienste in der Nachricht">
+          <div class="tiles" role="group" aria-label={t().servicesInMessage}>
             {#each serviceOrder as platform (platform)}
               {@const link = song.links[platform]}
               {@const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name)}
               <button type="button" class="tile" class:missing={!link.found} aria-pressed={services.includes(platform)} onclick={() => toggle(platform)}>
                 <Logo {platform} size={32} />
-                <span><strong>{platforms[platform]}</strong><small>{!link.found ? 'Nur Suche' : names.length ? names.join(', ') : platform === song.source.platform ? 'Quelle' : 'Gefunden'}</small></span>
+                <span><strong>{platforms[platform]}</strong><small>{!link.found ? t().searchOnly : names.length ? names.join(', ') : platform === song.source.platform ? t().sourceService : t().found}</small></span>
                 <span class="check" aria-hidden="true">{services.includes(platform) ? '✓' : ''}</span>
               </button>
             {/each}
@@ -132,8 +134,8 @@
             <p class="what">{what}</p>
             <pre>{message}</pre>
             <div class="actions">
-              {#if canShare}<button class="button primary" type="button" onclick={share}>Teilen</button>{/if}
-              <button class="button {canShare ? 'ghost' : 'primary'}" type="button" onclick={copy}>Kopieren</button>
+              {#if canShare}<button class="button primary" type="button" onclick={share}>{t().share}</button>{/if}
+              <button class="button {canShare ? 'ghost' : 'primary'}" type="button" onclick={copy}>{t().copy}</button>
             </div>
           </div>
         </div>

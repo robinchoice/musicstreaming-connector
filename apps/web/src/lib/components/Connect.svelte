@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { inviteSlugs, platforms, type Platform } from '@app/shared';
   import { addFriend, inviteUrl, loadFriends, setMe, social } from '$lib/friends.svelte';
+  import { t } from '$lib/i18n';
   import { toast, toastError } from '$lib/toast.svelte';
   import Avatar from './Avatar.svelte';
   import Logo from './Logo.svelte';
@@ -23,33 +24,33 @@
   }
 
   async function answer(mine: Platform) {
-    if (!myName.trim()) { toastError('Gib zuerst deinen Namen ein.'); return; }
+    if (!myName.trim()) { toastError(t().nameFirst); return; }
     const me = { name: myName.trim().slice(0, 40), platform: mine };
     setMe(me);
     const url = inviteUrl(page.url.origin, me);
-    const text = `Ich höre auf ${platforms[mine]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:`;
+    const text = t().inviteText(platforms[mine]);
     try {
       if (typeof navigator.share === 'function') await navigator.share({ text, url });
-      else { await navigator.clipboard.writeText(`${text}\n${url}`); toast('Einladung kopiert. Schick sie an ' + name + '.'); }
-    } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError('Teilen nicht möglich.'); }
+      else { await navigator.clipboard.writeText(`${text}\n${url}`); toast(t().inviteCopiedTo(name)); }
+    } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError(t().shareFailed); }
   }
 </script>
 
 <div class="who">
   <Avatar friend={{ name, platform }} size={heading === 'h1' ? 64 : 44} />
   <div>
-    <svelte:element this={heading} class="title">{name} hört auf {platforms[platform]}</svelte:element>
-    <p>Speicher {name}, dann landen deine Songs bei {name} immer direkt in {platforms[platform]}.</p>
+    <svelte:element this={heading} class="title">{t().listensOn(name, platforms[platform])}</svelte:element>
+    <p>{t().saveFriendHint(name, platforms[platform])}</p>
   </div>
 </div>
 <div class="actions">
-  <a class="button primary" href="musiclink://app/friend?{new URLSearchParams({ name, service: inviteSlugs[platform] })}">In der Songgate-App speichern</a>
-  <button class="button ghost" onclick={save} disabled={saved}>{saved ? `✓ ${name} ist gespeichert` : 'Hier im Browser speichern'}</button>
+  <a class="button primary" href="musiclink://app/friend?{new URLSearchParams({ name, service: inviteSlugs[platform] })}">{t().saveInApp}</a>
+  <button class="button ghost" onclick={save} disabled={saved}>{saved ? t().saved(name) : t().saveInBrowser}</button>
 </div>
 <div class="answer">
-  <h3>Und du?</h3>
-  <p>Schick {name} deinen Dienst zurück, dann klappt es in beide Richtungen.</p>
-  <input bind:value={myName} maxlength="40" placeholder="Dein Name" autocomplete="given-name" />
+  <h3>{t().andYou}</h3>
+  <p>{t().sendBack(name)}</p>
+  <input bind:value={myName} maxlength="40" placeholder={t().yourName} autocomplete="given-name" />
   <div class="services">
     {#each (Object.keys(platforms) as Platform[]) as mine}
       <button onclick={() => answer(mine)}><Logo platform={mine} size={22} />{platforms[mine]}</button>
