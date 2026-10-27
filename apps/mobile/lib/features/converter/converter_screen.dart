@@ -766,7 +766,7 @@ class _ServiceTile extends StatelessWidget {
               color: selected ? raised : null,
               border: Border.all(
                 color: selected
-                    ? bandColor((appBand.from + appBand.to) / 2, glow)
+                    ? Theme.of(context).colorScheme.primary
                     : hairlineStrong,
               ),
             ),

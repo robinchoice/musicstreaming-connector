@@ -19,8 +19,9 @@ private enum Brand {
         return Font(CTFontCreateWithFontDescriptor(descriptor, size, nil))
     }
     // The band 3.85 to 4.55 on glow, only for the main action and picked items
+    static let accent = Color(hex: 0x64CC9E)
     static let gradient = LinearGradient(
-        colors: [Color(hex: 0x80CD84), Color(hex: 0x64CC9E), Color(hex: 0x57C6BB)],
+        colors: [Color(hex: 0x80CD84), accent, Color(hex: 0x57C6BB)],
         startPoint: .bottomLeading,
         endPoint: .topTrailing
     )
@@ -61,8 +62,10 @@ struct ServiceLogo: View {
         "deezer": "M0.693 10.024C1.074 10.024 1.386 8.768 1.386 7.217 1.386 5.667 1.074 4.41 0.693 4.41 0.312 4.41 0 5.666 0 7.217 0 8.768 0.312 10.025 0.693 10.025ZM21.038 1.56C20.674 1.56 20.354 2.365 20.128 3.656 19.765 1.446 19.184 0 18.526 0 17.746 0 17.062 2.036 16.742 5 16.43 2.842 15.954 1.464 15.417 1.464 14.672 1.464 14.031 4.168 13.797 7.936 13.355 6.004 12.714 4.791 12.004 4.791 11.294 4.791 10.654 6.004 10.211 7.936 9.969 4.176 9.337 1.473 8.583 1.473 8.046 1.473 7.57 2.851 7.258 5.008 6.938 2.036 6.262 0 5.474 0 4.816 0 4.227 1.447 3.872 3.665 3.655 2.374 3.326 1.56 2.962 1.56 2.287 1.56 1.741 4.367 1.741 7.832 1.741 11.298 2.287 14.105 2.962 14.105 3.239 14.105 3.499 13.629 3.698 12.832 4.018 15.76 4.694 17.77 5.474 17.77 6.08 17.77 6.617 16.566 6.981 14.66 7.232 18.282 7.856 20.855 8.583 20.855 9.043 20.855 9.458 19.832 9.77 18.178 10.142 21.6 11 24 12.004 24 13.009 24 13.867 21.6 14.239 18.178 14.551 19.832 14.966 20.855 15.425 20.855 16.153 20.855 16.777 18.282 17.028 14.66 17.392 16.566 17.928 17.77 18.535 17.77 19.315 17.77 19.99 15.76 20.31 12.832 20.518 13.629 20.77 14.105 21.047 14.105 21.722 14.105 22.267 11.298 22.267 7.832 22.259 4.375 21.714 1.56 21.037 1.56ZM23.307 10.024C23.688 10.024 24 8.768 24 7.217 24 5.667 23.688 4.41 23.307 4.41 22.926 4.41 22.614 5.666 22.614 7.217 22.614 8.768 22.926 10.025 23.307 10.025Z",
     ]
 
+    private static let parsedPaths = paths.mapValues(LogoShape.parse)
+
     var body: some View {
-        LogoShape(d: Self.paths[platform] ?? "")
+        LogoShape(logo: Self.parsedPaths[platform] ?? Path())
             .fill(Color(hex: Self.colors[platform] ?? 0x9A98A3))
             .frame(width: size, height: size)
             .accessibilityHidden(true)
@@ -70,9 +73,13 @@ struct ServiceLogo: View {
 }
 
 private struct LogoShape: Shape {
-    let d: String
+    let logo: Path
 
     func path(in rect: CGRect) -> Path {
+        logo.applying(CGAffineTransform(translationX: rect.minX, y: rect.minY).scaledBy(x: rect.width / 24, y: rect.height / 24))
+    }
+
+    static func parse(_ d: String) -> Path {
         // Commands and numbers; a minus or a second dot starts a new number
         var tokens: [String] = []
         var digits = ""
@@ -122,7 +129,7 @@ private struct LogoShape: Shape {
             default: index += 1
             }
         }
-        return path.applying(CGAffineTransform(translationX: rect.minX, y: rect.minY).scaledBy(x: rect.width / 24, y: rect.height / 24))
+        return path
     }
 }
 
@@ -156,6 +163,7 @@ private struct PickChip<Leading: View>: View {
     let label: String
     let selected: Bool
     let action: () -> Void
+    var leadingPadding: CGFloat = 5
     @ViewBuilder var leading: Leading
 
     var body: some View {
@@ -167,7 +175,7 @@ private struct PickChip<Leading: View>: View {
                     .foregroundStyle(Brand.text)
                     .lineLimit(1)
             }
-            .padding(.leading, Leading.self == EmptyView.self ? 14 : 5)
+            .padding(.leading, leadingPadding)
             .padding(.trailing, 14)
             .frame(minHeight: 38)
             .background(Capsule().fill(selected ? Brand.raised : Color.white.opacity(0.03)))
@@ -195,8 +203,12 @@ struct ShareView: View {
             ZStack {
                 Brand.background.ignoresSafeArea()
                 if let song = model.song {
-                    backdrop(song)
-                    result(song)
+                    AsyncImage(url: song.source.artworkUrl.flatMap(URL.init(string:))) { phase in
+                        ZStack {
+                            backdrop(phase.image)
+                            result(song, image: phase.image)
+                        }
+                    }
                 } else if model.isLoading {
                     VStack(spacing: 16) {
                         if let source = model.input.flatMap({ ShareModel.sourceOf($0) }) {
@@ -244,7 +256,7 @@ struct ShareView: View {
                 }
             }
         }
-        .tint(Color(hex: 0x64CC9E))
+        .tint(Brand.accent)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingGuide) {
             NavigationStack {
@@ -265,7 +277,7 @@ struct ShareView: View {
                     }
                 }
             }
-            .tint(Color(hex: 0x64CC9E))
+            .tint(Brand.accent)
             .preferredColorScheme(.dark)
         }
         .popover(item: $shareItem) { item in
@@ -277,14 +289,12 @@ struct ShareView: View {
     }
 
     // The cover, blurred far behind the result, tints the page
-    private func backdrop(_ song: Song) -> some View {
+    private func backdrop(_ image: Image?) -> some View {
         Color.clear
             .frame(height: 360)
             .overlay {
-                AsyncImage(url: song.source.artworkUrl.flatMap(URL.init(string:))) { image in
+                if let image {
                     image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.clear
                 }
             }
             .clipped()
@@ -296,17 +306,20 @@ struct ShareView: View {
             .accessibilityHidden(true)
     }
 
-    private func result(_ song: Song) -> some View {
-        ScrollView {
+    private func result(_ song: Song, image: Image?) -> some View {
+        let message = model.message
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                AsyncImage(url: song.source.artworkUrl.flatMap(URL.init(string:))) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Image(systemName: "music.note")
-                        .font(.largeTitle)
-                        .foregroundStyle(Brand.muted)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Brand.raised)
+                Group {
+                    if let image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        Image(systemName: "music.note")
+                            .font(.largeTitle)
+                            .foregroundStyle(Brand.muted)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Brand.raised)
+                    }
                 }
                 .frame(width: 148, height: 148)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
@@ -327,7 +340,7 @@ struct ShareView: View {
                     .padding(.top, 20)
                 tiles(song)
                     .padding(.top, 16)
-                if let message = model.message {
+                if let message {
                     messageBox(message)
                         .padding(.top, 14)
                 }
@@ -336,7 +349,7 @@ struct ShareView: View {
             .padding(20)
         }
         .safeAreaInset(edge: .bottom) {
-            if let message = model.message {
+            if let message {
                 actions(message)
             }
         }
@@ -356,7 +369,7 @@ struct ShareView: View {
                 let anyGroup = model.groups.contains { model.isGroupChosen($0) }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        PickChip(label: "Alle", selected: model.services.isEmpty, action: { model.pick([]); copied = false }) { EmptyView() }
+                        PickChip(label: "Alle", selected: model.services.isEmpty, action: { model.pick([]); copied = false }, leadingPadding: 14) { EmptyView() }
                         ForEach(model.groups, id: \.self) { group in
                             PickChip(label: group.name, selected: model.isGroupChosen(group), action: { model.toggle(group: group); copied = false }) {
                                 Text("\(group.members.count)")
@@ -410,7 +423,7 @@ struct ShareView: View {
                     .overlay(alignment: .topTrailing) {
                         if selected {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color(hex: 0x64CC9E))
+                                .foregroundStyle(Brand.accent)
                                 .padding(10)
                         }
                     }
