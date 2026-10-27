@@ -796,6 +796,8 @@
 				"000000000000000000000002",
 				"000000000000000000000003",
 				"000000000000000000000005",
+				"F10000000000000000000002",
+				"F10000000000000000000003",
 			);
 			"path" = "ShareExtension";
 			"sourceTree" = "<group>";
@@ -822,6 +824,8 @@
 			"buildActionMask" = "2147483647";
 			"files" = (
 				"F2000000000000000000004D",
+				"F2000000000000000000004E",
+				"F2000000000000000000004F",
 			);
 			"runOnlyForDeploymentPostprocessing" = "0";
 		};
@@ -977,6 +981,28 @@
 		"F2000000000000000000004D" = {
 			"isa" = "PBXBuildFile";
 			"fileRef" = "F10000000000000000000001";
+		};
+		"F10000000000000000000002" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "file";
+			"name" = "BricolageGrotesque.ttf";
+			"path" = "../assets/fonts/BricolageGrotesque.ttf";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"F10000000000000000000003" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text";
+			"name" = "OFL.txt";
+			"path" = "../assets/fonts/OFL.txt";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"F2000000000000000000004E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F10000000000000000000002";
+		};
+		"F2000000000000000000004F" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F10000000000000000000003";
 		};
 	};
 	"rootObject" = "97C146E61CF9000F007C117D";

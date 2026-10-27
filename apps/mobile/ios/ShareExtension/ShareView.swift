@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreText
 
 // Colours of the app, see lib/core/brand.dart
 private enum Brand {
@@ -10,6 +11,13 @@ private enum Brand {
     static let ink = Color(hex: 0x17171A)
     static let hairline = Color.white.opacity(0.07)
     static let hairlineStrong = Color.white.opacity(0.14)
+    static func displayFont(size: CGFloat) -> Font {
+        let descriptor = CTFontDescriptorCreateWithAttributes([
+            kCTFontNameAttribute as String: "BricolageGrotesque-96ptExtraBold",
+            kCTFontVariationAttribute as String: [0x77647468: 80.0, 0x77676874: 780.0]
+        ] as CFDictionary)
+        return Font(CTFontCreateWithFontDescriptor(descriptor, size, nil))
+    }
     // The band 3.85 to 4.55 on glow, only for the main action and picked items
     static let gradient = LinearGradient(
         colors: [Color(hex: 0x80CD84), Color(hex: 0x64CC9E), Color(hex: 0x57C6BB)],
@@ -178,6 +186,9 @@ struct ShareView: View {
     @State private var shareItem: SharedItem?
     @State private var copied = false
     @State private var showingGuide = false
+    @ScaledMetric(relativeTo: .title2) private var titleSize: CGFloat = 22
+    @ScaledMetric(relativeTo: .headline) private var brandSize: CGFloat = 17
+    @ScaledMetric(relativeTo: .subheadline) private var sectionSize: CGFloat = 15
 
     var body: some View {
         NavigationStack {
@@ -216,6 +227,12 @@ struct ShareView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Brand.background, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Songgate")
+                        .font(Brand.displayFont(size: brandSize))
+                        .tracking(-0.035 * brandSize)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { showingGuide = true } label: {
                         Image(systemName: "star")
@@ -237,6 +254,12 @@ struct ShareView: View {
                 .navigationTitle("Songgate griffbereit")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("Songgate griffbereit")
+                            .font(Brand.displayFont(size: brandSize))
+                            .tracking(-0.035 * brandSize)
+                            .accessibilityAddTraits(.isHeader)
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Fertig") { showingGuide = false }
                     }
@@ -294,7 +317,8 @@ struct ShareView: View {
                     .foregroundStyle(Brand.muted)
                     .padding(.top, 16)
                 Text(song.source.title)
-                    .font(.title2.weight(.bold))
+                    .font(Brand.displayFont(size: titleSize))
+                    .tracking(-0.035 * titleSize)
                     .padding(.top, 4)
                 Text(song.source.artist)
                     .foregroundStyle(Brand.text.opacity(0.8))
@@ -322,7 +346,8 @@ struct ShareView: View {
     private var friendsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("An wen?")
-                .font(.subheadline.weight(.semibold))
+                .font(Brand.displayFont(size: sectionSize))
+                .tracking(-0.035 * sectionSize)
             if model.friends.isEmpty {
                 Text("Tipp: In der Songgate-App speicherst du Freunde mit ihrem Dienst. Dann bekommt jeder den Link für seinen Player.")
                     .font(.caption)
