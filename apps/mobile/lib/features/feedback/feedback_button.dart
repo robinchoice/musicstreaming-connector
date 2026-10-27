@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config.dart';
+import '../../core/locale.dart';
 import '../../core/router.dart';
 import 'feedback_sheet.dart';
 
@@ -137,13 +138,13 @@ class _FeedbackButtonState extends ConsumerState<FeedbackButton> {
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _report,
-                      child: const SizedBox.square(
+                      child: SizedBox.square(
                         dimension: _size,
                         child: Icon(
                           Icons.bug_report_outlined,
-                          color: Color(0xFFF2F0EA),
+                          color: const Color(0xFFF2F0EA),
                           size: 20,
-                          semanticLabel: 'Fehler melden',
+                          semanticLabel: ref.watch(messagesProvider).reportBug,
                         ),
                       ),
                     ),

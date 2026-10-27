@@ -15,7 +15,7 @@ import UIKit
     let channel = FlutterMethodChannel(name: "org.musiclink.prototype/preferences", binaryMessenger: engineBridge.applicationRegistrar.messenger())
     channel.setMethodCallHandler { call, result in
       guard let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype") else {
-        result(FlutterError(code: "preferences", message: "Einstellungen nicht verfügbar", details: nil))
+        result(FlutterError(code: "preferences", message: "Preferences unavailable", details: nil))
         return
       }
       switch call.method {
@@ -34,6 +34,13 @@ import UIKit
       case "setTestMode":
         guard let value = call.arguments as? Bool else { result(FlutterMethodNotImplemented); return }
         preferences.set(value, forKey: "testMode")
+        result(nil)
+      // The chosen language, nil until someone switches it. The share extension reads it too.
+      case "getLocale":
+        result(preferences.string(forKey: "locale"))
+      case "setLocale":
+        guard let value = call.arguments as? String else { result(FlutterMethodNotImplemented); return }
+        preferences.set(value, forKey: "locale")
         result(nil)
       case "dismissShareSetup":
         preferences.set(true, forKey: "shareSetupSeen")

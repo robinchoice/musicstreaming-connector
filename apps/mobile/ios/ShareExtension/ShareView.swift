@@ -215,7 +215,7 @@ struct ShareView: View {
                             ServiceLogo(platform: source, size: 36)
                         }
                         ProgressView()
-                        Text("Links für alle Dienste suchen …")
+                        Text(model.t.searching)
                             .foregroundStyle(Brand.muted)
                     }
                     .accessibilityElement(children: .combine)
@@ -227,7 +227,7 @@ struct ShareView: View {
                         Text(error)
                             .multilineTextAlignment(.center)
                         if model.canRetry {
-                            Button("Erneut versuchen", action: model.retry)
+                            Button(model.t.retry, action: model.retry)
                                 .buttonStyle(MainButtonStyle())
                         }
                     }
@@ -249,10 +249,10 @@ struct ShareView: View {
                     Button { showingGuide = true } label: {
                         Image(systemName: "star")
                     }
-                    .accessibilityLabel("Songgate griffbereit")
+                    .accessibilityLabel(model.t.handy)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Schließen", action: finish)
+                    Button(model.t.close, action: finish)
                 }
             }
         }
@@ -261,19 +261,19 @@ struct ShareView: View {
         .sheet(isPresented: $showingGuide) {
             NavigationStack {
                 Form {
-                    Text("Im Teilen-Menü: Mehr → Bearbeiten → Plus bei Songgate. Ziehe Songgate über den Griff nach oben und tippe auf Fertig.")
+                    Text(model.t.guide)
                 }
-                .navigationTitle("Songgate griffbereit")
+                .navigationTitle(model.t.handy)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
-                        Text("Songgate griffbereit")
+                        Text(model.t.handy)
                             .font(Brand.displayFont(size: brandSize))
                             .tracking(-0.035 * brandSize)
                             .accessibilityAddTraits(.isHeader)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Fertig") { showingGuide = false }
+                        Button(model.t.done) { showingGuide = false }
                     }
                 }
             }
@@ -325,7 +325,7 @@ struct ShareView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
                 .accessibilityHidden(true)
-                Text("\(song.source.kind == "album" ? "Album" : "Song") aus \(ShareModel.platforms[song.source.platform] ?? song.source.platform)")
+                Text(model.t.kindFrom(song.source.kind == "album", ShareModel.platforms[song.source.platform] ?? song.source.platform))
                     .font(.subheadline)
                     .foregroundStyle(Brand.muted)
                     .padding(.top, 16)
@@ -358,18 +358,18 @@ struct ShareView: View {
     // "An wen?": everyone, a group or friends. Picking people picks their services.
     private var friendsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("An wen?")
+            Text(model.t.toWhom)
                 .font(Brand.displayFont(size: sectionSize))
                 .tracking(-0.035 * sectionSize)
             if model.friends.isEmpty {
-                Text("Tipp: In der Songgate-App speicherst du Freunde mit ihrem Dienst. Dann bekommt jeder den Link für seinen Player.")
+                Text(model.t.friendsTip)
                     .font(.caption)
                     .foregroundStyle(Brand.muted)
             } else {
                 let anyGroup = model.groups.contains { model.isGroupChosen($0) }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        PickChip(label: "Alle", selected: model.services.isEmpty, action: { model.pick([]); copied = false }, leadingPadding: 14) { EmptyView() }
+                        PickChip(label: model.t.everyone, selected: model.services.isEmpty, action: { model.pick([]); copied = false }, leadingPadding: 14) { EmptyView() }
                         ForEach(model.groups, id: \.self) { group in
                             PickChip(label: group.name, selected: model.isGroupChosen(group), action: { model.toggle(group: group); copied = false }) {
                                 Text("\(group.members.count)")
@@ -436,10 +436,9 @@ struct ShareView: View {
     }
 
     private var hint: String {
-        guard let first = model.services.first else { return "Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats." }
-        if model.services.count > 1 { return "Eine Zeile pro Dienst, für alle anderen der Link für alle." }
-        let name = ShareModel.platforms[first] ?? first
-        return model.me == nil ? "Direktlink für \(name)." : "Direktlink für \(name), dazu der Link für alle mit deinem Namen."
+        guard let first = model.services.first else { return model.t.hintEveryone }
+        if model.services.count > 1 { return model.t.hintSeveral }
+        return model.t.hintOne(ShareModel.platforms[first] ?? first, model.me != nil)
     }
 
     private func messageBox(_ message: String) -> some View {
@@ -462,7 +461,7 @@ struct ShareView: View {
             Button {
                 shareItem = SharedItem(items: [message])
             } label: {
-                Label("Teilen", systemImage: "square.and.arrow.up")
+                Label(model.t.share, systemImage: "square.and.arrow.up")
             }
             .buttonStyle(MainButtonStyle())
             Button {
@@ -470,7 +469,7 @@ struct ShareView: View {
                 copied = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { finish() }
             } label: {
-                Label(copied ? "Kopiert ✓" : "Kopieren", systemImage: "doc.on.doc")
+                Label(copied ? model.t.copied : model.t.copy, systemImage: "doc.on.doc")
             }
             .buttonStyle(GhostButtonStyle())
         }

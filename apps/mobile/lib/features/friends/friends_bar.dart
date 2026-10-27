@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/brand.dart';
+import '../../core/locale.dart';
 import '../converter/conversion.dart';
 import 'friends_screen.dart';
 import 'social.dart';
@@ -143,6 +144,7 @@ class FriendsBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final social = ref.watch(socialProvider);
+    final t = ref.watch(messagesProvider);
     final theme = Theme.of(context);
     // Read at call time: "+ Neu" picks a friend saved after this build
     void pick(List<String> names) => onChanged(names, [
@@ -166,7 +168,7 @@ class FriendsBar extends ConsumerWidget {
         Row(
           children: [
             Text(
-              'An wen?',
+              t.toWhom,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -176,7 +178,7 @@ class FriendsBar extends ConsumerWidget {
               onPressed: () => Navigator.of(
                 context,
               ).push(MaterialPageRoute(builder: (_) => const FriendsScreen())),
-              child: const Text('Bearbeiten'),
+              child: Text(t.edit),
             ),
           ],
         ),
@@ -188,7 +190,7 @@ class FriendsBar extends ConsumerWidget {
               for (final chip in [
                 PickChip(
                   key: const ValueKey('pick-all'),
-                  label: 'Alle',
+                  label: t.everyone,
                   selected: services.isEmpty,
                   onTap: enabled ? () => onChanged([], []) : null,
                 ),
@@ -237,7 +239,7 @@ class FriendsBar extends ConsumerWidget {
                   ),
                 PickChip(
                   key: const ValueKey('friend-add'),
-                  label: '+ Neu',
+                  label: t.addNew,
                   dashed: true,
                   onTap: enabled
                       ? () async {
@@ -257,14 +259,14 @@ class FriendsBar extends ConsumerWidget {
                 if (selected.length > 1 && !anyGroup)
                   PickChip(
                     key: const ValueKey('group-add'),
-                    label: 'Als Gruppe speichern',
+                    label: t.saveAsGroup,
                     dashed: true,
                     onTap: enabled
                         ? () async {
                             final name = await askText(
                               context,
-                              title: 'Gruppe aus ${selected.join(', ')}',
-                              label: 'Name, z. B. WG',
+                              title: t.groupOf(selected.join(', ')),
+                              label: t.groupNameLabel,
                             );
                             if (name != null) {
                               ref
@@ -285,10 +287,7 @@ class FriendsBar extends ConsumerWidget {
         if (social.friends.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.',
-              style: theme.textTheme.bodySmall,
-            ),
+            child: Text(t.friendsEmpty, style: theme.textTheme.bodySmall),
           ),
       ],
     );

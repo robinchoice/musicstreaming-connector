@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config.dart';
+import '../../core/messages.dart';
 import '../converter/conversion.dart';
 
 /// Invite links name the service with a short slug, see packages/shared.
@@ -161,8 +162,8 @@ String _origin() => apiUrl.replaceFirst(RegExp(r'/+$'), '');
 String inviteUrl(Friend me) =>
     '${_origin()}/f/${inviteSlugs[me.platform]}?name=${Uri.encodeQueryComponent(me.name)}';
 
-String inviteText(Friend me) =>
-    'Ich höre auf ${platforms[me.platform]}. Speicher mich in Songgate, dann bekomme ich deine Songs immer passend:\n${inviteUrl(me)}';
+String inviteText(Friend me, Messages t) =>
+    t.inviteText(platforms[me.platform]!, inviteUrl(me));
 
 /// A share page may name its sender, so the recipient can save them and
 /// answer with their own service. Same as shareUrl in packages/shared.
@@ -180,7 +181,9 @@ String friendsMessage(
   List<Friend> friends, {
   Friend? from,
   List<String>? services,
+  AppLocale locale = AppLocale.de,
 }) {
+  final t = locale.messages;
   final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
   final everyone = shareUrl(song.sharePath, from);
   final chosen =
@@ -190,7 +193,7 @@ String friendsMessage(
     return [
       head,
       '${song.links[chosen.first]}',
-      if (from != null) 'Alle Dienste: $everyone',
+      if (from != null) '${t.allServices}: $everyone',
     ].join('\n');
   }
   return [
@@ -201,7 +204,7 @@ String friendsMessage(
         friends.where((friend) => friend.platform == platform),
         song.links[platform],
       ),
-    'Andere: $everyone',
+    '${t.others}: $everyone',
   ].join('\n');
 }
 

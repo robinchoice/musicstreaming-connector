@@ -13,6 +13,15 @@ void main() {
   const preferences = MethodChannel('org.musiclink.prototype/preferences');
   const share = MethodChannel('org.musiclink.prototype/share');
   setUp(() {
+    // German texts, whatever the machine's language
+    TestWidgetsFlutterBinding.instance.platformDispatcher.localesTestValue =
+        const [Locale('de', 'DE')];
+    addTearDown(
+      TestWidgetsFlutterBinding
+          .instance
+          .platformDispatcher
+          .clearLocalesTestValue,
+    );
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(

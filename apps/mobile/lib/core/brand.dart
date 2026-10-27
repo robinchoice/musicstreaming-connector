@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../config.dart';
+import 'locale.dart';
 
 // Signal colours from starter's DESIGN.md: the same in every product, never the product colour.
 // Filled counters take glow, text and lines on the light ground take deep.
@@ -220,11 +222,11 @@ class SonggateBrand extends StatelessWidget {
   );
 }
 
-class PleasanceFooter extends StatelessWidget {
+class PleasanceFooter extends ConsumerWidget {
   const PleasanceFooter({super.key});
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
     margin: const EdgeInsets.only(top: 28),
     padding: const EdgeInsets.symmetric(vertical: 18),
     decoration: const BoxDecoration(
@@ -234,7 +236,7 @@ class PleasanceFooter extends StatelessWidget {
       children: [
         Flexible(
           child: Text(
-            'ein Werkzeug von',
+            ref.watch(messagesProvider).madeBy,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

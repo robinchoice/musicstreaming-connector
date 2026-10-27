@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/brand.dart';
+import '../../core/locale.dart';
 
-class ShareSetup extends StatefulWidget {
+class ShareSetup extends ConsumerStatefulWidget {
   const ShareSetup({super.key, required this.onDone, this.guideOnly = false});
 
   final VoidCallback onDone;
   final bool guideOnly;
 
   @override
-  State<ShareSetup> createState() => _ShareSetupState();
+  ConsumerState<ShareSetup> createState() => _ShareSetupState();
 }
 
-class _ShareSetupState extends State<ShareSetup> {
+class _ShareSetupState extends ConsumerState<ShareSetup> {
   late bool _guide = widget.guideOnly;
   bool _sharing = false;
   bool _tried = false;
@@ -33,11 +35,7 @@ class _ShareSetupState extends State<ShareSetup> {
     } on PlatformException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Öffne bei einem Song in deiner Musik-App das Teilen-Menü und folge dieser Anleitung.',
-            ),
-          ),
+          SnackBar(content: Text(ref.read(messagesProvider).shareMenuFallback)),
         );
       }
     } finally {
@@ -48,12 +46,13 @@ class _ShareSetupState extends State<ShareSetup> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = ref.watch(messagesProvider);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: _guide
             ? IconButton(
-                tooltip: 'Zurück',
+                tooltip: t.back,
                 icon: const Icon(Icons.arrow_back_ios_new, size: 18),
                 onPressed: _sharing
                     ? null
@@ -72,9 +71,7 @@ class _ShareSetupState extends State<ShareSetup> {
               padding: const EdgeInsets.all(24),
               children: [
                 Text(
-                  _guide
-                      ? 'EINMAL KURZ EINRICHTEN'
-                      : 'WENIGER SUCHEN. MEHR MUSIK.',
+                  _guide ? t.setupKicker : t.welcomeKicker,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.primary,
                     letterSpacing: 1.5,
@@ -84,13 +81,11 @@ class _ShareSetupState extends State<ShareSetup> {
                 Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(
-                        text: _guide ? 'Beim nächsten Song\n' : 'Dein Song.\n',
-                      ),
+                      TextSpan(text: _guide ? t.setupTitle : t.welcomeTitle),
                       TextSpan(
                         text: _guide
-                            ? 'gleich zur Hand.'
-                            : 'Ihr Lieblingsplayer.',
+                            ? t.setupTitleAccent
+                            : t.welcomeTitleAccent,
                         style: TextStyle(color: theme.colorScheme.primary),
                       ),
                     ],
@@ -99,30 +94,12 @@ class _ShareSetupState extends State<ShareSetup> {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  _guide
-                      ? 'Füge Songgate zu deinen Favoriten im iPhone-Teilen-Menü hinzu.'
-                      : 'Teile Musik in dem Dienst, den deine Freunde nutzen. Direkt aus deiner Musik-App.',
+                  _guide ? t.setupIntro : t.welcomeIntro,
                   style: theme.textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 28),
                 if (_guide) ...[
-                  for (final step in const [
-                    (
-                      '01',
-                      '„Mehr“ öffnen',
-                      'In der Reihe mit den Apps ganz nach rechts wischen.',
-                    ),
-                    (
-                      '02',
-                      '„Bearbeiten“ → Plus bei Songgate',
-                      'Damit kommt Songgate zu deinen Favoriten.',
-                    ),
-                    (
-                      '03',
-                      'Songgate nach oben ziehen',
-                      'Über den Griff rechts. Dann auf „Fertig“ tippen.',
-                    ),
-                  ])
+                  for (final step in t.setupSteps)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
                       child: Row(
@@ -186,24 +163,18 @@ class _ShareSetupState extends State<ShareSetup> {
                       onPressed: _sharing ? null : () => _trySharing(context),
                       icon: const Icon(Icons.ios_share),
                       label: Text(
-                        _tried
-                            ? 'Noch einmal ausprobieren'
-                            : 'Mit Beispiel-Song einrichten',
+                        _tried ? t.tryAgain : t.setUpWithExample,
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
                   TextButton(
                     onPressed: _sharing ? null : widget.onDone,
-                    child: Text(
-                      _tried ? 'Weiter zur App' : 'Später einrichten',
-                    ),
+                    child: Text(_tried ? t.continueToApp : t.setUpLater),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _tried
-                        ? 'Du kannst die Anleitung jederzeit wieder öffnen. Deine Favoriten verwaltest du selbst im iOS-Menü.'
-                        : 'Die Reihenfolge legst du selbst im iOS-Menü fest.',
+                    _tried ? t.guideReopen : t.orderNote,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall,
                   ),
@@ -246,11 +217,7 @@ class _ShareSetupState extends State<ShareSetup> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  for (final text in const [
-                    'Ohne Anmeldung loslegen',
-                    'In deiner Musik-App bleiben',
-                    'Songgate einmal nach vorne holen',
-                  ])
+                  for (final text in t.welcomePoints)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 14),
                       child: Row(
@@ -269,11 +236,11 @@ class _ShareSetupState extends State<ShareSetup> {
                   FilledButton.icon(
                     onPressed: () => setState(() => _guide = true),
                     icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Teilen-Menü einrichten'),
+                    label: Text(t.setUpShareMenu),
                   ),
                   TextButton(
                     onPressed: widget.onDone,
-                    child: const Text('Später · direkt ausprobieren'),
+                    child: Text(t.laterTryNow),
                   ),
                 ],
                 const PleasanceFooter(),

@@ -40,10 +40,23 @@ struct ShareTargetsTests {
              "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAlle Dienste: https://songgate.app/s/yt/x?from=Robin&service=youtube"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify", "appleMusic"]),
              "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nAndere: https://songgate.app/s/yt/x"),
+            (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: me, services: ["spotify"], t: .en),
+             "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAll services: https://songgate.app/s/yt/x?from=Robin&service=youtube"),
+            (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify", "appleMusic"], t: .en),
+             "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nOthers: https://songgate.app/s/yt/x"),
         ]
+        // The app's choice wins, else the first device language we speak, else German
+        let languages: [(String?, [String], String)] = [
+            ("en", ["de-DE"], "en"),
+            (nil, ["fr-FR", "en-GB", "de-DE"], "en"),
+            (nil, ["fr-FR"], "de"),
+        ]
+        for (saved, preferred, expected) in languages {
+            precondition(ShareTexts.pick(saved: saved, preferred: preferred).code == expected, "Unexpected language for \(preferred)")
+        }
         for (message, expected) in messages {
             precondition(message == expected, "Unexpected message \(message)")
         }
-        print("Share targets: \(cases.count + messages.count) cases passed")
+        print("Share targets: \(cases.count + messages.count + languages.count) cases passed")
     }
 }

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:musiclink/app.dart';
 import 'package:musiclink/core/api.dart';
+import 'package:musiclink/core/messages.dart';
 import 'package:musiclink/core/router.dart';
 import 'package:musiclink/features/converter/conversion.dart';
 import 'package:musiclink/features/friends/friends_screen.dart';
@@ -40,6 +41,15 @@ void main() {
   String? stored;
 
   setUp(() {
+    // German texts, whatever the machine's language
+    TestWidgetsFlutterBinding.instance.platformDispatcher.localesTestValue =
+        const [Locale('de', 'DE')];
+    addTearDown(
+      TestWidgetsFlutterBinding
+          .instance
+          .platformDispatcher
+          .clearLocalesTestValue,
+    );
     stored = jsonEncode({
       'friends': [
         {'name': 'Lisa', 'platform': 'spotify'},
@@ -123,6 +133,25 @@ void main() {
       'Spotify (Lisa): https://open.spotify.com/track/x\n'
       'Apple Music: https://music.apple.com/de/song/1\n'
       'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+    );
+    // In English, the same as friendsMessage in packages/shared
+    expect(
+      friendsMessage(
+        song,
+        const [Friend('Lisa', 'spotify')],
+        services: const ['spotify', 'appleMusic'],
+        locale: AppLocale.en,
+      ).split('\n').last,
+      'Others: http://localhost:3000/s/yt/UijW9hGpnzc',
+    );
+    expect(
+      friendsMessage(
+        song,
+        const [Friend('Lisa', 'spotify')],
+        from: const Friend('Robin', 'deezer'),
+        locale: AppLocale.en,
+      ).split('\n').last,
+      'All services: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin&service=deezer',
     );
   });
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/locale.dart';
 import '../converter/conversion.dart';
 import 'friends_bar.dart';
 import 'social.dart';
@@ -16,6 +17,10 @@ Future<String?> askText(
   String initial = '',
 }) {
   final controller = TextEditingController(text: initial);
+  final t = ProviderScope.containerOf(
+    context,
+    listen: false,
+  ).read(messagesProvider);
   return showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
@@ -31,14 +36,14 @@ Future<String?> askText(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(t.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(
             context,
             controller.text.trim().isEmpty ? null : controller.text.trim(),
           ),
-          child: const Text('Speichern'),
+          child: Text(t.save),
         ),
       ],
     ),
@@ -49,17 +54,18 @@ Future<String?> askText(
 Future<Friend?> showAddFriendDialog(
   BuildContext context,
   WidgetRef ref, {
-  String title = 'Freund hinzufügen',
+  String? title,
   Friend? initial,
   bool save = true,
 }) async {
+  final t = ref.read(messagesProvider);
   final controller = TextEditingController(text: initial?.name ?? '');
   var platform = initial?.platform ?? 'spotify';
   final friend = await showDialog<Friend>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(title),
+        title: Text(title ?? t.addFriend),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -67,11 +73,11 @@ Future<Friend?> showAddFriendDialog(
               controller: controller,
               autofocus: initial == null,
               maxLength: 40,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(labelText: t.name),
             ),
             DropdownButtonFormField<String>(
               initialValue: platform,
-              decoration: const InputDecoration(labelText: 'Hört auf'),
+              decoration: InputDecoration(labelText: t.listensOn),
               items: [
                 for (final entry in platforms.entries)
                   DropdownMenuItem(value: entry.key, child: Text(entry.value)),
@@ -83,7 +89,7 @@ Future<Friend?> showAddFriendDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            child: Text(t.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -92,7 +98,7 @@ Future<Friend?> showAddFriendDialog(
                 Navigator.pop(context, Friend(name, platform));
               }
             },
-            child: const Text('Speichern'),
+            child: Text(t.save),
           ),
         ],
       ),
@@ -110,11 +116,12 @@ Future<void> shareInvite(
   WidgetRef ref, {
   Rect? origin,
 }) async {
+  final t = ref.read(messagesProvider);
   final current = ref.read(socialProvider).me;
   final me = await showAddFriendDialog(
     context,
     ref,
-    title: 'Meine Einladung',
+    title: t.myInvite,
     initial: current ?? const Friend('', 'spotify'),
     save: false,
   );
@@ -122,22 +129,23 @@ Future<void> shareInvite(
   await ref.read(socialProvider.notifier).setMe(me);
   try {
     await SharePlus.instance.share(
-      ShareParams(text: inviteText(me), sharePositionOrigin: origin),
+      ShareParams(text: inviteText(me, t), sharePositionOrigin: origin),
     );
   } on PlatformException {
-    await Clipboard.setData(ClipboardData(text: inviteText(me)));
+    await Clipboard.setData(ClipboardData(text: inviteText(me, t)));
   }
 }
 
 /// Face to face the invite is scanned instead of sent.
 Future<void> showInviteQr(BuildContext context, WidgetRef ref) async {
+  final t = ref.read(messagesProvider);
   final current = ref.read(socialProvider).me;
   final me =
       current ??
       await showAddFriendDialog(
         context,
         ref,
-        title: 'Meine Einladung',
+        title: t.myInvite,
         initial: const Friend('', 'spotify'),
         save: false,
       );
@@ -157,20 +165,17 @@ Future<void> showInviteQr(BuildContext context, WidgetRef ref) async {
             child: QrImageView(
               data: inviteUrl(me),
               backgroundColor: Colors.white,
-              semanticsLabel: 'QR-Code deiner Einladung',
+              semanticsLabel: t.inviteQrLabel,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Lass den Code mit der Kamera scannen.',
-            textAlign: TextAlign.center,
-          ),
+          Text(t.scanHint, textAlign: TextAlign.center),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Fertig'),
+          child: Text(t.done),
         ),
       ],
     ),
@@ -184,15 +189,14 @@ class FriendsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final social = ref.watch(socialProvider);
     final notifier = ref.read(socialProvider.notifier);
+    final t = ref.watch(messagesProvider);
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Freunde')),
+      appBar: AppBar(title: Text(t.friends)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'Damit Songgate weiß, wohin deine Songs sollen. Alles bleibt auf diesem Handy.',
-          ),
+          Text(t.friendsIntro),
           const SizedBox(height: 16),
           Builder(
             builder: (context) => FilledButton.icon(
@@ -207,29 +211,29 @@ class FriendsScreen extends ConsumerWidget {
               icon: const Icon(Icons.ios_share),
               label: Text(
                 social.me == null
-                    ? 'Meine Einladung teilen'
-                    : 'Einladung teilen (${social.me!.name} · ${platforms[social.me!.platform]})',
+                    ? t.shareMyInvite
+                    : t.shareInviteAs(
+                        social.me!.name,
+                        platforms[social.me!.platform]!,
+                      ),
               ),
             ),
           ),
           TextButton.icon(
             onPressed: () => showInviteQr(context, ref),
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Einladung als QR-Code zeigen'),
+            label: Text(t.showInviteQr),
           ),
           TextButton.icon(
             onPressed: () => showAddFriendDialog(context, ref),
             icon: const Icon(Icons.person_add_alt),
-            label: const Text('Freund von Hand hinzufügen'),
+            label: Text(t.addFriendManually),
           ),
           const SizedBox(height: 8),
           if (social.friends.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'Noch keine Freunde. Schick deine Einladung, wer sie öffnet, kann dich speichern und dir seine zurückschicken.',
-                style: theme.textTheme.bodySmall,
-              ),
+              child: Text(t.noFriends, style: theme.textTheme.bodySmall),
             ),
           for (final friend in social.friends)
             ListTile(
@@ -241,18 +245,18 @@ class FriendsScreen extends ConsumerWidget {
               onTap: () => showAddFriendDialog(
                 context,
                 ref,
-                title: 'Freund bearbeiten',
+                title: t.editFriend,
                 initial: friend,
               ),
               trailing: IconButton(
-                tooltip: '${friend.name} entfernen',
+                tooltip: t.remove(friend.name),
                 icon: const Icon(Icons.delete_outline),
                 onPressed: () => notifier.removeFriend(friend.name),
               ),
             ),
           if (social.groups.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Gruppen', style: theme.textTheme.titleSmall),
+            Text(t.groups, style: theme.textTheme.titleSmall),
             for (final group in social.groups)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -260,17 +264,14 @@ class FriendsScreen extends ConsumerWidget {
                 title: Text(group.name),
                 subtitle: Text(group.members.join(', ')),
                 trailing: IconButton(
-                  tooltip: '${group.name} entfernen',
+                  tooltip: t.remove(group.name),
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () => notifier.removeGroup(group.name),
                 ),
               ),
           ],
           const SizedBox(height: 16),
-          Text(
-            'Gruppen legst du beim Teilen an: mehrere Freunde wählen, dann „+ Gruppe“.',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text(t.groupsHint, style: theme.textTheme.bodySmall),
         ],
       ),
     );
@@ -288,28 +289,27 @@ class AddFriendScreen extends ConsumerWidget {
     final platform = platformForSlug(service);
     final name = this.name?.trim() ?? '';
     final valid = platform != null && name.isNotEmpty && name.length <= 40;
+    final t = ref.watch(messagesProvider);
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Einladung')),
+      appBar: AppBar(title: Text(t.invite)),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: !valid
-            ? const Text(
-                'Diese Einladung ist unvollständig. Bitte um einen neuen Link.',
-              )
+            ? Text(t.inviteIncomplete)
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(child: FriendAvatar(Friend(name, platform), size: 76)),
                   const SizedBox(height: 16),
                   Text(
-                    '$name hört auf ${platforms[platform]}',
+                    t.friendListensOn(name, platforms[platform]!),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Speicher $name, dann landen deine Songs bei $name immer direkt in ${platforms[platform]}.',
+                    t.saveFriendHint(name, platforms[platform]!),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -320,11 +320,11 @@ class AddFriendScreen extends ConsumerWidget {
                           .addFriend(Friend(name, platform));
                       if (context.mounted) context.go('/');
                     },
-                    child: Text('$name speichern'),
+                    child: Text(t.saveName(name)),
                   ),
                   TextButton(
                     onPressed: () => context.go('/'),
-                    child: const Text('Nicht jetzt'),
+                    child: Text(t.notNow),
                   ),
                 ],
               ),

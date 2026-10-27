@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'app.dart';
+import 'core/locale.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,13 @@ Future<void> main() async {
       ..maxBreadcrumbs = 0
       ..tracesSampleRate = 0
       ..enableAutoSessionTracking = false,
-    appRunner: () => runApp(const ProviderScope(child: App())),
+    appRunner: () async {
+      // The language is read before the first frame, so no text flips after the start
+      final container = ProviderContainer();
+      await container.read(localeProvider.future);
+      runApp(
+        UncontrolledProviderScope(container: container, child: const App()),
+      );
+    },
   );
 }

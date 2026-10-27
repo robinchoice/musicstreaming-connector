@@ -25,6 +25,11 @@ class MainActivity : FlutterActivity() {
                     preferences.edit().putBoolean("testMode", call.arguments as Boolean).apply()
                     result.success(null)
                 }
+                "getLocale" -> result.success(preferences.getString("locale", null))
+                "setLocale" -> {
+                    preferences.edit().putString("locale", call.arguments as String).apply()
+                    result.success(null)
+                }
                 "setPreferences" -> {
                     preferences.edit().putString("target", call.argument<String>("target")).apply()
                     result.success(null)

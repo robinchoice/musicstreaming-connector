@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config.dart';
 import '../../core/api.dart';
+import '../../core/locale.dart';
 import '../../core/router.dart';
 
 enum FeedbackKind { bug, idea }
@@ -104,13 +105,12 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       });
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
+      final t = ref.read(messagesProvider);
       Navigator.of(context).pop();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            email.isEmpty
-                ? 'Danke für dein Feedback!'
-                : 'Danke! Wir melden uns per Mail.',
+            email.isEmpty ? t.feedbackThanks : t.feedbackThanksReply,
           ),
         ),
       );
@@ -124,6 +124,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   @override
   Widget build(BuildContext context) {
     final c = widget.feedbackContext;
+    final t = ref.watch(messagesProvider);
     final muted = Theme.of(context).textTheme.bodySmall
         ?.copyWith(color: Theme.of(context).hintColor);
     return Padding(
@@ -133,9 +134,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         children: [
           Text(
-            widget.kind == FeedbackKind.bug
-                ? 'Fehler melden'
-                : 'Feedback geben',
+            widget.kind == FeedbackKind.bug ? t.reportBug : t.giveFeedback,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -148,8 +147,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: widget.kind == FeedbackKind.bug
-                  ? 'Was ist passiert? Was hast du erwartet?'
-                  : 'Was fehlt dir, was wünschst du dir, was gefällt dir?',
+                  ? t.bugPlaceholder
+                  : t.ideaPlaceholder,
               border: const OutlineInputBorder(),
               counterText: '',
             ),
@@ -170,18 +169,15 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
               children: [
                 TextButton(
                   onPressed: () => setState(() => _screenshot = null),
-                  child: const Text('Screenshot entfernen'),
+                  child: Text(t.removeScreenshot),
                 ),
-                TextButton(
-                  onPressed: _mark,
-                  child: const Text('Stelle markieren'),
-                ),
+                TextButton(onPressed: _mark, child: Text(t.markSpot)),
               ],
             ),
           ],
           ExpansionTile(
             title: Text(
-              'Was mitgeschickt wird',
+              t.whatIsSent,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             tilePadding: EdgeInsets.zero,
@@ -189,11 +185,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final (label, value) in [
-                ('Seite', c['page']),
-                ('Gerät', c['device']),
-                ('Fenster', c['viewport']),
+                (t.contextPage, c['page']),
+                (t.contextDevice, c['device']),
+                (t.contextViewport, c['viewport']),
                 (
-                  'Letzte Fehler',
+                  t.contextErrors,
                   (c['errors'] as List).isEmpty
                       ? '–'
                       : (c['errors'] as List).join(', '),
@@ -208,9 +204,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
             maxLength: 255,
-            decoration: const InputDecoration(
-              labelText: 'Deine Mail, falls wir uns melden dürfen (freiwillig)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: t.emailLabel,
+              border: const OutlineInputBorder(),
               counterText: '',
             ),
           ),
@@ -227,7 +223,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             onPressed: _sending || _message.text.trim().length < 5
                 ? null
                 : _send,
-            child: const Text('Senden'),
+            child: Text(t.send),
           ),
         ],
       ),
@@ -298,20 +294,21 @@ class _MarkScreenState extends ConsumerState<MarkScreen> {
   @override
   Widget build(BuildContext context) {
     final image = _image;
+    final t = ref.watch(messagesProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF0E0D12),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0E0D12),
         foregroundColor: const Color(0xFFF2F0EA),
         title: Text(
-          'Zieh einen Rahmen um die Stelle, die nicht stimmt.',
+          t.markHint,
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: const Color(0xFFF2F0EA)),
         ),
         actions: [
           TextButton(
             onPressed: _rect == null ? null : _done,
-            child: const Text('Fertig'),
+            child: Text(t.done),
           ),
         ],
       ),

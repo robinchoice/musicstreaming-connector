@@ -6,8 +6,10 @@ import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../features/converter/conversion.dart';
+import 'messages.dart';
 
-final apiProvider = Provider.autoDispose((ref) {
+// Kept for the app's lifetime, so the language set by localeProvider stays
+final apiProvider = Provider((ref) {
   final client = http.Client();
   ref.onDispose(client.close);
   return Api(client, apiUrl);
@@ -46,6 +48,15 @@ class Api {
   Api(this.client, String baseUrl)
     : baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), '');
 
+  /// Language of error texts, set by localeProvider. The API answers in it too.
+  AppLocale locale = AppLocale.de;
+
+  Map<String, String> get _headers => {
+    'accept': 'application/json',
+    'accept-language': locale.name,
+    ..._appHeaders,
+  };
+
   Uri _url(String path) => Uri.parse('$baseUrl/api/v1$path');
 
   /// Asked once at launch. Offline or failing, the app just starts.
@@ -67,7 +78,7 @@ class Api {
           .get(
             _url('/song')
                 .replace(queryParameters: {'input': input, 'country': country}),
-            headers: {'accept': 'application/json', ..._appHeaders},
+            headers: _headers,
           )
           .timeout(const Duration(seconds: 25));
       final body =
@@ -75,29 +86,21 @@ class Api {
       if (response.statusCode >= 400) {
         _noteError('/song', response.statusCode);
         throw ApiException(
-          body['error'] as String? ?? 'Der Dienst ist gerade nicht erreichbar.',
+          body['error'] as String? ?? locale.messages.serviceUnavailable,
         );
       }
       return Song.fromJson(body);
     } on ApiException {
       rethrow;
     } on TimeoutException {
-      throw const ApiException(
-        'Die Suche dauert zu lange. Versuche es erneut.',
-      );
+      throw ApiException(locale.messages.searchTimeout);
     } on http.ClientException {
       _noteError('/song', 'offline');
-      throw const ApiException(
-        'Keine Verbindung zum Server. Versuche es erneut.',
-      );
+      throw ApiException(locale.messages.offline);
     } on FormatException {
-      throw const ApiException(
-        'Der Dienst hat eine ungültige Antwort gesendet.',
-      );
+      throw ApiException(locale.messages.invalidAnswer);
     } on TypeError {
-      throw const ApiException(
-        'Der Dienst hat eine ungültige Antwort gesendet.',
-      );
+      throw ApiException(locale.messages.invalidAnswer);
     }
   }
 
@@ -106,11 +109,7 @@ class Api {
       final response = await client
           .post(
             _url('/feedback'),
-            headers: {
-              'content-type': 'application/json',
-              'accept': 'application/json',
-              ..._appHeaders,
-            },
+            headers: {'content-type': 'application/json', ..._headers},
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 30));
@@ -124,16 +123,12 @@ class Api {
         } on FormatException {
           // Not from our API, e.g. a proxy page
         }
-        throw ApiException(error ?? 'Der Dienst ist gerade nicht erreichbar.');
+        throw ApiException(error ?? locale.messages.serviceUnavailable);
       }
     } on TimeoutException {
-      throw const ApiException(
-        'Das Senden dauert zu lange. Versuche es erneut.',
-      );
+      throw ApiException(locale.messages.sendTimeout);
     } on http.ClientException {
-      throw const ApiException(
-        'Keine Verbindung zum Server. Versuche es erneut.',
-      );
+      throw ApiException(locale.messages.offline);
     }
   }
 }

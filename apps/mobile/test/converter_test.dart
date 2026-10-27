@@ -42,6 +42,15 @@ void main() {
   const channel = MethodChannel('org.musiclink.prototype/share');
   const preferences = MethodChannel('org.musiclink.prototype/preferences');
   setUp(() {
+    // German texts, whatever the machine's language
+    TestWidgetsFlutterBinding.instance.platformDispatcher.localesTestValue =
+        const [Locale('de', 'DE')];
+    addTearDown(
+      TestWidgetsFlutterBinding
+          .instance
+          .platformDispatcher
+          .clearLocalesTestValue,
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(preferences, (_) async => <String, String>{});
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -255,6 +264,63 @@ void main() {
     await mount(tester, (_) async => ok(result()));
     expect(find.text('Paul Kalkbrenner'), findsOneWidget);
   });
+
+  testWidgets(
+    'starts in the device language, the settings switch it and the choice stays',
+    (tester) async {
+      tester.platformDispatcher.localesTestValue = const [
+        Locale('fr', 'FR'),
+        Locale('en', 'US'),
+      ];
+      String? saved;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(preferences, (call) async {
+            if (call.method == 'getLocale') return saved;
+            if (call.method == 'setLocale') saved = call.arguments as String;
+            return null;
+          });
+      final languages = <String?>[];
+      await mount(tester, (request) async {
+        languages.add(request.headers['accept-language']);
+        return ok(result());
+      });
+      await tester.enterText(
+        find.byType(TextField),
+        'https://youtu.be/UijW9hGpnzc',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Find'));
+      await tester.pumpAndSettle();
+      expect(languages, ['en']);
+      expect(find.text('Song from YouTube Music'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.settings_outlined));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Deutsch'));
+      await tester.tap(find.text('Deutsch'));
+      await tester.pumpAndSettle();
+      expect(saved, 'de');
+      expect(find.text('Song aus YouTube Music'), findsOneWidget);
+
+      // A fresh scope is what the app gets after a restart
+      await tester.pumpWidget(
+        ProviderScope(
+          key: UniqueKey(),
+          overrides: [
+            apiProvider.overrideWith(
+              (ref) => Api(
+                MockClient((_) async => ok(result())),
+                'https://example.com',
+              ),
+            ),
+          ],
+          child: const App(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Einfügen'), findsOneWidget);
+    },
+  );
 
   testWidgets('the device region picks the catalogue', (tester) async {
     tester.platformDispatcher.localeTestValue = const Locale('de', 'AT');
