@@ -9,6 +9,7 @@ const transport = process.env.SMTP_HOST
       host: process.env.SMTP_HOST,
       port,
       secure: port === 465,
+      requireTLS: port !== 465,
       dnsTimeout: 5000,
       connectionTimeout: 5000,
       greetingTimeout: 5000,
