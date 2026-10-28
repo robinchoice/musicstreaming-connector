@@ -31,7 +31,7 @@ class FakeStore implements InAppPurchase {
       for (final (id, price) in [
         (supportProducts[2], '9,99 €'),
         (supportProducts[0], '0,99 €'),
-        (supportProducts[1], '4,19 €'),
+        (supportProducts[1], '3,59 €'),
       ])
         ProductDetails(
           id: id,
@@ -88,7 +88,7 @@ void main() {
         .where((d) => d!.length < 15)
         .toList();
     expect(names, ['Ein Song', 'Eine Single', 'Ein Album']);
-    expect(find.text('4,19 €'), findsOneWidget);
+    expect(find.text('3,59 €'), findsOneWidget);
 
     await tester.tap(find.text('Eine Single'));
     await tester.pump();

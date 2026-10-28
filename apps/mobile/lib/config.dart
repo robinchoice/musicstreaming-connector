@@ -21,7 +21,7 @@ const playStoreUrl =
 // The supporter purchases in the settings. Stays false until the products are
 // approved in App Store Connect and Google Play.
 const supportEnabled = false;
-// Consumable in-app products, the same IDs in both stores: 0.99, 4.19, 9.99 EUR.
+// Consumable in-app products, the same IDs in both stores: 0.99, 3.59, 9.99 EUR.
 const supportProducts = [
   'org.pleasance.songgate.support.song',
   'org.pleasance.songgate.support.single',
