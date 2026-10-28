@@ -199,7 +199,7 @@ void main() {
     expect(find.text('Nur Suche'), findsOneWidget);
     expect(
       await copyMessage(tester),
-      '🎵 Plätscher – Paul Kalkbrenner\nhttp://localhost:3000/s/yt/UijW9hGpnzc',
+      '🎵 Plätscher – Paul Kalkbrenner\nhttp://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
     );
   });
 
@@ -216,7 +216,7 @@ void main() {
       '🎵 Plätscher – Paul Kalkbrenner\n'
       'Spotify: https://open.spotify.com/track/1\n'
       'Apple Music: https://music.apple.com/de/song/1\n'
-      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
     );
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('pick-all')),

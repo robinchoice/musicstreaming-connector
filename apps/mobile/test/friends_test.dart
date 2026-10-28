@@ -75,7 +75,7 @@ void main() {
   test('message has one link per service and the share page for others', () {
     expect(
       friendsMessage(song, const [Friend('Lisa', 'spotify')]),
-      '🎵 Savior – RHCP\nhttps://open.spotify.com/track/x',
+      '🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\n\nGeteilt mit localhost:3000',
     );
     expect(
       friendsMessage(song, const [
@@ -86,13 +86,13 @@ void main() {
       '🎵 Savior – RHCP\n'
       'Spotify (Lisa, Ben): https://open.spotify.com/track/x\n'
       'Apple Music (Jonas): https://music.apple.com/de/song/1\n'
-      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
     );
     expect(
       friendsMessage(song, const [
         Friend('Lisa', 'spotify'),
         Friend('Jonas', 'appleMusic'),
-      ], from: const Friend('Robin Ö', 'youtubeMusic')).split('\n').last,
+      ], from: const Friend('Robin Ö', 'youtubeMusic')).split('\n')[3],
       'Andere: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube',
     );
     expect(
@@ -101,7 +101,7 @@ void main() {
       ], from: const Friend('Robin', 'deezer')),
       '🎵 Savior – RHCP\n'
       'https://open.spotify.com/track/x\n'
-      'Alle Dienste: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin&service=deezer',
+      'Alle Dienste: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin&service=deezer\n\nGeteilt mit localhost:3000',
     );
     final album = Song.fromJson({
       'source': {
@@ -116,12 +116,12 @@ void main() {
     });
     expect(
       friendsMessage(album, const [Friend('Lisa', 'deezer')]),
-      '💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789',
+      '💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789\n\nGeteilt mit localhost:3000',
     );
     // Group chats: no service means the share page only, tapped services need no friends
     expect(
       friendsMessage(song, const [], services: const []),
-      '🎵 Savior – RHCP\nhttp://localhost:3000/s/yt/UijW9hGpnzc',
+      '🎵 Savior – RHCP\nhttp://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
     );
     expect(
       friendsMessage(
@@ -132,7 +132,7 @@ void main() {
       '🎵 Savior – RHCP\n'
       'Spotify (Lisa): https://open.spotify.com/track/x\n'
       'Apple Music: https://music.apple.com/de/song/1\n'
-      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc',
+      'Andere: http://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
     );
     // In English, the same as friendsMessage in packages/shared
     expect(
@@ -142,7 +142,7 @@ void main() {
         services: const ['spotify', 'appleMusic'],
         locale: AppLocale.en,
       ).split('\n').last,
-      'Others: http://localhost:3000/s/yt/UijW9hGpnzc',
+      'Shared with localhost:3000',
     );
     expect(
       friendsMessage(
@@ -150,7 +150,7 @@ void main() {
         const [Friend('Lisa', 'spotify')],
         from: const Friend('Robin', 'deezer'),
         locale: AppLocale.en,
-      ).split('\n').last,
+      ).split('\n')[2],
       'All services: http://localhost:3000/s/yt/UijW9hGpnzc?from=Robin&service=deezer',
     );
   });

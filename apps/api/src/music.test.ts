@@ -175,18 +175,19 @@ test('friends message has one link for one service and one line per service othe
     spotify: { url: 'https://open.spotify.com/track/x', found: true }, deezer: { url: 'https://www.deezer.com/track/1', found: true },
   } };
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
-    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x');
+    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\n\nGeteilt mit musiclink.pleasance.org');
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
-    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc`);
-  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }], 'https://songgate.app', { name: 'Robin Ö', platform: 'youtubeMusic' }).split('\n').at(-1))
+    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa, Ben): https://open.spotify.com/track/x\nApple Music (Jonas): ${apple}\nAndere: https://musiclink.pleasance.org/s/yt/UijW9hGpnzc\n\nGeteilt mit musiclink.pleasance.org`);
+  expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Jonas', platform: 'appleMusic' }], 'https://songgate.app', { name: 'Robin Ö', platform: 'youtubeMusic' }).split('\n').at(-3))
     .toBe('Andere: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin+%C3%96&service=youtube');
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }], 'https://songgate.app', { name: 'Robin', platform: 'deezer' }))
-    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\nAlle Dienste: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer');
+    .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\nAlle Dienste: https://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer\n\nGeteilt mit songgate.app');
   // Group chats: no service means the share page only, tapped services need no friends
   expect(friendsMessage(song, [], 'https://songgate.app', { name: 'Robin', platform: 'deezer' }, []))
-    .toBe('🎵 Savior – RHCP\nhttps://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer');
+    .toBe('🎵 Savior – RHCP\nhttps://songgate.app/s/yt/UijW9hGpnzc?from=Robin&service=deezer\n\nGeteilt mit songgate.app');
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }], 'https://songgate.app', null, ['spotify', 'appleMusic']))
-    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa): https://open.spotify.com/track/x\nApple Music: ${apple}\nAndere: https://songgate.app/s/yt/UijW9hGpnzc`);
+    .toBe(`🎵 Savior – RHCP\nSpotify (Lisa): https://open.spotify.com/track/x\nApple Music: ${apple}\nAndere: https://songgate.app/s/yt/UijW9hGpnzc\n\nGeteilt mit songgate.app`);
+  expect(friendsMessage(song, [], 'https://songgate.app', null, [], 'en').split('\n').at(-1)).toBe('Shared with songgate.app');
 });
 
 test('invalid source metadata reports only a fixed failure class and provider', async () => {

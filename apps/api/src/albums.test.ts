@@ -123,7 +123,7 @@ test('resolveAll finds an album from YouTube Music everywhere, by UPC-less text 
     spotify: { url: 'https://open.spotify.com/search/Daft%20Punk%20Random%20Access%20Memories', found: false },
     deezer: { url: 'https://www.deezer.com/album/6575789', found: true },
   });
-  expect(friendsMessage(album, [{ name: 'Ada', platform: 'deezer' }], 'https://songgate.app')).toBe('💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789');
+  expect(friendsMessage(album, [{ name: 'Ada', platform: 'deezer' }], 'https://songgate.app')).toBe('💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789\n\nGeteilt mit songgate.app');
 });
 
 test('an unknown Deezer album is unavailable, a missing match offers the search', async () => {

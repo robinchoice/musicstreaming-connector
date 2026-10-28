@@ -87,11 +87,13 @@ export function friendsMessage(song: Song, friends: Friend[], origin: string, fr
   const m = messages[locale];
   const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
   const everyone = shareUrl(origin, song.sharePath, from);
-  if (!services.length) return [head, everyone].join('\n');
-  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`${m.allServices}: ${everyone}`] : [])].join('\n');
+  // Every message ends with where it was made, so recipients find Songgate too
+  const footer = `\n\n${m.sharedWith} ${origin.replace(/^https?:\/\//, '')}`;
+  if (!services.length) return [head, everyone].join('\n') + footer;
+  if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`${m.allServices}: ${everyone}`] : [])].join('\n') + footer;
   const lines = services.map(platform => {
     const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name);
     return `${platforms[platform]}${names.length ? ` (${names.join(', ')})` : ''}: ${song.links[platform].url}`;
   });
-  return [head, ...lines, `${m.others}: ${everyone}`].join('\n');
+  return [head, ...lines, `${m.others}: ${everyone}`].join('\n') + footer;
 }

@@ -64,6 +64,7 @@ struct ShareTexts {
     let found: String
     let allServices: String
     let others: String
+    let sharedWith: String
     let missingServer: String
     let unreachable: String
     let unreadable: String
@@ -89,6 +90,7 @@ struct ShareTexts {
         found: "Gefunden",
         allServices: "Alle Dienste",
         others: "Andere",
+        sharedWith: "Geteilt mit",
         missingServer: "Die Server-Adresse fehlt in dieser App-Version.",
         unreachable: "Der Dienst ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
         unreadable: "Der geteilte Link konnte nicht gelesen werden. Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer erneut."
@@ -115,6 +117,7 @@ struct ShareTexts {
         found: "Found",
         allServices: "All services",
         others: "Others",
+        sharedWith: "Shared with",
         missingServer: "This version of the app is missing the server address.",
         unreachable: "The service can’t be reached right now. Check your connection and try again.",
         unreadable: "The shared link couldn’t be read. Share a song or album from YouTube Music, Apple Music, Spotify or Deezer again."
@@ -221,15 +224,17 @@ final class ShareModel: ObservableObject {
     static func friendsMessage(_ song: Song, friends: [Friend], origin: String, from: Friend?, services: [String], t: ShareTexts = .de) -> String {
         let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
         let everyone = shareURL(origin + song.sharePath, from: from)
-        guard let first = services.first else { return [head, everyone].joined(separator: "\n") }
+        // Every message ends with where it was made, so recipients find Songgate too
+        let footer = "\n\n\(t.sharedWith) \(origin.replacingOccurrences(of: "^https?://", with: "", options: .regularExpression))"
+        guard let first = services.first else { return [head, everyone].joined(separator: "\n") + footer }
         if services.count == 1 {
-            return ([head, song.links[first]?.url ?? ""] + (from == nil ? [] : ["\(t.allServices): \(everyone)"])).joined(separator: "\n")
+            return ([head, song.links[first]?.url ?? ""] + (from == nil ? [] : ["\(t.allServices): \(everyone)"])).joined(separator: "\n") + footer
         }
         let lines = services.map { platform in
             let names = friends.filter { $0.platform == platform }.map(\.name).joined(separator: ", ")
             return "\(platforms[platform] ?? platform)\(names.isEmpty ? "" : " (\(names))"): \(song.links[platform]?.url ?? "")"
         }
-        return ([head] + lines + ["\(t.others): \(everyone)"]).joined(separator: "\n")
+        return ([head] + lines + ["\(t.others): \(everyone)"]).joined(separator: "\n") + footer
     }
 
     // A share page may name its sender, same as shareUrl in packages/shared

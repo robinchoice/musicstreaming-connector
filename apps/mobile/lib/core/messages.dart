@@ -126,6 +126,7 @@ abstract class Messages {
   /// Lines in the message, the same as friendsMessage in packages/shared
   String get allServices;
   String get others;
+  String get sharedWith;
 
   // Feedback
   String get reportBug;
@@ -407,6 +408,8 @@ class De extends Messages {
   String get allServices => 'Alle Dienste';
   @override
   String get others => 'Andere';
+  @override
+  String get sharedWith => 'Geteilt mit';
 
   @override
   String get reportBug => 'Fehler melden';
@@ -701,6 +704,8 @@ class En extends Messages {
   String get allServices => 'All services';
   @override
   String get others => 'Others';
+  @override
+  String get sharedWith => 'Shared with';
 
   @override
   String get reportBug => 'Report a bug';

@@ -33,17 +33,17 @@ struct ShareTargetsTests {
         let me = Friend(name: "Robin", platform: "youtubeMusic")
         let messages: [(String, String)] = [
             (ShareModel.friendsMessage(song, friends: [], origin: "https://songgate.app", from: nil, services: []),
-             "🎵 Hey Jude – The Beatles\nhttps://songgate.app/s/yt/x"),
+             "🎵 Hey Jude – The Beatles\nhttps://songgate.app/s/yt/x\n\nGeteilt mit songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify"]),
-             "🎵 Hey Jude – The Beatles\nhttps://sp/x"),
+             "🎵 Hey Jude – The Beatles\nhttps://sp/x\n\nGeteilt mit songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: me, services: ["spotify"]),
-             "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAlle Dienste: https://songgate.app/s/yt/x?from=Robin&service=youtube"),
+             "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAlle Dienste: https://songgate.app/s/yt/x?from=Robin&service=youtube\n\nGeteilt mit songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify", "appleMusic"]),
-             "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nAndere: https://songgate.app/s/yt/x"),
+             "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nAndere: https://songgate.app/s/yt/x\n\nGeteilt mit songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: me, services: ["spotify"], t: .en),
-             "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAll services: https://songgate.app/s/yt/x?from=Robin&service=youtube"),
+             "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAll services: https://songgate.app/s/yt/x?from=Robin&service=youtube\n\nShared with songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify", "appleMusic"], t: .en),
-             "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nOthers: https://songgate.app/s/yt/x"),
+             "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nOthers: https://songgate.app/s/yt/x\n\nShared with songgate.app"),
         ]
         // The app's choice wins, else the first device language we speak, else German
         let languages: [(String?, [String], String)] = [

@@ -186,26 +186,31 @@ String friendsMessage(
   final t = locale.messages;
   final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
   final everyone = shareUrl(song.sharePath, from);
+  // Every message ends with where it was made, so recipients find Songgate too
+  final footer =
+      '\n\n${t.sharedWith} ${_origin().replaceFirst(RegExp(r'^https?://'), '')}';
   final chosen =
       services ?? friends.map((friend) => friend.platform).toSet().toList();
-  if (chosen.isEmpty) return [head, everyone].join('\n');
+  if (chosen.isEmpty) return [head, everyone].join('\n') + footer;
   if (chosen.length == 1) {
     return [
-      head,
-      '${song.links[chosen.first]}',
-      if (from != null) '${t.allServices}: $everyone',
-    ].join('\n');
+          head,
+          '${song.links[chosen.first]}',
+          if (from != null) '${t.allServices}: $everyone',
+        ].join('\n') +
+        footer;
   }
   return [
-    head,
-    for (final platform in chosen)
-      _serviceLine(
-        platform,
-        friends.where((friend) => friend.platform == platform),
-        song.links[platform],
-      ),
-    '${t.others}: $everyone',
-  ].join('\n');
+        head,
+        for (final platform in chosen)
+          _serviceLine(
+            platform,
+            friends.where((friend) => friend.platform == platform),
+            song.links[platform],
+          ),
+        '${t.others}: $everyone',
+      ].join('\n') +
+      footer;
 }
 
 String _serviceLine(String platform, Iterable<Friend> friends, String? url) {

@@ -27,6 +27,7 @@ const de = {
   // The message sent to friends, see friendsMessage in index.ts
   allServices: 'Alle Dienste',
   others: 'Andere',
+  sharedWith: 'Geteilt mit',
 
   // Web: errors and toasts
   serviceDown: 'Der Dienst ist gerade nicht erreichbar.',
@@ -192,6 +193,7 @@ const en: Messages = {
 
   allServices: 'All services',
   others: 'Others',
+  sharedWith: 'Shared with',
 
   serviceDown: 'The service cannot be reached right now.',
   offline: 'No connection to the server. Try again.',
