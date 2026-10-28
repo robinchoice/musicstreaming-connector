@@ -47,7 +47,14 @@
           {/each}
         </div>
         {#if from}<section class="back"><Connect name={from.name} platform={from.platform} heading="h2" /></section>{/if}
-        <p class="more">{t().shareYourself} <a href="/">{t().openSonggate}</a></p>
+        <section class="promo">
+          <img src="/favicon.svg" alt="" width="44" height="44" />
+          <div>
+            <strong>{t().shareYourself}</strong>
+            <p>{t().shareYourselfHint}</p>
+          </div>
+          <a class="button primary" href="/">{t().openSonggate}</a>
+        </section>
       </div>
     </section>
   </main>
@@ -78,7 +85,11 @@
   .open.missing { opacity: .6; }
   .open.mine { grid-column: 1 / -1; padding: 20px; background: linear-gradient(rgb(40 39 46 / .92), rgb(40 39 46 / .92)) padding-box, var(--gradient) border-box; border: 1px solid transparent; }
   .back { margin-top: 22px; padding: 18px; border-radius: 18px; border: 1px dashed var(--border-strong); background: rgb(0 0 0 / .2); }
-  .more { color: var(--muted); font-size: 14px; margin-top: 20px; }
+  .promo { display: flex; align-items: center; gap: 16px; margin-top: 22px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(rgb(40 39 46 / .92), rgb(40 39 46 / .92)) padding-box, var(--gradient) border-box; border: 1px solid transparent; }
+  .promo img { flex: none; }
+  .promo div { flex: 1; min-width: 0; }
+  .promo strong { display: block; font-size: 18px; font-weight: 650; }
+  .promo p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
   @media(max-width: 860px) {
     .shell { padding: 0 18px; }
     main { padding: 24px 0 40px; }
@@ -88,5 +99,7 @@
     .open { padding: 14px; gap: 10px; }
     .open small { display: none; }
     .open.mine small { display: inline; }
+    .promo { flex-wrap: wrap; }
+    .promo .button { flex: 1 0 100%; }
   }
 </style>

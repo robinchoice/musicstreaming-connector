@@ -112,6 +112,7 @@ const de = {
   lastUsed: 'Zuletzt genutzt',
   open: 'Öffnen',
   shareYourself: 'Selbst Musik teilen?',
+  shareYourselfHint: 'Ein Link aus deinem Dienst, und alle hören im eigenen. Ohne Anmeldung.',
   openSonggate: 'Songgate öffnen',
   shareMeta: (from: string | null, services: string) => `${from ? `Von ${from} · ` : ''}Anhören auf ${services}`,
 
@@ -274,6 +275,7 @@ const en: Messages = {
   lastUsed: 'Last used',
   open: 'Open',
   shareYourself: 'Want to share music yourself?',
+  shareYourselfHint: 'One link from your service, and everyone listens in theirs. No sign-up.',
   openSonggate: 'Open Songgate',
   shareMeta: (from, services) => `${from ? `From ${from} · ` : ''}Listen on ${services}`,
 
