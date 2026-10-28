@@ -17,6 +17,7 @@ import '../feedback/feedback_sheet.dart';
 import '../friends/friends_bar.dart';
 import '../friends/friends_screen.dart';
 import '../friends/social.dart';
+import '../support/support_screen.dart';
 import 'conversion.dart';
 import 'share_setup.dart';
 
@@ -151,6 +152,19 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: Text(t.giveFeedback),
                 ),
+                if (supportEnabled)
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.of(this.context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SupportScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.favorite_outline),
+                    label: Text(t.support),
+                  ),
                 SwitchListTile(
                   title: Text(t.testMode),
                   subtitle: Text(t.testModeHint),

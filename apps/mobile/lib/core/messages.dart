@@ -29,6 +29,14 @@ abstract class Messages {
   String get giveFeedback;
   String get testMode;
   String get testModeHint;
+  String get support;
+  String supportIntro(String app);
+  String get supportSong;
+  String get supportSingle;
+  String get supportAlbum;
+  String get supportThanks;
+  String get supportUnavailable;
+  String get supportFailed;
 
   /// Label of the language button, in the language it switches to
   String get otherLanguage;
@@ -185,6 +193,24 @@ class De extends Messages {
   @override
   String get testModeHint =>
       'Zeigt den Käfer-Knopf, mit dem du Fehler samt Screenshot meldest.';
+  @override
+  String get support => 'Unterstützen';
+  @override
+  String supportIntro(String app) =>
+      '$app bleibt gratis. Wenn es dir gefällt, unterstütze es mit einem einmaligen Kauf. Er schaltet nichts frei, er hilft nur, $app weiterzubauen.';
+  @override
+  String get supportSong => 'Ein Song';
+  @override
+  String get supportSingle => 'Eine Single';
+  @override
+  String get supportAlbum => 'Ein Album';
+  @override
+  String get supportThanks => 'Danke für deine Unterstützung!';
+  @override
+  String get supportUnavailable =>
+      'Der Store ist gerade nicht erreichbar. Du kannst es später noch einmal versuchen.';
+  @override
+  String get supportFailed => 'Der Kauf hat nicht geklappt.';
   @override
   String get otherLanguage => 'English';
   @override
@@ -487,6 +513,24 @@ class En extends Messages {
   @override
   String get testModeHint =>
       'Shows the bug button for reporting problems with a screenshot.';
+  @override
+  String get support => 'Support';
+  @override
+  String supportIntro(String app) =>
+      '$app stays free. If you like it, support it with a one-off purchase. It unlocks nothing, it just helps keep $app going.';
+  @override
+  String get supportSong => 'A song';
+  @override
+  String get supportSingle => 'A single';
+  @override
+  String get supportAlbum => 'An album';
+  @override
+  String get supportThanks => 'Thank you for your support!';
+  @override
+  String get supportUnavailable =>
+      'The store isn’t available right now. You can try again later.';
+  @override
+  String get supportFailed => 'The purchase didn’t go through.';
   @override
   String get otherLanguage => 'Deutsch';
   @override
