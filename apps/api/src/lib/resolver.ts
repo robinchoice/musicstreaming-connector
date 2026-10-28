@@ -18,26 +18,12 @@ export function searchUrl(target: Platform, source: { title: string; artist: str
   return url.toString();
 }
 
-export function youtubeVideoId(input: string) {
-  const links = input.match(/https?:\/\/[^\s<>]+/gi) ?? [];
-  if (!links.length) throw new ResolutionError('INVALID_LINK');
-  const ids = new Set<string>();
-  for (const link of links) {
-    let url: URL;
-    try {
-      url = new URL(link.replace(/[.,!)\]]+$/, ''));
-    } catch {
-      throw new ResolutionError('INVALID_LINK');
-    }
-    if (!['music.youtube.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) continue;
-    if (url.username || url.password) throw new ResolutionError('INVALID_LINK');
-    const id = url.hostname === 'youtu.be' ? url.pathname.slice(1) : url.pathname === '/watch' ? url.searchParams.get('v') : null;
-    if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) throw new ResolutionError('INVALID_LINK');
-    ids.add(id);
-  }
-  if (!ids.size) throw new ResolutionError('UNSUPPORTED_LINK');
-  if (ids.size !== 1) throw new ResolutionError('INVALID_LINK');
-  return [...ids][0]!;
+export const YOUTUBE_HOSTS = ['music.youtube.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be'];
+
+export function youtubeVideoId(url: URL) {
+  const id = url.hostname === 'youtu.be' ? url.pathname.slice(1) : url.pathname === '/watch' ? url.searchParams.get('v') : null;
+  if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) throw new ResolutionError('INVALID_LINK');
+  return id;
 }
 
 const metadataSchema = z.object({

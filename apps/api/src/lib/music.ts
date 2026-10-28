@@ -1,8 +1,8 @@
-import { platforms, type Conversion, type ConversionInput, type Platform, type Song } from '@app/shared';
+import { platformSchema, type Conversion, type ConversionInput, type Platform, type Song } from '@app/shared';
 import { z } from 'zod';
 import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
-import { appleCatalog, codeFailure, https, providerCall, recording, session, spotifyMeta, youtube, type MusicLink, type Session } from './providers';
-import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, type Fetch } from './resolver';
+import { appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, spotifyMeta, youtube, type MusicLink, type Session } from './providers';
+import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, YOUTUBE_HOSTS, type Fetch } from './resolver';
 
 const appleTrack = z.object({
   wrapperType: z.literal('track'), kind: z.literal('song'), trackId: z.number(),
@@ -37,13 +37,14 @@ export function musicSource(input: string): MusicLink {
       const id = song ?? album;
       if (url.username || url.password || !/^[a-z]{2}$/i.test(parts[0] ?? '') || !id || !/^\d{1,12}$/.test(id)) throw new ResolutionError('INVALID_LINK');
       links.set(`apple:${id}`, { kind: song ? 'song' : 'album', platform: 'appleMusic', id, country: parts[0]!.toUpperCase() });
-    } else if (['music.youtube.com', 'www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be'].includes(url.hostname)) {
+    } else if (YOUTUBE_HOSTS.includes(url.hostname)) {
+      if (url.username || url.password) throw new ResolutionError('INVALID_LINK');
       const album = url.pathname === '/playlist' ? url.searchParams.get('list') : url.pathname.startsWith('/browse/') ? url.pathname.slice(8) : null;
       if (album === null) {
-        const id = youtubeVideoId(link);
+        const id = youtubeVideoId(url);
         links.set(`youtube:${id}`, { kind: 'song', platform: 'youtubeMusic', id, country: '' });
       } else {
-        if (url.username || url.password || !/^(?:OLAK5uy_|MPREb_)[A-Za-z0-9_-]{8,40}$/.test(album)) throw new ResolutionError('INVALID_LINK');
+        if (!/^(?:OLAK5uy_|MPREb_)[A-Za-z0-9_-]{8,40}$/.test(album)) throw new ResolutionError('INVALID_LINK');
         links.set(`youtube:${album}`, { kind: 'album', platform: 'youtubeMusic', id: album, country: '' });
       }
     } else if (url.hostname === 'open.spotify.com' || ['www.deezer.com', 'deezer.com'].includes(url.hostname)) {
@@ -87,12 +88,8 @@ async function expandShortLink(input: string, { request, signal }: Session) {
 }
 
 function appleCandidate(link: string, title: string, album: string | undefined, millis: number | undefined, artworkUrl: string | null) {
-  const url = new URL(link);
-  if (url.protocol !== 'https:' || url.hostname !== 'music.apple.com' || url.username || url.password) return [];
-  const songId = url.searchParams.get('i');
-  url.search = '';
-  if (songId) url.searchParams.set('i', songId);
-  return [{ title, url: url.toString(), ...(album === undefined ? {} : { album }), ...(millis ? { durationSeconds: Math.round(millis / 1000) } : {}), artworkUrl }];
+  const url = appleUrl(link, true);
+  return url ? [{ title, url, ...(album === undefined ? {} : { album }), ...(millis ? { durationSeconds: Math.round(millis / 1000) } : {}), artworkUrl }] : [];
 }
 const deezerCandidate = (track: z.infer<typeof deezerTrack>) => ({ title: track.title, url: `https://www.deezer.com/track/${track.id}`, ...(track.album?.title === undefined ? {} : { album: track.album.title }), ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_medium) });
 
@@ -197,29 +194,32 @@ async function lookup(parsed: MusicLink, current: Session, search: MusicSearch, 
   return { source, find: (target: Platform, country: string) => findCandidates(target, source, country, current, search) };
 }
 
-export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums): Promise<Conversion> {
+async function withSession<T>(input: string, requestSignal: AbortSignal | undefined, fetcher: Fetch, run: (parsed: MusicLink, current: Session) => Promise<T>): Promise<T> {
   const current = session(requestSignal, fetcher);
   try {
-    const parsed = musicSource(await expandShortLink(input.input, current));
-    if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
-    const { source, find } = await lookup(parsed, current, search, albums);
-    const candidates = await find(input.target, input.country);
-    if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
-    return { source: { kind: parsed.kind, title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(parsed) };
+    return await run(musicSource(await expandShortLink(input, current)), current);
   } catch (error) {
     if (error instanceof ResolutionError) throw error;
     throw new ResolutionError('NETWORK');
   } finally { current.controller.abort(); }
 }
 
+export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums): Promise<Conversion> {
+  return withSession(input.input, requestSignal, fetcher, async (parsed, current) => {
+    if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
+    const { source, find } = await lookup(parsed, current, search, albums);
+    const candidates = await find(input.target, input.country);
+    if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country));
+    return { source: { kind: parsed.kind, title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(parsed) };
+  });
+}
+
 // The best match on every service at once, for the share page and for friends. A service
 // that finds nothing or fails gets a search link, so one slow service never blocks the rest.
 export async function resolveAll(input: { input: string; country: string }, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums): Promise<Song> {
-  const current = session(requestSignal, fetcher);
-  try {
-    const parsed = musicSource(await expandShortLink(input.input, current));
+  return withSession(input.input, requestSignal, fetcher, async (parsed, current) => {
     const { source, find } = await lookup(parsed, current, search, albums);
-    const targets = Object.keys(platforms) as Platform[];
+    const targets = platformSchema.options;
     const bests = await Promise.all(targets.map(target => target === parsed.platform ? undefined
       : find(target, input.country).then(candidates => candidates[0], () => undefined)));
     const links = Object.fromEntries(targets.map((target, i) => [target, target === parsed.platform ? { url: source.url, found: true }
@@ -227,8 +227,5 @@ export async function resolveAll(input: { input: string; country: string }, requ
     // YouTube thumbnails of songs are letterboxed video frames, a square album cover from another service looks better
     const artworkUrl = parsed.platform === 'youtubeMusic' && parsed.kind === 'song' ? bests.find(best => best?.artworkUrl)?.artworkUrl?.replace('/100x100bb.', '/600x600bb.') ?? source.artworkUrl : source.artworkUrl;
     return { source: { kind: parsed.kind, platform: parsed.platform, title: source.title, artist: source.artist, url: source.url, artworkUrl }, sharePath: sharePath(parsed), links };
-  } catch (error) {
-    if (error instanceof ResolutionError) throw error;
-    throw new ResolutionError('NETWORK');
-  } finally { current.controller.abort(); }
+  });
 }

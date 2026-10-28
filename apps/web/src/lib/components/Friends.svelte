@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { renderSVG } from 'uqr';
-  import { platforms, type Platform } from '@app/shared';
+  import { platformSchema, platforms, type Platform } from '@app/shared';
   import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '$lib/friends.svelte';
   import { t } from '$lib/i18n';
   import { toast, toastError } from '$lib/toast.svelte';
@@ -74,7 +74,7 @@
     <form class="panel" onsubmit={submit}>
       <p>{panel === 'add' ? t().addFriendHint : panel === 'group' ? t().groupOf(selected.join(', ')) : t().inviteHint}</p>
       <input bind:value={name} maxlength="40" placeholder={panel === 'group' ? t().groupName : panel === 'invite' ? t().yourName : t().name} required />
-      {#if panel !== 'group'}<select bind:value={platform}>{#each (Object.keys(platforms) as Platform[]) as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
+      {#if panel !== 'group'}<select bind:value={platform}>{#each platformSchema.options as key}<option value={key}>{platforms[key]}</option>{/each}</select>{/if}
       <button type="submit" class="button primary">{panel === 'invite' ? t().shareInvite : t().save}</button>
       {#if qr}<figure class="qr"><span role="img" aria-label={t().inviteQr}>{@html qr}</span><figcaption>{t().scanHint}</figcaption></figure>{/if}
     </form>

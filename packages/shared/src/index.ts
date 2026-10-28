@@ -9,10 +9,10 @@ export const LIVE = false;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
 export { type Locale, type Messages, messages, pickLocale } from './messages';
 
-export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const;
-export type Platform = keyof typeof platforms;
-export const serviceOrder: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
 export const platformSchema = z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']);
+export type Platform = z.infer<typeof platformSchema>;
+export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const satisfies Record<Platform, string>;
+export const serviceOrder: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
 export const countries = ['DE', 'AT', 'CH', 'US', 'GB'] as const;
 export const conversionInput = z.object({
   input: z.string().trim().min(1).max(4096),

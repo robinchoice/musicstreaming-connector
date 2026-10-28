@@ -2,8 +2,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import type { Database } from '@app/db';
-import { conversionInput, countries, type Song } from '@app/shared';
-import { z } from 'zod';
+import { conversionInput, type Song } from '@app/shared';
 import { t } from './lib/i18n';
 import { ResolutionError } from './lib/resolver';
 import { resolve, resolveAll } from './lib/music';
@@ -12,7 +11,7 @@ import { agentRoutes } from './routes/agents';
 import { feedbackRoutes } from './routes/feedback';
 
 // Without a database there is no feedback, the converter needs none.
-const songInput = z.object({ input: z.string().trim().min(1).max(4096), country: z.enum(countries).default('DE') });
+const songInput = conversionInput.omit({ target: true });
 
 export function createApp(resolver = resolve, db?: Database, resolveSong = resolveAll) {
   let windowStart = Date.now();

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { resolve } from './lib/music';
-import { searchUrl, youtubeVideoId, type Fetch } from './lib/resolver';
+import { musicSource, resolve } from './lib/music';
+import { searchUrl, type Fetch } from './lib/resolver';
 
 const first = '0O8RjwNco465s5o9Ix9IYj';
 const second = '60zaXKLFGQ4hPH7NtTcfq1';
@@ -33,7 +33,7 @@ describe('YouTube links', () => {
     ['https://www.youtube.com/watch?list=playlist&v=UijW9hGpnzc', 'UijW9hGpnzc'],
     ['https://youtu.be/UijW9hGpnzc ' + link, 'UijW9hGpnzc'],
     ['Hör mal (https://youtu.be/UijW9hGpnzc).', 'UijW9hGpnzc'],
-  ])('accepts %s', (input, id) => expect(youtubeVideoId(input)).toBe(id));
+  ])('accepts %s', (input, id) => expect(musicSource(input).id).toBe(id));
 
   test.each([
     'https://music.youtube.com/playlist?list=playlist',
@@ -42,8 +42,7 @@ describe('YouTube links', () => {
     'https://music.youtube.com/watch?v=short',
     'https://youtu.be/UijW9hGpnzc https://youtu.be/Z19cVpmYIkw',
     'Savior', 'http://127.0.0.1/watch?v=UijW9hGpnzc',
-    'https://open.spotify.com/track/' + first,
-  ])('rejects %s', input => expect(() => youtubeVideoId(input)).toThrow());
+  ])('rejects %s', input => expect(() => musicSource(input)).toThrow());
 });
 
 test('resolves metadata without tracking or credentials', async () => {

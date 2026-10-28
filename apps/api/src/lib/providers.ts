@@ -22,6 +22,15 @@ export function recording(title: string, artists: string[]) {
 }
 export const https = (url?: string | null) => url?.startsWith('https://') ? url : null;
 
+export function appleUrl(link: string, keepSongId: boolean) {
+  const url = new URL(link);
+  if (url.protocol !== 'https:' || url.hostname !== 'music.apple.com' || url.username || url.password) return null;
+  const songId = keepSongId ? url.searchParams.get('i') : null;
+  url.search = '';
+  if (songId) url.searchParams.set('i', songId);
+  return url.toString();
+}
+
 // Spotify has no open metadata API; its public pages carry titles, artists and links as meta tags.
 export function spotifyMeta(html: string, name: string) {
   return spotifyMetas(html, name)[0];

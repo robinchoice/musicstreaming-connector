@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { inviteSlugs, platforms, type Platform } from '@app/shared';
+  import { inviteSlugs, platformSchema, platforms, type Platform } from '@app/shared';
   import { addFriend, inviteUrl, loadFriends, setMe, social } from '$lib/friends.svelte';
   import { t } from '$lib/i18n';
   import { toast, toastError } from '$lib/toast.svelte';
@@ -52,7 +52,7 @@
   <p>{t().sendBack(name)}</p>
   <input bind:value={myName} maxlength="40" placeholder={t().yourName} autocomplete="given-name" />
   <div class="services">
-    {#each (Object.keys(platforms) as Platform[]) as mine}
+    {#each platformSchema.options as mine}
       <button onclick={() => answer(mine)}><Logo platform={mine} size={22} />{platforms[mine]}</button>
     {/each}
   </div>

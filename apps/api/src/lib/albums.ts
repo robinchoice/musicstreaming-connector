@@ -1,7 +1,7 @@
 import type { Conversion, Platform } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { appleCatalog, codeFailure, https, normalize, providerCall, recording, spotifyMeta, spotifyMetas, youtube, type MusicLink, type Session } from './providers';
+import { appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, spotifyMeta, spotifyMetas, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
 
 type Candidates = Conversion['candidates'];
@@ -59,10 +59,8 @@ const upcCode = (value?: string) => value && /^\d{12,14}$/.test(value) ? { upc: 
 const appleName = (name: string) => name.replace(/ - (?:Single|EP)$/, '');
 const deezerCandidate = (album: z.infer<typeof deezerAlbum>) => ({ title: album.title, url: `https://www.deezer.com/album/${album.id}`, artworkUrl: https(album.cover_medium) });
 function appleCandidate(link: string, title: string, artworkUrl: string | null) {
-  const url = new URL(link);
-  if (url.protocol !== 'https:' || url.hostname !== 'music.apple.com' || url.username || url.password) return [];
-  url.search = '';
-  return [{ title: appleName(title), url: url.toString(), artworkUrl }];
+  const url = appleUrl(link, false);
+  return url ? [{ title: appleName(title), url, artworkUrl }] : [];
 }
 
 export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTubeAlbums): Promise<Album> {

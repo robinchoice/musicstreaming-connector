@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { countries, messages, platforms, type Platform, type Song } from '@app/shared';
+import { countries, messages, platformSchema, platforms, type Song } from '@app/shared';
 import { platformForSlug } from '$lib/friends.svelte';
 import type { PageServerLoad } from './$types';
 
@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ params, fetch, request, url, locals
   // Busy or unreachable services are temporary, only a song that cannot be found is a 404
   if (!response.ok) error(response.status === 429 || response.status >= 500 ? 503 : 404, body.error ?? m.linkFailed);
   const song = body as Song;
-  const found = (Object.keys(platforms) as Platform[]).filter(platform => song.links[platform].found).map(platform => platforms[platform]);
+  const found = platformSchema.options.filter(platform => song.links[platform].found).map(platform => platforms[platform]);
   // Optional sender, see shareUrl in packages/shared
   const name = (url.searchParams.get('from') ?? '').trim().slice(0, 40);
   const platform = platformForSlug(url.searchParams.get('service') ?? '');

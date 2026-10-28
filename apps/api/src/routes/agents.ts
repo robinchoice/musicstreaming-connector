@@ -1,4 +1,4 @@
-import { APP_NAME, type Locale, messages } from '@app/shared';
+import { APP_NAME, messages, pickLocale } from '@app/shared';
 import { type Context, Hono } from 'hono';
 import { type PublicPage, publicPages } from '../lib/public-pages';
 
@@ -25,8 +25,7 @@ const markdownPath = (path: string) => (path === '/' ? '/index.md' : `${path}.md
 
 function language(c: Context) {
   const lang = c.req.query('lang');
-  const tags = [lang, ...(c.req.header('accept-language') ?? '').split(',')].map(tag => tag?.trim().slice(0, 2).toLowerCase());
-  const locale: Locale = tags.find(tag => tag === 'de' || tag === 'en') ?? 'de';
+  const locale = pickLocale(`${lang?.trim().slice(0, 2) ?? ''},${c.req.header('accept-language') ?? ''}`);
   // Links keep an explicit ?lang= so an agent stays in its language
   return { locale, query: lang ? `?lang=${locale}` : '' };
 }
