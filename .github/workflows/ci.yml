@@ -34,8 +34,7 @@ jobs:
       - id: playwright
         run: |
           echo "version=$(grep -oP '"playwright": \["playwright@\K[^"]+' bun.lock)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
@@ -162,8 +161,7 @@ jobs:
       - id: playwright
         run: |
           echo "version=$(grep -oP '"playwright": \["playwright@\K[^"]+' bun.lock)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}

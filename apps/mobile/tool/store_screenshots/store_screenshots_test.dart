@@ -230,7 +230,6 @@ void main() {
           );
           await tester.pump();
           await tester.tap(find.text(locale == 'de' ? 'Finden' : 'Find'));
-          await tester.pumpAndSettle();
         }
 
         await convert(false);
@@ -238,7 +237,6 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('group-Bandprobe')));
         await tester.pumpAndSettle();
         await tester.drag(find.byType(Scrollable).first, const Offset(0, -320));
-        await tester.pumpAndSettle();
         await capture('group');
         await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
         await tester.pumpAndSettle();
@@ -247,7 +245,6 @@ void main() {
         await tester.tap(find.byIcon(Icons.settings_outlined));
         await tester.pumpAndSettle();
         await tester.tap(find.byIcon(Icons.group_outlined));
-        await tester.pumpAndSettle();
         await capture('friends');
         await tester.pumpWidget(const SizedBox());
         await tester.pump(const Duration(minutes: 1));
