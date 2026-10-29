@@ -168,24 +168,19 @@ void main() {
         await tester.pumpAndSettle();
         // Load the covers once, so the first picture has them too
         await tester.runAsync(() async {
-          final context = shot.currentContext!;
           for (final name in ['song', 'album']) {
+            final cover = NetworkImage(
+              'http://127.0.0.1:${covers.port}/cover-$name.png',
+            );
+            await precacheImage(cover, shot.currentContext!);
             await precacheImage(
-              NetworkImage('http://127.0.0.1:${covers.port}/cover-$name.png'),
-              context,
+              ResizeImage(cover, width: 96),
+              shot.currentContext!,
             );
           }
         });
 
         Future<void> capture(String name) async {
-          // Covers decode outside the fake clock
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(seconds: 2)),
-          );
-          await tester.pumpAndSettle();
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 500)),
-          );
           await tester.pumpAndSettle();
           await tester.runAsync(() async {
             final boundary =
@@ -193,6 +188,7 @@ void main() {
                     as RenderRepaintBoundary;
             final image = await boundary.toImage(pixelRatio: spec.ratio);
             final png = await image.toByteData(format: ui.ImageByteFormat.png);
+            image.dispose();
             final file = File(
               'build/store_screenshots/$locale-${device.key}-$name.png',
             );

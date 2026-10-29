@@ -6,6 +6,7 @@
 # writes build/store_screenshots/out/<locale>/<device>-<n>.png. share-<device>.png
 # here is the iOS share sheet, which no Flutter test can render.
 import json
+from functools import cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -90,6 +91,7 @@ def status_bar(screen, height, scale):
         draw.rounded_rectangle([x, middle + 1.4 * unit - h, x + unit * 0.9, middle + 1.4 * unit], radius=unit / 4, fill=TEXT)
 
 
+@cache
 def background(size):
     image = Image.new('RGB', size, BACKGROUND)
     glow = Image.new('RGB', size, BACKGROUND)
