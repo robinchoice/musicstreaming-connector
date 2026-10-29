@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../config.dart';
+import '../../core/brand.dart';
 import '../../core/locale.dart';
 import '../../core/messages.dart';
 
@@ -87,16 +88,16 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       _state = _State.buying;
     });
     try {
-      await _store.buyConsumable(
+      final started = await _store.buyConsumable(
         purchaseParam: PurchaseParam(productDetails: product),
       );
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _failed = true;
-          _state = _State.ready;
-        });
-      }
+      if (started) return;
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _failed = true;
+        _state = _State.ready;
+      });
     }
   }
 
@@ -119,8 +120,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             Text(t.supportIntro(appName), style: theme.textTheme.bodyLarge),
             const SizedBox(height: 24),
             switch (_state) {
-              _State.loading => const Center(
-                child: CircularProgressIndicator(),
+              _State.loading => Center(
+                child: ShaderMask(
+                  shaderCallback: (bounds) =>
+                      bandGradient(glow).createShader(bounds),
+                  blendMode: BlendMode.srcIn,
+                  child: const CircularProgressIndicator(color: Colors.white),
+                ),
               ),
               _State.unavailable => Text(
                 t.supportUnavailable,
@@ -152,7 +158,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       ),
                     ),
                   if (_failed)
-                    Text(t.supportFailed, style: theme.textTheme.bodyMedium),
+                    Text(
+                      t.supportFailed,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: errorGlow,
+                      ),
+                    ),
                 ],
               ),
             },

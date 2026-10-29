@@ -18,7 +18,7 @@ STATUS_FONT = ImageFont.truetype('/usr/share/fonts/truetype/noto/NotoSans-Bold.t
 
 BACKGROUND = (14, 13, 18)
 TEXT = (242, 240, 234)
-ACCENT = (108, 207, 142)
+ACCENT = (100, 204, 158)
 BEZEL = (23, 23, 26)
 
 DEVICES = {
