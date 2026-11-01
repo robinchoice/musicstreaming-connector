@@ -4,4 +4,4 @@ import { $ } from 'bun';
 import { SLUG } from './src/config';
 
 const url = process.env.APP_URL || 'https://songgate.app';
-await $`bun build src/main.ts --compile --minify --outfile build/${SLUG} --define process.env.CLI_URL=${JSON.stringify(url)} ${process.argv.slice(2)}`;
+await $`bun build src/main.ts --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --minify --outfile build/${SLUG} --define process.env.CLI_URL=${JSON.stringify(url)} ${process.argv.slice(2)}`;
