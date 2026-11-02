@@ -1,0 +1,2 @@
+ALTER TABLE "feedback" ADD CONSTRAINT "feedback_kind" CHECK ("feedback"."kind" in ('bug', 'idea'));--> statement-breakpoint
+ALTER TABLE "rate_limits" ADD CONSTRAINT "rate_limits_count" CHECK ("rate_limits"."count" >= 1);
