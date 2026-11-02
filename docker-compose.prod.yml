@@ -3,7 +3,6 @@ services:
     image: ghcr.io/robinchoice/musiclink-web:${IMAGE_TAG:?IMAGE_TAG is required}
     environment:
       API_INTERNAL_URL: http://api:3000
-      ORIGIN: ${APP_URL}
       PUBLIC_SENTRY_DSN: ${PUBLIC_SENTRY_DSN:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
     depends_on:

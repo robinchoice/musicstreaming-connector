@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { countries, messages, platformSchema, platforms, type Song } from '@app/shared';
-import { platformForSlug } from '$lib/friends.svelte';
+import { platformForSlug } from '#lib/friends.svelte.ts';
 import type { PageServerLoad } from './$types';
 
 // The inverse of sharePath in the API: back to a link the resolver understands

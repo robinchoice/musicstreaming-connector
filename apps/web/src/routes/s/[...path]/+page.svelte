@@ -1,11 +1,11 @@
 <script lang="ts">
-  import Avatar from '$lib/components/Avatar.svelte';
-  import Connect from '$lib/components/Connect.svelte';
-  import Logo from '$lib/components/Logo.svelte';
-  import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
+  import Avatar from '#lib/components/Avatar.svelte';
+  import Connect from '#lib/components/Connect.svelte';
+  import Logo from '#lib/components/Logo.svelte';
+  import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
   import { onMount } from 'svelte';
   import { platforms, serviceOrder, type Platform } from '@app/shared';
-  import { t } from '$lib/i18n';
+  import { t } from '#lib/i18n.ts';
   let { data } = $props();
   const song = $derived(data.song);
   const from = $derived(data.from);

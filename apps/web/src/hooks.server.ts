@@ -1,7 +1,7 @@
 import { captureException } from './monitoring.server';
 import { type Locale, pickLocale } from '@app/shared';
-import type { Handle, HandleServerError } from '@sveltejs/kit';
-import { dev } from '$app/environment';
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { dev } from '$app/env';
 import dns from 'node:dns';
 
 // Docker's embedded DNS doesn't answer AAAA queries, which otherwise stalls
@@ -16,7 +16,7 @@ const API_ORIGIN = process.env.API_INTERNAL_URL || (dev ? 'http://localhost:3000
 // Public content for agents comes from the API, see apps/api/src/routes/agents.ts
 const AGENT_PATH = /^\/llms(-full)?\.txt$|\.md$/;
 
-// From starter. The CSP comes from svelte.config.js. Browsers ignore HSTS over
+// From starter. The CSP comes from vite.config.ts. Browsers ignore HSTS over
 // plain HTTP, so it is harmless in dev.
 // The legal pages have one URL per language
 const LEGAL: Record<string, Locale> = { '/impressum': 'de', '/datenschutz': 'de', '/imprint': 'en', '/privacy': 'en' };

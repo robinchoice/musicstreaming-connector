@@ -1,10 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import Connect from '$lib/components/Connect.svelte';
-  import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
-  import { platformForSlug } from '$lib/friends.svelte';
+  import Connect from '#lib/components/Connect.svelte';
+  import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
+  import { platformForSlug } from '#lib/friends.svelte.ts';
   import { platforms } from '@app/shared';
-  import { t } from '$lib/i18n';
+  import { t } from '#lib/i18n.ts';
 
   const platform = platformForSlug(page.params.service ?? '');
   const name = (page.url.searchParams.get('name') ?? '').trim().slice(0, 40);

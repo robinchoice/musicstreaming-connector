@@ -1,10 +1,10 @@
 <script lang="ts">
   import { APP_BAND, APP_NAME, bandColor, bandGradient, GLOW } from '@app/shared';
-  import { browser } from '$app/environment';
+  import { browser } from '$app/env';
   import { page } from '$app/state';
-  import Feedback from '$lib/components/Feedback.svelte';
-  import Toasts from '$lib/components/Toasts.svelte';
-  import { t } from '$lib/i18n';
+  import Feedback from '#lib/components/Feedback.svelte';
+  import Toasts from '#lib/components/Toasts.svelte';
+  import { t } from '#lib/i18n.ts';
   let { children } = $props();
 
   // Link previews. Public pages override them with meta in their load,

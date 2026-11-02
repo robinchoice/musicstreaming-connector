@@ -1,5 +1,5 @@
 import { type Locale, messages } from '@app/shared';
-import { goto, invalidateAll } from '$app/navigation';
+import { goto, refreshAll } from '$app/navigation';
 import { page } from '$app/state';
 
 // Texts in the current language, e.g. {t().share}. hooks.server.ts takes the
@@ -11,10 +11,10 @@ const legal: Record<string, string> = { '/impressum': '/imprint', '/imprint': '/
 
 export async function setLocale(locale: Locale) {
   document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;
-  const url = new URL(page.url);
+  const url = new URL(page.url.href);
   url.searchParams.delete('lang');
   url.pathname = legal[url.pathname] ?? url.pathname;
-  if (url.href !== page.url.href) await goto(url, { replaceState: true, noScroll: true, keepFocus: true, invalidateAll: true });
-  else await invalidateAll();
+  if (url.href !== page.url.href) await goto(url, { replace: true, reset: false, refreshAll: true });
+  else await refreshAll();
   document.documentElement.lang = locale;
 }

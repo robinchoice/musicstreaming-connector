@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import Friends from '$lib/components/Friends.svelte';
-  import Logo from '$lib/components/Logo.svelte';
-  import PleasanceFooter from '$lib/components/PleasanceFooter.svelte';
+  import Friends from '#lib/components/Friends.svelte';
+  import Logo from '#lib/components/Logo.svelte';
+  import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
   import { countries, friendsMessage, platforms, serviceOrder, sourceOf, type Platform, type Song } from '@app/shared';
   import { page } from '$app/state';
-  import { api } from '$lib/api';
-  import { social } from '$lib/friends.svelte';
-  import { t } from '$lib/i18n';
-  import { toast, toastError } from '$lib/toast.svelte';
+  import { api } from '#lib/api.ts';
+  import { social } from '#lib/friends.svelte.ts';
+  import { t } from '#lib/i18n.ts';
+  import { toast, toastError } from '#lib/toast.svelte.ts';
 
   let input = $state('');
   let country = 'DE';

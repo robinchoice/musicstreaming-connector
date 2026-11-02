@@ -10,9 +10,9 @@
     sendFeedback,
     takeScreenshot,
     testMode,
-  } from '$lib/feedback.svelte';
-  import { t } from '$lib/i18n';
-  import { toast } from '$lib/toast.svelte';
+  } from '#lib/feedback.svelte.ts';
+  import { t } from '#lib/i18n.ts';
+  import { toast } from '#lib/toast.svelte.ts';
 
   const SIZE = 44;
   const STORAGE_KEY = 'feedback-button';

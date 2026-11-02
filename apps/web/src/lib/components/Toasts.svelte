@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { t } from '$lib/i18n';
-  import { removeToast, toasts } from '$lib/toast.svelte';
+  import { t } from '#lib/i18n.ts';
+  import { removeToast, toasts } from '#lib/toast.svelte.ts';
 </script>
 
 <div class="toasts">

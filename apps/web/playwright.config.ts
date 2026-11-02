@@ -17,7 +17,13 @@ export default defineConfig({
   testDir: 'tests',
   forbidOnly: !!process.env.CI,
   // German like most testers, English is tested on purpose (tests/language.test.ts)
-  use: { baseURL: WEB, locale: 'de-DE' },
+  use: {
+    baseURL: WEB,
+    locale: 'de-DE',
+    // Plain http, as Traefik reports it. Without it adapter-node assumes https and
+    // SvelteKit's CSRF check rejects POSTs whose origin then differs.
+    extraHTTPHeaders: { 'x-forwarded-proto': 'http' },
+  },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   webServer: [
     {
@@ -33,7 +39,7 @@ export default defineConfig({
       env: {
         NODE_ENV: 'production',
         PORT: String(WEB_PORT),
-        ORIGIN: WEB,
+        PROTOCOL_HEADER: 'x-forwarded-proto',
         BODY_SIZE_LIMIT: '8M',
         API_INTERNAL_URL: API,
       },

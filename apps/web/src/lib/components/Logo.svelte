@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Platform } from '@app/shared';
-  import { logos } from '$lib/logos';
+  import { logos } from '#lib/logos.ts';
   let { platform, size = 24 }: { platform: Platform; size?: number } = $props();
 </script>
 

@@ -2,9 +2,9 @@
   import { onMount } from 'svelte';
   import { renderSVG } from 'uqr';
   import { platformSchema, platforms, type Platform } from '@app/shared';
-  import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '$lib/friends.svelte';
-  import { t } from '$lib/i18n';
-  import { toast, toastError } from '$lib/toast.svelte';
+  import { addFriend, addGroup, inviteUrl, loadFriends, removeFriend, setMe, social } from '#lib/friends.svelte.ts';
+  import { t } from '#lib/i18n.ts';
+  import { toast, toastError } from '#lib/toast.svelte.ts';
   import Avatar from './Avatar.svelte';
 
   // Picking friends or a group also picks their services, the page can change those on its own

@@ -1,10 +1,10 @@
-import type { HandleClientError } from '@sveltejs/kit';
+import type { HandleClientError } from '@sveltejs/kit/hooks';
 import * as Sentry from '@sentry/browser';
-import { env } from '$env/dynamic/public';
+import { PUBLIC_SENTRY_DSN, PUBLIC_SENTRY_ENVIRONMENT } from '$app/env/public';
 
 Sentry.init({
-  dsn: env.PUBLIC_SENTRY_DSN,
-  environment: env.PUBLIC_SENTRY_ENVIRONMENT || 'production',
+  dsn: PUBLIC_SENTRY_DSN,
+  environment: PUBLIC_SENTRY_ENVIRONMENT || 'production',
   dataCollection: {
     userInfo: false,
     cookies: false,

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { APP_BAND } from '@app/shared';
   import { page } from '$app/state';
-  import { openFeedback, setTestMode, testMode } from '$lib/feedback.svelte';
-  import { setLocale, t } from '$lib/i18n';
+  import { openFeedback, setTestMode, testMode } from '#lib/feedback.svelte.ts';
+  import { setLocale, t } from '#lib/i18n.ts';
 
   const other = $derived(page.data.locale === 'de' ? 'en' : 'de');
 </script>

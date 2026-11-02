@@ -11,8 +11,11 @@ RUN bun install --frozen-lockfile
 COPY packages/shared packages/shared
 COPY apps/web apps/web
 RUN cd apps/web && bun run build
+# SvelteKit keeps @opentelemetry/api external, so the runtime needs this one package
+RUN mkdir -p apps/web/build/node_modules/@opentelemetry \
+  && cp -rL apps/web/node_modules/@opentelemetry/api apps/web/build/node_modules/@opentelemetry/
 
-# adapter-node bundles every devDependency, so the build runs without node_modules
+# adapter-node bundles every other devDependency, so the build runs without node_modules
 FROM oven/bun:1-slim
 WORKDIR /app
 COPY --from=build /app/apps/web/build build

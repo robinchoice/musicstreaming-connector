@@ -1,5 +1,5 @@
 import { messages, platforms } from '@app/shared';
-import { platformForSlug } from '$lib/friends.svelte';
+import { platformForSlug } from '#lib/friends.svelte.ts';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, url, parent }) => {

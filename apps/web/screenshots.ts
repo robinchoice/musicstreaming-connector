@@ -33,7 +33,7 @@ try {
           canvas.width = img.width;
           canvas.height = img.height;
           canvas.getContext('2d')!.drawImage(img, 0, 0);
-          return canvas.toDataURL('image/webp', 0.85).split(',')[1];
+          return canvas.toDataURL('image/webp', 0.85).replace(/^data:[^,]*,/, '');
         },
         `data:image/png;base64,${png.toString('base64')}`,
       ),
