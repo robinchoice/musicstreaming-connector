@@ -1,4 +1,4 @@
-// Renders the app screens for the App Store pictures with made-up data:
+// Renders the app screens for the App Store and Google Play pictures with made-up data:
 //
 //   flutter test --dart-define=API_URL=https://songgate.app tool/store_screenshots/store_screenshots_test.dart
 //
@@ -20,9 +20,11 @@ import 'package:musiclink/app.dart';
 import 'package:musiclink/core/api.dart';
 
 const devices = {
-  // Logical size, pixel ratio and safe area of an iPhone 16 Pro Max and a 13" iPad
+  // Logical size, pixel ratio and safe area of an iPhone 16 Pro Max, a 13" iPad
+  // and an Android phone at 1:2, the longest side Google Play takes
   'iphone': (size: Size(440, 956), ratio: 3.0, top: 62.0, bottom: 34.0),
   'ipad': (size: Size(1032, 1376), ratio: 2.0, top: 24.0, bottom: 20.0),
+  'android': (size: Size(440, 880), ratio: 3.0, top: 40.0, bottom: 24.0),
 };
 
 late HttpServer covers;
@@ -84,6 +86,8 @@ Future<void> loadFont(String family, List<String> files) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const preferences = MethodChannel('org.musiclink.prototype/preferences');
+  // Android asks it for a link shared into the app, there is none
+  const share = MethodChannel('org.musiclink.prototype/share');
   final shot = GlobalKey();
 
   setUpAll(() async {
@@ -125,7 +129,9 @@ void main() {
   for (final locale in ['de', 'en']) {
     for (final device in devices.entries) {
       testWidgets('$locale ${device.key}', (tester) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        debugDefaultTargetPlatformOverride = device.key == 'android'
+            ? TargetPlatform.android
+            : TargetPlatform.iOS;
         tester.platformDispatcher.localesTestValue = [Locale(locale)];
         final spec = device.value;
         tester.view.physicalSize = spec.size * spec.ratio;
@@ -143,6 +149,8 @@ void main() {
                 _ => null,
               };
             });
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(share, (call) async => null);
         var album = false;
         await tester.pumpWidget(
           RepaintBoundary(

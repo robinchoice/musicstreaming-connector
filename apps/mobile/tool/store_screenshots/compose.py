@@ -1,5 +1,6 @@
 # Puts the screens from store_screenshots_test.dart into a device frame under a
-# caption, at the App Store sizes for 6.9" iPhones and 13" iPads:
+# caption, at the App Store sizes for 6.9" iPhones and 13" iPads and at 1:2 for
+# Google Play phones (no share slide there, the picture is the iOS share sheet):
 #
 #   python3 tool/store_screenshots/compose.py
 #
@@ -26,6 +27,7 @@ DEVICES = {
     # canvas, screen width, top of the frame, frame width, corner radius, safe area of the raw screen in px
     'iphone': dict(canvas=(1320, 2868), screen=1100, top=720, frame=30, radius=150, status=186),
     'ipad': dict(canvas=(2064, 2752), screen=1628, top=720, frame=34, radius=70, status=48),
+    'android': dict(canvas=(1320, 2640), screen=1100, top=720, frame=30, radius=110, status=120),
 }
 
 SLIDES = ['share', 'song', 'group', 'album', 'friends']
@@ -118,7 +120,7 @@ def compose(locale, device, slide, n):
         raw = Image.open(RAW / f'{locale}-{device}-{slide}.png').convert('RGBA')
         boxes = RAW / f'{locale}-{device}-{slide}.json'
         paint_emoji(raw, json.loads(boxes.read_text()) if boxes.exists() else [])
-        status_bar(raw, spec['status'], raw.width / (440 if device == 'iphone' else 1032))
+        status_bar(raw, spec['status'], raw.width / (1032 if device == 'ipad' else 440))
         screen = raw.resize((screen_w, round(raw.height * screen_w / raw.width)), Image.LANCZOS)
     left = (w - screen_w) // 2
     top = spec['top']
@@ -134,6 +136,7 @@ def compose(locale, device, slide, n):
 
 for locale in CAPTIONS:
     for device in DEVICES:
-        for n, slide in enumerate(SLIDES, 1):
+        slides = [s for s in SLIDES if s != 'share'] if device == 'android' else SLIDES
+        for n, slide in enumerate(slides, 1):
             compose(locale, device, slide, n)
 print('written to', RAW / 'out')

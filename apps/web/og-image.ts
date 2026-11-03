@@ -1,13 +1,16 @@
 // Renders the link preview that WhatsApp, Signal and co. show for shared links,
 // 1200×630 per language into static/og-image-<locale>.png (starter DESIGN.md,
-// "Vorschaubild"). Rerun after changing APP_NAME, APP_BAND, the tagline or the
-// tile in static/favicon.svg, and commit the pictures.
+// "Vorschaubild"), and the same at 1024×500 as the Google Play feature graphic in
+// docs/store/play/<locale>/feature-graphic.png. Rerun after changing APP_NAME,
+// APP_BAND, the tagline or the tile in static/favicon.svg, and commit the pictures.
 // Run: bun run og-image
 import { readFileSync } from 'node:fs';
 import { APP_BAND, APP_NAME, bandGradient, GLOW, type Locale, messages } from '@app/shared';
 import { chromium } from '@playwright/test';
 
 const STATIC = new URL('static/', import.meta.url);
+const PLAY = new URL('../../docs/store/play/', import.meta.url);
+const PLAY_LOCALES: Record<Locale, string> = { de: 'de-DE', en: 'en-US' };
 const dataUrl = (file: string, type: string) =>
   `data:${type};base64,${readFileSync(new URL(file, STATIC)).toString('base64')}`;
 
@@ -23,8 +26,8 @@ const html = (locale: Locale) => `<!doctype html>
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    width: 1200px;
-    height: 630px;
+    width: 100vw;
+    height: 100vh;
     margin: 0;
     padding: 0 96px 64px;
     background: #0e0d12;
@@ -65,6 +68,15 @@ try {
     const file = `og-image-${locale}.png`;
     await page.screenshot({ path: new URL(file, STATIC).pathname });
     console.log(file);
+  }
+  // Google Play: 1024×500, the layout at 1280×625 scaled by 0.8
+  const play = await browser.newPage({ viewport: { width: 1280, height: 625 }, deviceScaleFactor: 0.8 });
+  for (const locale of Object.keys(messages) as Locale[]) {
+    await play.setContent(html(locale));
+    await play.evaluate(() => document.fonts.ready);
+    const file = new URL(`${PLAY_LOCALES[locale]}/feature-graphic.png`, PLAY);
+    await play.screenshot({ path: file.pathname });
+    console.log(file.pathname);
   }
 } finally {
   await browser.close();
