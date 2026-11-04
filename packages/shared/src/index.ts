@@ -5,7 +5,7 @@ export const APP_NAME = 'Songgate';
 export const APP_BAND = { from: 3.85, to: 4.55 };
 // True once Songgate is live as 1.0 (starter README, "Live als 1.0"). From then on
 // the bug button waits for the test mode switch, see testMode in the web's feedback.svelte.ts.
-export const LIVE = false;
+export const LIVE = true;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
 export { type Locale, type Messages, messages, pickLocale } from './messages';
 

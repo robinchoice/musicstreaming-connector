@@ -7,12 +7,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:musiclink/app.dart';
+import 'package:musiclink/config.dart';
 import 'package:musiclink/core/api.dart';
 
 void main() {
   const preferences = MethodChannel('org.musiclink.prototype/preferences');
   const share = MethodChannel('org.musiclink.prototype/share');
+  // The saved test mode switch, null = never switched
+  bool? savedTestMode;
   setUp(() {
+    savedTestMode = null;
     // German texts, whatever the machine's language
     TestWidgetsFlutterBinding.instance.platformDispatcher.localesTestValue =
         const [Locale('de', 'DE')];
@@ -26,7 +30,8 @@ void main() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(
       preferences,
-      (_) async => <String, String>{},
+      (call) async =>
+          call.method == 'getTestMode' ? savedTestMode : <String, String>{},
     );
     messenger.setMockMethodCallHandler(share, (_) async => null);
     addTearDown(() {
@@ -64,6 +69,7 @@ void main() {
   testWidgets('the bug button sends a screenshot and the optional email', (
     tester,
   ) async {
+    savedTestMode = true;
     final sent = await mount(tester);
 
     // The screenshot renders for real, outside the test's fake clock
@@ -133,11 +139,14 @@ void main() {
     expect(report.containsKey('screenshot'), isFalse);
     expect(report.containsKey('email'), isFalse);
   });
-  testWidgets('the test mode switch in the settings hides the bug button', (
+  testWidgets('the test mode switch in the settings toggles the bug button', (
     tester,
   ) async {
     await mount(tester);
-    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    // Off by default once live, on before
+    final byDefault = live ? findsNothing : findsOneWidget;
+    final switched = live ? findsOneWidget : findsNothing;
+    expect(find.byIcon(Icons.bug_report_outlined), byDefault);
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
     expect(find.text('Datenschutz'), findsOneWidget);
@@ -146,10 +155,10 @@ void main() {
     await tester.ensureVisible(find.text('Testmodus'));
     await tester.tap(find.text('Testmodus'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
+    expect(find.byIcon(Icons.bug_report_outlined), switched);
 
     await tester.tap(find.text('Testmodus'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.bug_report_outlined), byDefault);
   });
 }
