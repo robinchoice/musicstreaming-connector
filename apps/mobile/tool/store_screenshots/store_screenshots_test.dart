@@ -25,6 +25,9 @@ const devices = {
   'iphone': (size: Size(440, 956), ratio: 3.0, top: 62.0, bottom: 34.0),
   'ipad': (size: Size(1032, 1376), ratio: 2.0, top: 24.0, bottom: 20.0),
   'android': (size: Size(440, 880), ratio: 3.0, top: 40.0, bottom: 24.0),
+  // 7" and 10" Android tablets in portrait, 600 and 800 dp wide
+  'tablet7': (size: Size(600, 960), ratio: 2.0, top: 24.0, bottom: 24.0),
+  'tablet10': (size: Size(800, 1280), ratio: 2.0, top: 24.0, bottom: 24.0),
 };
 
 late HttpServer covers;
@@ -129,7 +132,7 @@ void main() {
   for (final locale in ['de', 'en']) {
     for (final device in devices.entries) {
       testWidgets('$locale ${device.key}', (tester) async {
-        debugDefaultTargetPlatformOverride = device.key == 'android'
+        debugDefaultTargetPlatformOverride = device.key != 'iphone' && device.key != 'ipad'
             ? TargetPlatform.android
             : TargetPlatform.iOS;
         tester.platformDispatcher.localesTestValue = [Locale(locale)];

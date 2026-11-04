@@ -1,6 +1,6 @@
 # Puts the screens from store_screenshots_test.dart into a device frame under a
 # caption, at the App Store sizes for 6.9" iPhones and 13" iPads and at 1:2 for
-# Google Play phones (no share slide there, the picture is the iOS share sheet):
+# Google Play phones and 7"/10" tablets (no share slide there, the picture is the iOS share sheet):
 #
 #   python3 tool/store_screenshots/compose.py
 #
@@ -28,6 +28,9 @@ DEVICES = {
     'iphone': dict(canvas=(1320, 2868), screen=1100, top=720, frame=30, radius=150, status=186),
     'ipad': dict(canvas=(2064, 2752), screen=1628, top=720, frame=34, radius=70, status=48),
     'android': dict(canvas=(1320, 2640), screen=1100, top=720, frame=30, radius=110, status=120),
+    # 7" and 10" Android tablets, 1200×1920 and 1600×2560 as Google Play takes them; scale sizes the caption
+    'tablet7': dict(canvas=(1200, 1920), screen=1000, top=560, frame=26, radius=60, status=48, scale=0.9, logical=600),
+    'tablet10': dict(canvas=(1600, 2560), screen=1340, top=740, frame=30, radius=70, status=48, scale=1.2, logical=800),
 }
 
 SLIDES = ['share', 'song', 'group', 'album', 'friends']
@@ -110,8 +113,9 @@ def compose(locale, device, slide, n):
     w, h = spec['canvas']
     draw = ImageDraw.Draw(canvas)
     title, subtitle = CAPTIONS[locale][slide]
-    draw.multiline_text((w / 2, 150), title, font=font(118), fill=TEXT, anchor='ma', align='center', spacing=4)
-    draw.text((w / 2, 470), subtitle, font=font(50, weight=500, width=100), fill=ACCENT, anchor='ma')
+    k = spec.get('scale', 1)
+    draw.multiline_text((w / 2, 150 * k), title, font=font(round(118 * k)), fill=TEXT, anchor='ma', align='center', spacing=4)
+    draw.text((w / 2, 470 * k), subtitle, font=font(round(50 * k), weight=500, width=100), fill=ACCENT, anchor='ma')
 
     screen_w = spec['screen']
     if slide == 'share':
@@ -120,7 +124,7 @@ def compose(locale, device, slide, n):
         raw = Image.open(RAW / f'{locale}-{device}-{slide}.png').convert('RGBA')
         boxes = RAW / f'{locale}-{device}-{slide}.json'
         paint_emoji(raw, json.loads(boxes.read_text()) if boxes.exists() else [])
-        status_bar(raw, spec['status'], raw.width / (1032 if device == 'ipad' else 440))
+        status_bar(raw, spec['status'], raw.width / spec.get('logical', 1032 if device == 'ipad' else 440))
         screen = raw.resize((screen_w, round(raw.height * screen_w / raw.width)), Image.LANCZOS)
     left = (w - screen_w) // 2
     top = spec['top']
@@ -136,7 +140,7 @@ def compose(locale, device, slide, n):
 
 for locale in CAPTIONS:
     for device in DEVICES:
-        slides = [s for s in SLIDES if s != 'share'] if device == 'android' else SLIDES
+        slides = SLIDES if device in ('iphone', 'ipad') else [s for s in SLIDES if s != 'share']
         for n, slide in enumerate(slides, 1):
             compose(locale, device, slide, n)
 print('written to', RAW / 'out')
