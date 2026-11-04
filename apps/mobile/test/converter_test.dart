@@ -173,6 +173,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Kopieren'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Kopieren'));
     await tester.pumpAndSettle();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -454,4 +457,77 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
+  testWidgets('input, in-flight lookup and selection survive live resizing', (
+    tester,
+  ) async {
+    final response = Completer<http.Response>();
+    var requests = 0;
+    await mount(tester, (_) {
+      requests++;
+      return response.future;
+    });
+    await tester.enterText(
+      find.byType(TextField),
+      'https://youtu.be/UijW9hGpnzc',
+    );
+    tester.view.devicePixelRatio = 1;
+    for (final size in [
+      const Size(320, 640),
+      const Size(1024, 768),
+      const Size(640, 320),
+    ]) {
+      tester.view.physicalSize = size;
+      tester.view.padding = const FakeViewPadding(
+        left: 24,
+        right: 24,
+        bottom: 20,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('https://youtu.be/UijW9hGpnzc'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    await tester.tap(find.text('Finden'));
+    await tester.pump();
+    tester.view.physicalSize = const Size(768, 1024);
+    await tester.pump();
+    response.complete(ok(result()));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('service-spotify')),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('service-spotify')));
+    await tester.pumpAndSettle();
+    for (final size in [
+      const Size(320, 640),
+      const Size(1024, 768),
+      const Size(640, 320),
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
+    expect(requests, 1);
+    expect(
+      await copyMessage(tester),
+      contains('https://open.spotify.com/track/1'),
+    );
+  });
+
+  testWidgets('update remains reachable in a short window', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(640, 240);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [updateRequiredProvider.overrideWith((ref) async => true)],
+        child: const App(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Jetzt aktualisieren'));
+    expect(find.text('Jetzt aktualisieren').hitTestable(), findsOneWidget);
+  });
 }

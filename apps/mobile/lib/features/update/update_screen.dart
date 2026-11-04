@@ -18,26 +18,29 @@ class UpdateScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SonggateBrand(),
-                const SizedBox(height: 28),
-                Text(t.updateTitle, style: theme.textTheme.headlineSmall),
-                const SizedBox(height: 10),
-                Text(t.updateBody(appName), style: theme.textTheme.bodyLarge),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: () => launchUrl(
-                    Uri.parse(store),
-                    mode: LaunchMode.externalApplication,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SonggateBrand(),
+                  const SizedBox(height: 28),
+                  Text(t.updateTitle, style: theme.textTheme.headlineSmall),
+                  const SizedBox(height: 10),
+                  Text(t.updateBody(appName), style: theme.textTheme.bodyLarge),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => launchUrl(
+                      Uri.parse(store),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: Text(t.updateNow),
                   ),
-                  child: Text(t.updateNow),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

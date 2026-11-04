@@ -15,15 +15,16 @@ Future<String?> askText(
   required String title,
   required String label,
   String initial = '',
-}) {
+}) async {
   final controller = TextEditingController(text: initial);
   final t = ProviderScope.containerOf(
     context,
     listen: false,
   ).read(messagesProvider);
-  return showDialog<String>(
+  final route = DialogRoute<String>(
     context: context,
     builder: (context) => AlertDialog(
+      scrollable: true,
       title: Text(title),
       content: TextField(
         controller: controller,
@@ -47,7 +48,11 @@ Future<String?> askText(
         ),
       ],
     ),
-  ).whenComplete(controller.dispose);
+  );
+  final result = await Navigator.of(context).push(route);
+  await route.completed;
+  controller.dispose();
+  return result;
 }
 
 /// Name plus service. Saves it as a friend unless [save] is false.
@@ -61,10 +66,11 @@ Future<Friend?> showAddFriendDialog(
   final t = ref.read(messagesProvider);
   final controller = TextEditingController(text: initial?.name ?? '');
   var platform = initial?.platform ?? 'spotify';
-  final friend = await showDialog<Friend>(
+  final route = DialogRoute<Friend>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
+        scrollable: true,
         title: Text(title ?? t.addFriend),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -76,6 +82,7 @@ Future<Friend?> showAddFriendDialog(
               decoration: InputDecoration(labelText: t.name),
             ),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: platform,
               decoration: InputDecoration(labelText: t.listensOn),
               items: [
@@ -104,6 +111,8 @@ Future<Friend?> showAddFriendDialog(
       ),
     ),
   );
+  final friend = await Navigator.of(context).push(route);
+  await route.completed;
   controller.dispose();
   if (friend != null && save) {
     await ref.read(socialProvider.notifier).addFriend(friend);
@@ -111,11 +120,7 @@ Future<Friend?> showAddFriendDialog(
   return friend;
 }
 
-Future<void> shareInvite(
-  BuildContext context,
-  WidgetRef ref, {
-  Rect? origin,
-}) async {
+Future<void> shareInvite(BuildContext context, WidgetRef ref) async {
   final t = ref.read(messagesProvider);
   final current = ref.read(socialProvider).me;
   final me = await showAddFriendDialog(
@@ -127,6 +132,9 @@ Future<void> shareInvite(
   );
   if (me == null) return;
   await ref.read(socialProvider.notifier).setMe(me);
+  if (!context.mounted) return;
+  final box = context.findRenderObject()! as RenderBox;
+  final origin = box.localToGlobal(Offset.zero) & box.size;
   try {
     await SharePlus.instance.share(
       ShareParams(text: inviteText(me, t), sharePositionOrigin: origin),
@@ -155,6 +163,7 @@ Future<void> showInviteQr(BuildContext context, WidgetRef ref) async {
   await showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
+      scrollable: true,
       title: Text('${me.name} · ${platforms[me.platform]}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -193,86 +202,88 @@ class FriendsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(t.friends)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(t.friendsIntro),
-          const SizedBox(height: 16),
-          Builder(
-            builder: (context) => FilledButton.icon(
-              onPressed: () {
-                final box = context.findRenderObject()! as RenderBox;
-                shareInvite(
-                  context,
-                  ref,
-                  origin: box.localToGlobal(Offset.zero) & box.size,
-                );
-              },
-              icon: const Icon(Icons.ios_share),
-              label: Text(
-                social.me == null
-                    ? t.shareMyInvite
-                    : t.shareInviteAs(
-                        social.me!.name,
-                        platforms[social.me!.platform]!,
-                      ),
-              ),
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => showInviteQr(context, ref),
-            icon: const Icon(Icons.qr_code_2),
-            label: Text(t.showInviteQr),
-          ),
-          TextButton.icon(
-            onPressed: () => showAddFriendDialog(context, ref),
-            icon: const Icon(Icons.person_add_alt),
-            label: Text(t.addFriendManually),
-          ),
-          const SizedBox(height: 8),
-          if (social.friends.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(t.noFriends, style: theme.textTheme.bodySmall),
-            ),
-          for (final friend in social.friends)
-            ListTile(
-              key: ValueKey('manage-${friend.name}'),
-              contentPadding: EdgeInsets.zero,
-              leading: FriendAvatar(friend, size: 40),
-              title: Text(friend.name),
-              subtitle: Text(platforms[friend.platform]!),
-              onTap: () => showAddFriendDialog(
-                context,
-                ref,
-                title: t.editFriend,
-                initial: friend,
-              ),
-              trailing: IconButton(
-                tooltip: t.remove(friend.name),
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => notifier.removeFriend(friend.name),
-              ),
-            ),
-          if (social.groups.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(t.groups, style: theme.textTheme.titleSmall),
-            for (final group in social.groups)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(child: Icon(Icons.group_outlined)),
-                title: Text(group.name),
-                subtitle: Text(group.members.join(', ')),
-                trailing: IconButton(
-                  tooltip: t.remove(group.name),
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => notifier.removeGroup(group.name),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(t.friendsIntro),
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) => FilledButton.icon(
+                    onPressed: () => shareInvite(context, ref),
+                    icon: const Icon(Icons.ios_share),
+                    label: Text(
+                      social.me == null
+                          ? t.shareMyInvite
+                          : t.shareInviteAs(
+                              social.me!.name,
+                              platforms[social.me!.platform]!,
+                            ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
-          const SizedBox(height: 16),
-          Text(t.groupsHint, style: theme.textTheme.bodySmall),
-        ],
+                TextButton.icon(
+                  onPressed: () => showInviteQr(context, ref),
+                  icon: const Icon(Icons.qr_code_2),
+                  label: Text(t.showInviteQr),
+                ),
+                TextButton.icon(
+                  onPressed: () => showAddFriendDialog(context, ref),
+                  icon: const Icon(Icons.person_add_alt),
+                  label: Text(t.addFriendManually),
+                ),
+                const SizedBox(height: 8),
+                if (social.friends.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(t.noFriends, style: theme.textTheme.bodySmall),
+                  ),
+                for (final friend in social.friends)
+                  ListTile(
+                    key: ValueKey('manage-${friend.name}'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: FriendAvatar(friend, size: 40),
+                    title: Text(friend.name),
+                    subtitle: Text(platforms[friend.platform]!),
+                    onTap: () => showAddFriendDialog(
+                      context,
+                      ref,
+                      title: t.editFriend,
+                      initial: friend,
+                    ),
+                    trailing: IconButton(
+                      tooltip: t.remove(friend.name),
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => notifier.removeFriend(friend.name),
+                    ),
+                  ),
+                if (social.groups.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(t.groups, style: theme.textTheme.titleSmall),
+                  for (final group in social.groups)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.group_outlined),
+                      ),
+                      title: Text(group.name),
+                      subtitle: Text(group.members.join(', ')),
+                      trailing: IconButton(
+                        tooltip: t.remove(group.name),
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => notifier.removeGroup(group.name),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 16),
+                Text(t.groupsHint, style: theme.textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -293,41 +304,51 @@ class AddFriendScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(t.invite)),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: !valid
-            ? Text(t.inviteIncomplete)
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(child: FriendAvatar(Friend(name, platform), size: 76)),
-                  const SizedBox(height: 16),
-                  Text(
-                    t.friendListensOn(name, platforms[platform]!),
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    t.saveFriendHint(name, platforms[platform]!),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: () async {
-                      await ref
-                          .read(socialProvider.notifier)
-                          .addFriend(Friend(name, platform));
-                      if (context.mounted) context.go('/');
-                    },
-                    child: Text(t.saveName(name)),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/'),
-                    child: Text(t.notNow),
-                  ),
-                ],
-              ),
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: !valid
+                  ? Text(t.inviteIncomplete)
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: FriendAvatar(Friend(name, platform), size: 76),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          t.friendListensOn(name, platforms[platform]!),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          t.saveFriendHint(name, platforms[platform]!),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: () async {
+                            await ref
+                                .read(socialProvider.notifier)
+                                .addFriend(Friend(name, platform));
+                            if (context.mounted) context.go('/');
+                          },
+                          child: Text(t.saveName(name)),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/'),
+                          child: Text(t.notNow),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }

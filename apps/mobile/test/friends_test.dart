@@ -268,5 +268,95 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Robin · Deezer'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    for (final size in [const Size(320, 280), const Size(1024, 768)]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Fertig'));
+      expect(find.text('Fertig').hitTestable(), findsOneWidget);
+    }
   });
+  testWidgets('invite stays usable in a short window and after resizing', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(640, 280);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: AddFriendScreen(name: 'Alex', service: 'spotify'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Alex speichern'));
+    expect(find.text('Alex speichern').hitTestable(), findsOneWidget);
+    tester.view.physicalSize = const Size(320, 640);
+    await tester.pumpAndSettle();
+    expect(find.text('Alex hört auf Spotify'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('friend dialog scrolls above the keyboard without losing input', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(640, 360);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: FriendsScreen())),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Freund von Hand hinzufügen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Alex');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    tester.view.physicalSize = const Size(320, 640);
+    await tester.pumpAndSettle();
+    expect(find.text('Alex'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('invite popover uses the button bounds after dialog resize', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1024, 768);
+    addTearDown(tester.view.reset);
+    const share = MethodChannel('dev.fluttercommunity.plus/share');
+    Map? params;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(share, (call) async {
+          params = call.arguments as Map;
+          return '';
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(share, null),
+    );
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: FriendsScreen())),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Meine Einladung teilen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Alex');
+    tester.view.physicalSize = const Size(320, 640);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(params?['originX'], greaterThanOrEqualTo(0));
+    expect(
+      (params?['originX'] as num) + (params?['originWidth'] as num),
+      lessThanOrEqualTo(320),
+    );
+    expect(params?['originWidth'], greaterThan(0));
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

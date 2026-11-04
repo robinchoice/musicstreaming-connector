@@ -585,41 +585,54 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         onChanged: _setPeople,
       ),
       const SizedBox(height: 12),
-      for (var row = 0; row < serviceOrder.length; row += 2)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final platform in serviceOrder.skip(row).take(2)) ...[
-                  Expanded(
-                    child: _ServiceTile(
-                      key: ValueKey('service-$platform'),
-                      platform: platform,
-                      selected: _services.contains(platform),
-                      found: song.found[platform] ?? false,
-                      detail: _tileDetail(song, platform, social, t),
-                      onTap: _sharing
-                          ? null
-                          : () => setState(() {
-                              _services = _services.contains(platform)
-                                  ? _services
-                                        .where((other) => other != platform)
-                                        .toList()
-                                  : [..._services, platform];
-                              // No service left means everyone again
-                              if (_services.isEmpty) _chosen = [];
-                            }),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth < 320 ? 1 : 2;
+          return Column(
+            children: [
+              for (var row = 0; row < serviceOrder.length; row += columns)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final platform
+                            in serviceOrder.skip(row).take(columns)) ...[
+                          Expanded(
+                            child: _ServiceTile(
+                              key: ValueKey('service-$platform'),
+                              platform: platform,
+                              selected: _services.contains(platform),
+                              found: song.found[platform] ?? false,
+                              detail: _tileDetail(song, platform, social, t),
+                              onTap: _sharing
+                                  ? null
+                                  : () => setState(() {
+                                      _services = _services.contains(platform)
+                                          ? _services
+                                                .where(
+                                                  (other) => other != platform,
+                                                )
+                                                .toList()
+                                          : [..._services, platform];
+                                      // No service left means everyone again
+                                      if (_services.isEmpty) _chosen = [];
+                                    }),
+                            ),
+                          ),
+                          if (platform !=
+                              serviceOrder.skip(row).take(columns).last)
+                            const SizedBox(width: 10),
+                        ],
+                      ],
                     ),
                   ),
-                  if (platform != serviceOrder.skip(row).take(2).last)
-                    const SizedBox(width: 10),
-                ],
-              ],
-            ),
-          ),
-        ),
+                ),
+            ],
+          );
+        },
+      ),
       Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.all(16),
@@ -642,28 +655,38 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
             const SizedBox(height: 8),
             SelectableText(message),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Builder(
-                    builder: (context) => FilledButton.icon(
-                      onPressed: _sharing
-                          ? null
-                          : () => _share(context, message),
-                      icon: const Icon(Icons.ios_share, size: 18),
-                      label: Text(t.share),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth < 300
+                    ? constraints.maxWidth
+                    : (constraints.maxWidth - 8) / 2;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: Builder(
+                        builder: (context) => FilledButton.icon(
+                          onPressed: _sharing
+                              ? null
+                              : () => _share(context, message),
+                          icon: const Icon(Icons.ios_share, size: 18),
+                          label: Text(t.share),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _sharing ? null : () => _copy(message),
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: Text(t.copy),
-                  ),
-                ),
-              ],
+                    SizedBox(
+                      width: width,
+                      child: OutlinedButton.icon(
+                        onPressed: _sharing ? null : () => _copy(message),
+                        icon: const Icon(Icons.copy, size: 18),
+                        label: Text(t.copy),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

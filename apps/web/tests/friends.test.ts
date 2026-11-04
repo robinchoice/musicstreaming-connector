@@ -49,3 +49,37 @@ test('an invite saves its sender and the own invite shows as a QR code', async (
   await page.getByPlaceholder('Dein Name').fill('Robin');
   await expect(page.getByRole('img', { name: 'QR-Code deiner Einladung' }).locator('svg')).toBeVisible();
 });
+
+
+test('draft and result selection survive live window changes without overflow', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Meine Einladung' }).click();
+  await page.getByPlaceholder('Dein Name').fill('Alex');
+  for (const [width, height] of [[320, 640], [640, 320], [768, 1024], [1024, 768], [1440, 900], [320, 480]]) {
+    await page.setViewportSize({ width: width!, height: height! });
+    await expect(page.getByPlaceholder('Dein Name')).toHaveValue('Alex');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.getByRole('button', { name: 'Meine Einladung' }).click();
+  await page.route('**/api/v1/song?**', route => route.fulfill({ json: {
+    source: { kind: 'song', platform: 'youtubeMusic', title: 'Savior', artist: 'RHCP',
+      url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null },
+    sharePath: '/s/yt/UijW9hGpnzc',
+    links: {
+      spotify: { url: 'https://open.spotify.com/track/x', found: true },
+      appleMusic: { url: 'https://music.apple.com/de/song/1', found: true },
+      youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true },
+      deezer: { url: 'https://www.deezer.com/search/Savior', found: false },
+    },
+  } }));
+  await page.locator('#song').fill('https://youtu.be/UijW9hGpnzc');
+  await page.locator('#song').press('Enter');
+  await expect(page.getByRole('heading', { name: 'Savior' })).toBeVisible();
+  await page.getByRole('button', { name: /Spotify/ }).click();
+  const message = await page.locator('pre').textContent();
+  for (const [width, height] of [[1440, 900], [1024, 768], [640, 320], [320, 640]]) {
+    await page.setViewportSize({ width: width!, height: height! });
+    await expect(page.locator('pre')).toHaveText(message!);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

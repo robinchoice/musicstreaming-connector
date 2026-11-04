@@ -167,13 +167,14 @@ class FriendsBar extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Text(
-              t.toWhom,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                t.toWhom,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(
                 context,
