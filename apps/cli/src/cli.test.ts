@@ -13,6 +13,8 @@ const song: Song = {
     appleMusic: { url: 'https://music.apple.com/de/album/savior/945575406?i=945575419', found: true },
     spotify: { url: 'https://open.spotify.com/search/Savior', found: false },
     deezer: { url: 'https://www.deezer.com/track/725299', found: true },
+    tidal: { url: 'https://tidal.com/track/1566468', found: true },
+    amazonMusic: { url: 'https://music.amazon.de/search/Savior', found: false },
   },
 };
 const album: Song = {
@@ -23,6 +25,8 @@ const album: Song = {
     appleMusic: { url: 'https://music.apple.com/de/album/617154241', found: true },
     spotify: { url: 'https://open.spotify.com/album/4m2880jivSbbyEGAKfITCa', found: true },
     deezer: { url: 'https://www.deezer.com/album/6575789', found: true },
+    tidal: { url: 'https://tidal.com/album/1566467', found: true },
+    amazonMusic: { url: 'https://music.amazon.de/search/Daft%20Punk%20Random%20Access%20Memories', found: false },
   },
 };
 const conversion: Conversion = {
@@ -91,6 +95,7 @@ test('convert takes albums like songs', async () => {
   const text = await cli(['convert', 'https://www.deezer.com/de/album/6575789']);
   expect(text.out).toContain('Random Access Memories – Daft Punk');
   expect(text.out).toContain('https://open.spotify.com/album/4m2880jivSbbyEGAKfITCa');
+  expect(text.out).toContain('https://tidal.com/album/1566467');
 });
 
 test('convert --to asks the converter and reads the link from stdin', async () => {
@@ -116,7 +121,7 @@ test('errors of the API end with exit 1, in JSON as { error }', async () => {
 
 test('wrong usage ends with exit 2 before asking the API', async () => {
   const before = converted.length + looked.length;
-  for (const args of [['convert'], ['convert', '-'], ['convert', 'song', '--to', 'tidal'], ['convert', 'song', '--country', 'FR'], ['convert', 'a', 'b'], ['play'], ['--nope']]) {
+  for (const args of [['convert'], ['convert', '-'], ['convert', 'song', '--to', 'napster'], ['convert', 'song', '--country', 'FR'], ['convert', 'a', 'b'], ['play'], ['--nope']]) {
     expect((await cli(args)).code).toBe(EXIT.usage);
   }
   expect(converted.length + looked.length).toBe(before);

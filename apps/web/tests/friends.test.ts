@@ -70,6 +70,8 @@ test('draft and result selection survive live window changes without overflow', 
       appleMusic: { url: 'https://music.apple.com/de/song/1', found: true },
       youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true },
       deezer: { url: 'https://www.deezer.com/search/Savior', found: false },
+      tidal: { url: 'https://tidal.com/track/1', found: true },
+      amazonMusic: { url: 'https://music.amazon.de/search/RHCP%20Savior', found: false },
     },
   } }));
   await page.locator('#song').fill('https://youtu.be/UijW9hGpnzc');

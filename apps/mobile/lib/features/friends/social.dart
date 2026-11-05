@@ -13,6 +13,8 @@ const inviteSlugs = {
   'youtubeMusic': 'youtube',
   'spotify': 'spotify',
   'deezer': 'deezer',
+  'tidal': 'tidal',
+  'amazonMusic': 'amazon',
 };
 
 String? platformForSlug(String? slug) => inviteSlugs.entries

@@ -91,8 +91,11 @@ test.each([
   [spotify, { kind: 'song', platform: 'spotify', id: '2Foc5Q5nqNiosCNqttzHof', country: '' }],
   [deezer, { kind: 'song', platform: 'deezer', id: '67238735', country: '' }],
   ['https://deezer.com/track/67238735', { kind: 'song', platform: 'deezer', id: '67238735', country: '' }],
+  ['https://tidal.com/track/1566468/u', { kind: 'song', platform: 'tidal', id: '1566468', country: '' }],
+  ['https://listen.tidal.com/album/1566467/track/1566468', { kind: 'song', platform: 'tidal', id: '1566468', country: '' }],
+  ['https://tidal.com/browse/album/1566467', { kind: 'album', platform: 'tidal', id: '1566467', country: '' }],
 ] as const)('accepts %s', (input, source) => expect(musicSource(input)).toEqual(source));
-test.each(['https://open.spotify.com/artist/2Foc5Q5nqNiosCNqttzHof', 'https://open.spotify.com/album/short', 'https://open.spotify.com/track/short', 'https://www.deezer.com/de/playlist/123', 'https://deezer.com.evil.example/track/1'])('rejects %s', input => {
+test.each(['https://open.spotify.com/artist/2Foc5Q5nqNiosCNqttzHof', 'https://open.spotify.com/album/short', 'https://open.spotify.com/track/short', 'https://www.deezer.com/de/playlist/123', 'https://deezer.com.evil.example/track/1', 'https://tidal.com/playlist/1', 'https://tidal.com/track/abc', 'https://music.amazon.de/albums/B0C1'])('rejects %s', input => {
   expect(() => musicSource(input)).toThrow();
 });
 
@@ -162,17 +165,21 @@ test('resolveAll finds every service once and falls back to search per service',
     appleMusic: { url: apple, found: true },
     spotify: { url: 'https://open.spotify.com/search/Red%20Hot%20Chili%20Peppers%20Savior', found: false },
     deezer: { url: 'https://www.deezer.com/search/Red%20Hot%20Chili%20Peppers%20Savior', found: false },
+    tidal: { url: 'https://tidal.com/search?q=Red+Hot+Chili+Peppers+Savior', found: false },
+    amazonMusic: { url: 'https://music.amazon.de/search/Red%20Hot%20Chili%20Peppers%20Savior', found: false },
   });
 });
 
 test.each([
   [youtube, '/s/yt/UijW9hGpnzc'], [apple, '/s/am/de/945575419'], [spotify, '/s/sp/2Foc5Q5nqNiosCNqttzHof'], [deezer, '/s/dz/67238735'],
+  ['https://tidal.com/browse/track/1566468', '/s/td/1566468'], ['https://tidal.com/album/1566467/u', '/s/album/td/1566467'],
 ])('share path for %s', (input, path) => expect(sharePath(musicSource(input))).toBe(path));
 
 test('friends message has one link for one service and one line per service otherwise', () => {
   const song = { source: { kind: 'song' as const, platform: 'youtubeMusic' as const, title: 'Savior', artist: 'RHCP', url: youtube, artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
     youtubeMusic: { url: youtube, found: true }, appleMusic: { url: apple, found: true },
     spotify: { url: 'https://open.spotify.com/track/x', found: true }, deezer: { url: 'https://www.deezer.com/track/1', found: true },
+    tidal: { url: 'https://tidal.com/track/1', found: true }, amazonMusic: { url: 'https://music.amazon.de/search/RHCP%20Savior', found: false },
   } };
   expect(friendsMessage(song, [{ name: 'Lisa', platform: 'spotify' }, { name: 'Ben', platform: 'spotify' }], 'https://musiclink.pleasance.org'))
     .toBe('🎵 Savior – RHCP\nhttps://open.spotify.com/track/x\n\nGeteilt mit musiclink.pleasance.org');

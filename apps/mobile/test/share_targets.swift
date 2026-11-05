@@ -12,6 +12,8 @@ struct ShareTargetsTests {
             ("https://music.youtube.com/watch?v=UijW9hGpnzc", "youtubeMusic"),
             ("https://youtu.be/UijW9hGpnzc", "youtubeMusic"),
             ("https://www.deezer.com/track/67238735", "deezer"),
+            ("https://tidal.com/track/28048256/u", "tidal"),
+            ("https://music.amazon.de/albums/B0C1", nil),
             ("", nil),
         ]
         for (input, source) in cases {

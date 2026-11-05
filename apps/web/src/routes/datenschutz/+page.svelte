@@ -18,9 +18,11 @@
     <li><strong>YouTube</strong> (Google Ireland Limited, Irland): Suche und Song-Angaben von YouTube Music</li>
     <li><strong>ListenBrainz</strong> (MetaBrainz Foundation, USA): ordnet Titel und Interpret den passenden Spotify-Songs zu</li>
     <li><strong>Spotify</strong> (Spotify AB, Schweden) und <strong>Deezer</strong> (Deezer S.A., Frankreich): Song-Angaben zu Links dieser Dienste</li>
+    <li><strong>TIDAL</strong> (TIDAL Music AS, Norwegen): Song-Angaben zu TIDAL-Links und Suche bei TIDAL</li>
   </ul>
+  <p>Bei Amazon Music fragt Songgate nichts ab, es baut nur einen Link zur Suche dort.</p>
   <p>Übermittelt werden nur der Song-Link bzw. Titel, Interpret und Album. Diese Abfragen stellt unser Server, deine IP-Adresse und andere Angaben zu dir gehen dabei nicht an die Anbieter. Links und Ergebnisse speichern wir nicht dauerhaft. Damit geteilte Song-Links schnell laden, behält der Server das Ergebnis bis zu 24 Stunden im Arbeitsspeicher, ohne Bezug zu dir. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
-  <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
+  <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer, TIDAL). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
 
   <h2>Einstellungen auf deinem Gerät</h2>
   <p>Deine bevorzugte Zielplattform, den Dienst, den du auf einer geteilten Song-Seite zuletzt geöffnet hast, deine Freunde und Gruppen (Name und Musikdienst) und, falls angegeben, deine E-Mail-Adresse für Feedback merkt sich Songgate lokal auf deinem Gerät. Freunde erreichen unseren Server nicht. Ein Einladungslink enthält nur den Namen und den Dienst, die du selbst angibst. Ein Cookie setzen wir nur, wenn du in der Fußzeile die Sprache umschaltest: Es merkt sich deine Wahl ein Jahr lang.</p>
@@ -35,5 +37,5 @@
   <h2>Deine Rechte</h2>
   <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Schreib uns dafür an <a href="mailto:hello@pleasance.org">hello@pleasance.org</a>. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren, zum Beispiel beim Landesbeauftragten für den Datenschutz und die Informationsfreiheit Baden-Württemberg.</p>
 
-  <p>Stand: Oktober 2026</p>
+  <p>Stand: November 2026</p>
 </LegalPage>

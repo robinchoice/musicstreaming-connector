@@ -52,6 +52,7 @@ test('song lookups are cached so share pages do not hit the services again', asy
   const song = { source: { kind: 'song' as const, platform: 'youtubeMusic' as const, title: 'Savior', artist: 'Red Hot Chili Peppers', url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null }, sharePath: '/s/yt/UijW9hGpnzc', links: {
     youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true }, appleMusic: { url: 'https://music.apple.com/de/album/savior/945575406?i=945575419', found: true },
     spotify: { url: 'https://open.spotify.com/search/Savior', found: false }, deezer: { url: 'https://www.deezer.com/track/725299', found: true },
+    tidal: { url: 'https://tidal.com/search?q=Savior', found: false }, amazonMusic: { url: 'https://music.amazon.de/search/Savior', found: false },
   } };
   let calls = 0;
   const app = createApp(undefined, undefined, async input => { calls++; expect(input).toEqual({ input: 'https://youtu.be/UijW9hGpnzc', country: 'AT' }); return song; });

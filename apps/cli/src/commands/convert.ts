@@ -16,7 +16,7 @@ const conversionSchema = z.object({
   candidates: z.array(z.object({ title: z.string(), url: z.string(), album: z.string().exactOptional() })),
 });
 
-// --to takes the short names of the invite links: apple, youtube, spotify, deezer
+// --to takes the short names of the invite links: apple, youtube, spotify, deezer, tidal, amazon
 const targets = Object.fromEntries(Object.entries(inviteSlugs).map(([platform, slug]) => [slug, platform as Platform]));
 
 // The core of Songgate: what the web shows for a shared link. Without --to like

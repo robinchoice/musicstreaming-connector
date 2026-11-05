@@ -9,10 +9,11 @@ export const LIVE = true;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
 export { type Locale, type Messages, messages, pickLocale } from './messages';
 
-export const platformSchema = z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer']);
+export const platformSchema = z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer', 'tidal', 'amazonMusic']);
 export type Platform = z.infer<typeof platformSchema>;
-export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer' } as const satisfies Record<Platform, string>;
-export const serviceOrder: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
+export const platforms = { appleMusic: 'Apple Music', youtubeMusic: 'YouTube Music', spotify: 'Spotify', deezer: 'Deezer', tidal: 'TIDAL', amazonMusic: 'Amazon Music' } as const satisfies Record<Platform, string>;
+// Amazon Music has no open catalogue: it is never a source and always gets a search link
+export const serviceOrder: Platform[] = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer', 'tidal', 'amazonMusic'];
 export const countries = ['DE', 'AT', 'CH', 'US', 'GB'] as const;
 export const conversionInput = z.object({
   input: z.string().trim().min(1).max(4096),
@@ -48,7 +49,7 @@ export const feedbackSchema = z.object({
 
 const sources: [RegExp, Platform][] = [
   [/music\.apple\.com\//, 'appleMusic'], [/youtu(?:be\.com|\.be)\//, 'youtubeMusic'],
-  [/open\.spotify\.com\/|spotify\.link\//, 'spotify'], [/deezer\.com\//, 'deezer'],
+  [/open\.spotify\.com\/|spotify\.link\//, 'spotify'], [/deezer\.com\//, 'deezer'], [/tidal\.com\//, 'tidal'],
 ];
 
 // The service a pasted link comes from, before the API has looked at it
@@ -72,7 +73,7 @@ export interface Song {
 
 // Friends live on the device only. An invite link carries a name and a service.
 export interface Friend { name: string; platform: Platform }
-export const inviteSlugs: Record<Platform, string> = { appleMusic: 'apple', youtubeMusic: 'youtube', spotify: 'spotify', deezer: 'deezer' };
+export const inviteSlugs: Record<Platform, string> = { appleMusic: 'apple', youtubeMusic: 'youtube', spotify: 'spotify', deezer: 'deezer', tidal: 'tidal', amazonMusic: 'amazon' };
 
 // A share page may name its sender, so the recipient can save them and answer with their own service
 export function shareUrl(origin: string, path: string, from: Friend | null): string {

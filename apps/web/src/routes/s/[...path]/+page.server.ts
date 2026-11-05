@@ -10,11 +10,13 @@ function sourceLink(path: string) {
   if (kind === 'am' && a && b && !c) return `https://music.apple.com/${a}/song/${b}`;
   if (kind === 'sp' && a && !b) return `https://open.spotify.com/track/${a}`;
   if (kind === 'dz' && a && !b) return `https://www.deezer.com/track/${a}`;
+  if (kind === 'td' && a && !b) return `https://tidal.com/track/${a}`;
   if (kind !== 'album') return;
   if (a === 'yt' && b && !c) return b.startsWith('MPREb_') ? `https://music.youtube.com/browse/${b}` : `https://music.youtube.com/playlist?list=${b}`;
   if (a === 'am' && b && c) return `https://music.apple.com/${b}/album/${c}`;
   if (a === 'sp' && b && !c) return `https://open.spotify.com/album/${b}`;
   if (a === 'dz' && b && !c) return `https://www.deezer.com/album/${b}`;
+  if (a === 'td' && b && !c) return `https://tidal.com/album/${b}`;
 }
 
 export const load: PageServerLoad = async ({ params, fetch, request, url, locals }) => {

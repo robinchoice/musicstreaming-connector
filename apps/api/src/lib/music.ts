@@ -1,8 +1,9 @@
 import { platformSchema, type Conversion, type ConversionInput, type Platform, type Song } from '@app/shared';
 import { z } from 'zod';
 import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
-import { appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, spotifyMeta, youtube, type MusicLink, type Session } from './providers';
+import { appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, pageMeta, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, YOUTUBE_HOSTS, type Fetch } from './resolver';
+import { tidalCatalog, tidalPageMeta, tidalSearch, tidalTracks } from './tidal';
 
 const appleTrack = z.object({
   wrapperType: z.literal('track'), kind: z.literal('song'), trackId: z.number(),
@@ -24,7 +25,7 @@ type Track = { title: string; artist: string; url: string; durationSeconds?: num
 type YouTubeSong = { id: string; title: string; artists: string[]; album?: string; durationSeconds?: number; artworkUrl: string | null };
 export type MusicSearch = (query: string, signal: AbortSignal) => Promise<YouTubeSong[]>;
 
-// A song or an album: Apple albums without ?i=, Spotify and Deezer /album/, YouTube Music album playlists and pages
+// A song or an album: Apple albums without ?i=, Spotify, Deezer and TIDAL /album/, YouTube Music album playlists and pages
 export function musicSource(input: string): MusicLink {
   const links = new Map<string, MusicLink>();
   for (const link of input.match(/https?:\/\/[^\s<>]+/gi) ?? []) {
@@ -54,6 +55,15 @@ export function musicSource(input: string): MusicLink {
       const id = kind ? parts.at(-1) : null;
       if (url.username || url.password || !kind || !id || !(spotify ? /^[A-Za-z0-9]{22}$/ : /^\d{1,12}$/).test(id)) throw new ResolutionError('INVALID_LINK');
       links.set(`${spotify ? 'spotify' : 'deezer'}:${kind}:${id}`, { kind, platform: spotify ? 'spotify' : 'deezer', id, country: '' });
+    } else if (['tidal.com', 'www.tidal.com', 'listen.tidal.com'].includes(url.hostname)) {
+      // tidal.com/track/1, tidal.com/browse/album/2, listen.tidal.com/album/2/track/1, share links end in /u
+      const parts = url.pathname.split('/').filter(Boolean);
+      const track = parts.lastIndexOf('track');
+      const at = track >= 0 ? track : parts.lastIndexOf('album');
+      const kind = parts[at] === 'track' ? 'song' : 'album';
+      const id = at >= 0 ? parts[at + 1] : undefined;
+      if (url.username || url.password || !id || !/^\d{1,12}$/.test(id)) throw new ResolutionError('INVALID_LINK');
+      links.set(`tidal:${kind}:${id}`, { kind, platform: 'tidal', id, country: '' });
     }
   }
   if (links.size > 1) throw new ResolutionError('INVALID_LINK');
@@ -73,7 +83,7 @@ export const searchYouTube: MusicSearch = async (query, signal) => {
 
 // Share links carry only the source song or album, so the share page needs no storage
 export function sharePath(source: MusicLink) {
-  const path = { youtubeMusic: `/yt/${source.id}`, appleMusic: `/am/${source.country.toLowerCase()}/${source.id}`, spotify: `/sp/${source.id}`, deezer: `/dz/${source.id}` }[source.platform];
+  const path = { youtubeMusic: `/yt/${source.id}`, appleMusic: `/am/${source.country.toLowerCase()}/${source.id}`, spotify: `/sp/${source.id}`, deezer: `/dz/${source.id}`, tidal: `/td/${source.id}` }[source.platform];
   return source.kind === 'album' ? `/s/album${path}` : `/s${path}`;
 }
 
@@ -91,6 +101,7 @@ function appleCandidate(link: string, title: string, album: string | undefined, 
   const url = appleUrl(link, true);
   return url ? [{ title, url, ...(album === undefined ? {} : { album }), ...(millis ? { durationSeconds: Math.round(millis / 1000) } : {}), artworkUrl }] : [];
 }
+const tidalCandidate = (track: ReturnType<typeof tidalTracks>[number]) => ({ title: track.title, url: track.url, ...(track.album === undefined ? {} : { album: track.album }), ...(track.durationSeconds === undefined ? {} : { durationSeconds: track.durationSeconds }), artworkUrl: null });
 const deezerCandidate = (track: z.infer<typeof deezerTrack>) => ({ title: track.title, url: `https://www.deezer.com/track/${track.id}`, ...(track.album?.title === undefined ? {} : { album: track.album.title }), ...(track.duration === undefined ? {} : { durationSeconds: track.duration }), artworkUrl: https(track.album?.cover_medium) });
 
 // The ISRC names the recording, so a hit needs no text comparison
@@ -106,6 +117,10 @@ async function isrcCandidates(target: Platform, isrc: string, country: string, c
       // Deezer answers an unknown ISRC with an error object, which does not parse as a track
       const track = deezerTrack.safeParse(await current.get(`https://api.deezer.com/track/isrc:${isrc}`, {}));
       return track.success && track.data.readable !== false ? [deezerCandidate(track.data)] : [];
+    }
+    if (target === 'tidal') {
+      const found = await tidalCatalog('tracks', [['filter[isrc]', isrc], ['countryCode', country], ['include', 'albums']], current);
+      return found ? tidalTracks(found).map(tidalCandidate) : [];
     }
   } catch {
     codeFailure('ISRC', target, current.signal);
@@ -135,8 +150,17 @@ function loadSource(parsed: MusicLink, current: Session): Promise<Track> {
       source = { ...isrcCode(isrc), title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
     } else if (parsed.platform === 'spotify') {
       const html = await current.spotifyPage(`track/${parsed.id}`);
-      const duration = Number(spotifyMeta(html, 'music:duration'));
-      source = { title: spotifyMeta(html, 'og:title') ?? '', artist: spotifyMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, ...(duration > 0 ? { durationSeconds: duration } : {}), artworkUrl: https(spotifyMeta(html, 'og:image')) };
+      const duration = Number(pageMeta(html, 'music:duration'));
+      source = { title: pageMeta(html, 'og:title') ?? '', artist: pageMeta(html, 'music:musician_description') ?? '', url: `https://open.spotify.com/track/${parsed.id}`, ...(duration > 0 ? { durationSeconds: duration } : {}), artworkUrl: https(pageMeta(html, 'og:image')) };
+    } else if (parsed.platform === 'tidal') {
+      // The page names the song without a key, the API adds its ISRC and duration
+      const [html, found] = await Promise.all([
+        current.tidalPage(`track/${parsed.id}`),
+        tidalCatalog(`tracks/${parsed.id}`, [['countryCode', 'DE']], current).then(doc => doc && tidalTracks(doc)[0], () => { codeFailure('ISRC', 'tidal', signal); return undefined; }),
+      ]);
+      const meta = tidalPageMeta(pageMeta(html, 'og:title'), pageMeta(html, 'og:description'));
+      if (!meta) throw new ResolutionError('SOURCE_UNAVAILABLE');
+      source = { ...isrcCode(found?.isrc), ...meta, url: `https://tidal.com/track/${parsed.id}`, ...(found?.durationSeconds ? { durationSeconds: found.durationSeconds } : {}), artworkUrl: https(pageMeta(html, 'og:image')) };
     } else {
       // Deezer reports unknown tracks as an error object with status 200
       const body = await get(`https://api.deezer.com/track/${parsed.id}`, {});
@@ -177,8 +201,13 @@ function findCandidates(target: Platform, source: Track, country: string, curren
         const track = deezerTrack.safeParse(item);
         return !track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration) ? [] : [deezerCandidate(track.data)];
       });
-    } else {
+    } else if (target === 'tidal') {
+      const found = await tidalSearch('tracks', query, country, current);
+      candidates = found ? tidalTracks(found).filter(track => matches(track.title, track.artists, track.durationSeconds)).map(tidalCandidate) : [];
+    } else if (target === 'spotify') {
       candidates = await spotifyCandidates(source, get);
+    } else {
+      candidates = [];
     }
     return [...new Map(candidates.map(candidate => [candidate.url, candidate])).values()].slice(0, 8);
   });

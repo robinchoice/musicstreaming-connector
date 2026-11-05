@@ -238,7 +238,7 @@ class De extends Messages {
   String get headline => 'Teil Musik. Jeder hört sie in seinem Dienst.';
   @override
   String get intro =>
-      'Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music und Deezer.';
+      'Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music, Deezer und TIDAL.';
   @override
   String get linkHint => 'Song- oder Albumlink';
   @override
@@ -246,7 +246,7 @@ class De extends Messages {
   @override
   String get find => 'Finden';
   @override
-  String get searching => 'Suche bei allen vier Diensten …';
+  String get searching => 'Suche bei allen Diensten …';
   @override
   String get linkFrom => 'Link aus ';
   @override
@@ -261,7 +261,7 @@ class De extends Messages {
       'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.';
   @override
   String get privacyNote =>
-      'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer und ListenBrainz.';
+      'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer, TIDAL und ListenBrainz.';
   @override
   String kindFrom(bool album, String? service) =>
       '${album ? 'Album' : 'Song'}${service == null ? '' : ' aus $service'}';
@@ -558,7 +558,7 @@ class En extends Messages {
   String get headline => 'Share music. Everyone hears it on their own service.';
   @override
   String get intro =>
-      'Paste a song or album link. Songgate finds it on Spotify, Apple Music, YouTube Music and Deezer.';
+      'Paste a song or album link. Songgate finds it on Spotify, Apple Music, YouTube Music, Deezer and TIDAL.';
   @override
   String get linkHint => 'Song or album link';
   @override
@@ -566,7 +566,7 @@ class En extends Messages {
   @override
   String get find => 'Find';
   @override
-  String get searching => 'Searching all four services …';
+  String get searching => 'Searching all services …';
   @override
   String get linkFrom => 'Link from ';
   @override
@@ -581,7 +581,7 @@ class En extends Messages {
       'Straight from your music app: open the share menu on a song and pick Songgate.';
   @override
   String get privacyNote =>
-      'No account. Friends and groups stay on your device. Your link goes to our service, the matches come from Apple, YouTube, Spotify, Deezer and ListenBrainz.';
+      'No account. Friends and groups stay on your device. Your link goes to our service, the matches come from Apple, YouTube, Spotify, Deezer, TIDAL and ListenBrainz.';
   @override
   String kindFrom(bool album, String? service) =>
       '${album ? 'Album' : 'Song'}${service == null ? '' : ' from $service'}';

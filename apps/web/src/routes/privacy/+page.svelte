@@ -18,9 +18,11 @@
     <li><strong>YouTube</strong> (Google Ireland Limited, Ireland): search and song details from YouTube Music</li>
     <li><strong>ListenBrainz</strong> (MetaBrainz Foundation, USA): maps title and artist to the matching Spotify songs</li>
     <li><strong>Spotify</strong> (Spotify AB, Sweden) and <strong>Deezer</strong> (Deezer S.A., France): song details for links from these services</li>
+    <li><strong>TIDAL</strong> (TIDAL Music AS, Norway): song details for TIDAL links and search on TIDAL</li>
   </ul>
+  <p>Songgate queries nothing at Amazon Music, it only builds a link to its search.</p>
   <p>Only the song link or title, artist and album are sent. Our server makes these requests, so your IP address and other details about you do not reach the providers. We don't store links or results permanently. So that shared song links load quickly, the server keeps the result in memory for up to 24 hours, without any reference to you. Legal basis is Art. 6(1)(b) GDPR.</p>
-  <p>Your device loads the cover images of the results directly from the platforms' servers (Apple, Google, Spotify, Deezer), which see your IP address. When you open a song in a music app or on a platform, its privacy policy applies.</p>
+  <p>Your device loads the cover images of the results directly from the platforms' servers (Apple, Google, Spotify, Deezer, TIDAL), which see your IP address. When you open a song in a music app or on a platform, its privacy policy applies.</p>
 
   <h2>Settings on your device</h2>
   <p>Songgate stores your preferred target platform, the service you last opened on a shared song page, your friends and groups (name and music service) and, if given, your email address for feedback locally on your device. Friends never reach our server. An invite link only contains the name and service you enter yourself. We only set a cookie when you switch the language in the footer: it keeps your choice for a year.</p>
@@ -35,5 +37,5 @@
   <h2>Your rights</h2>
   <p>You have the right to access, rectification, erasure, restriction of processing, data portability and objection. Write to <a href="mailto:hello@pleasance.org">hello@pleasance.org</a>. You can also lodge a complaint with a data protection authority, for example the State Commissioner for Data Protection and Freedom of Information Baden-Württemberg.</p>
 
-  <p>Last updated: October 2026</p>
+  <p>Last updated: November 2026</p>
 </LegalPage>

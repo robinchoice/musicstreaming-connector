@@ -7,7 +7,8 @@ import { ResolutionError, type Fetch } from './resolver';
 
 // Plumbing shared by the song and the album lookups
 
-export type MusicLink = { kind: 'song' | 'album'; platform: Platform; id: string; country: string };
+// Amazon Music has no open catalogue, so its links are never a source
+export type MusicLink = { kind: 'song' | 'album'; platform: Exclude<Platform, 'amazonMusic'>; id: string; country: string };
 
 export const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 export function recording(title: string, artists: string[]) {
@@ -31,11 +32,11 @@ export function appleUrl(link: string, keepSongId: boolean) {
   return url.toString();
 }
 
-// Spotify has no open metadata API; its public pages carry titles, artists and links as meta tags.
-export function spotifyMeta(html: string, name: string) {
-  return spotifyMetas(html, name)[0];
+// Spotify has no open metadata API; its public pages, like TIDAL's, carry titles, artists and links as meta tags.
+export function pageMeta(html: string, name: string) {
+  return pageMetas(html, name)[0];
 }
-export function spotifyMetas(html: string, name: string) {
+export function pageMetas(html: string, name: string) {
   return [...html.matchAll(new RegExp(`<meta (?:property|name)="${name}" content="([^"]*)"`, 'g'))].map(match =>
     match[1]!.replace(/&(amp|quot|lt|gt|#x27|#39);/g, (_, entity: string) => ({ amp: '&', quot: '"', lt: '<', gt: '>', '#x27': "'", '#39': "'" })[entity]!));
 }
@@ -43,7 +44,7 @@ export function spotifyMetas(html: string, name: string) {
 export function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(requestSignal ? [requestSignal] : [])]);
-  const request = async (origin: string, params: Record<string, string>, headers: Record<string, string> = { 'user-agent': 'Songgate/0.3' }) => {
+  const request = async (origin: string, params: Record<string, string> | [string, string][], headers: Record<string, string> = { 'user-agent': 'Songgate/0.3' }) => {
     const url = new URL(origin);
     url.search = new URLSearchParams(params).toString();
     const response = await fetcher(url, { signal, redirect: 'error', headers });
@@ -53,8 +54,10 @@ export function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) 
     return response;
   };
   const get = async (origin: string, params: Record<string, string>): Promise<unknown> => (await request(origin, params)).json();
-  const spotifyPage = async (path: string) => (await request(`https://open.spotify.com/${path}`, {}, { 'user-agent': 'Mozilla/5.0 (compatible; Songgate/0.3)' })).text();
-  return { controller, signal, request, get, spotifyPage };
+  const page = async (origin: string) => (await request(origin, {}, { 'user-agent': 'Mozilla/5.0 (compatible; Songgate/0.3)' })).text();
+  const spotifyPage = (path: string) => page(`https://open.spotify.com/${path}`);
+  const tidalPage = (path: string) => page(`https://tidal.com/${path}`);
+  return { controller, signal, fetcher, request, get, spotifyPage, tidalPage };
 }
 export type Session = ReturnType<typeof session>;
 

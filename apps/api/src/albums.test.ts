@@ -122,6 +122,8 @@ test('resolveAll finds an album from YouTube Music everywhere, by UPC-less text 
     youtubeMusic: { url: 'https://music.youtube.com/playlist?list=OLAK5uy_kNhM2yaBTOVwrcZJepB1C9P3-n5_Sfy5c', found: true },
     spotify: { url: 'https://open.spotify.com/search/Daft%20Punk%20Random%20Access%20Memories', found: false },
     deezer: { url: 'https://www.deezer.com/album/6575789', found: true },
+    tidal: { url: 'https://tidal.com/search?q=Daft+Punk+Random+Access+Memories', found: false },
+    amazonMusic: { url: 'https://music.amazon.de/search/Daft%20Punk%20Random%20Access%20Memories', found: false },
   });
   expect(friendsMessage(album, [{ name: 'Ada', platform: 'deezer' }], 'https://songgate.app')).toBe('💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789\n\nGeteilt mit songgate.app');
 });

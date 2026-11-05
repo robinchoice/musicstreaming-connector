@@ -6,10 +6,19 @@ const platforms = {
   'youtubeMusic': 'YouTube Music',
   'spotify': 'Spotify',
   'deezer': 'Deezer',
+  'tidal': 'TIDAL',
+  'amazonMusic': 'Amazon Music',
 };
 
 /// The order of the service tiles, the same as on the web.
-const serviceOrder = ['spotify', 'appleMusic', 'youtubeMusic', 'deezer'];
+const serviceOrder = [
+  'spotify',
+  'appleMusic',
+  'youtubeMusic',
+  'deezer',
+  'tidal',
+  'amazonMusic',
+];
 const countries = ['DE', 'AT', 'CH', 'US', 'GB'];
 
 const _sources = {
@@ -17,6 +26,7 @@ const _sources = {
   'youtubeMusic': r'youtu(?:be\.com|\.be)/',
   'spotify': r'open\.spotify\.com/|spotify\.link/',
   'deezer': r'deezer\.com/',
+  'tidal': r'tidal\.com/',
 };
 
 /// The service a pasted link comes from, before the API has looked at it.
@@ -31,6 +41,8 @@ const _logoColors = {
   'youtubeMusic': Color(0xFFFF0033),
   'spotify': Color(0xFF1ED760),
   'deezer': Color(0xFFA238FF),
+  'tidal': Color(0xFFFFFFFF),
+  'amazonMusic': Color(0xFF25D1DA),
 };
 
 class ServiceLogo extends StatelessWidget {

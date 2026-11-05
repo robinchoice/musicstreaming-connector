@@ -31,6 +31,11 @@ Map<String, dynamic> result({String title = 'Plätscher'}) => {
       'url': 'https://www.deezer.com/search/Pl%C3%A4tscher',
       'found': false,
     },
+    'tidal': {'url': 'https://tidal.com/track/1', 'found': true},
+    'amazonMusic': {
+      'url': 'https://music.amazon.de/search/Pl%C3%A4tscher',
+      'found': false,
+    },
   },
 };
 
@@ -195,11 +200,13 @@ void main() {
       'appleMusic',
       'youtubeMusic',
       'deezer',
+      'tidal',
+      'amazonMusic',
     ]) {
       expect(find.byKey(ValueKey('service-$platform')), findsOneWidget);
     }
     expect(find.text('Quelle'), findsOneWidget);
-    expect(find.text('Nur Suche'), findsOneWidget);
+    expect(find.text('Nur Suche'), findsNWidgets(2));
     expect(
       await copyMessage(tester),
       '🎵 Plätscher – Paul Kalkbrenner\nhttp://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',

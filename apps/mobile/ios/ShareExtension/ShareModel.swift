@@ -93,7 +93,7 @@ struct ShareTexts {
         sharedWith: "Geteilt mit",
         missingServer: "Die Server-Adresse fehlt in dieser App-Version.",
         unreachable: "Der Dienst ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
-        unreadable: "Der geteilte Link konnte nicht gelesen werden. Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify oder Deezer erneut."
+        unreadable: "Der geteilte Link konnte nicht gelesen werden. Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL erneut."
     )
 
     static let en = ShareTexts(
@@ -120,7 +120,7 @@ struct ShareTexts {
         sharedWith: "Shared with",
         missingServer: "This version of the app is missing the server address.",
         unreachable: "The service can’t be reached right now. Check your connection and try again.",
-        unreadable: "The shared link couldn’t be read. Share a song or album from YouTube Music, Apple Music, Spotify or Deezer again."
+        unreadable: "The shared link couldn’t be read. Share a song or album from YouTube Music, Apple Music, Spotify, Deezer or TIDAL again."
     )
 
     func kindFrom(_ album: Bool, _ service: String) -> String {
@@ -146,8 +146,8 @@ struct ShareTexts {
 
 @MainActor
 final class ShareModel: ObservableObject {
-    static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify", "deezer": "Deezer"]
-    static let serviceOrder = ["spotify", "appleMusic", "youtubeMusic", "deezer"]
+    static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify", "deezer": "Deezer", "tidal": "TIDAL", "amazonMusic": "Amazon Music"]
+    static let serviceOrder = ["spotify", "appleMusic", "youtubeMusic", "deezer", "tidal", "amazonMusic"]
     private let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype")
     private let country: String = {
         let region = Locale.current.region?.identifier ?? ""
@@ -238,7 +238,7 @@ final class ShareModel: ObservableObject {
     }
 
     // A share page may name its sender, same as shareUrl in packages/shared
-    static let inviteSlugs = ["appleMusic": "apple", "youtubeMusic": "youtube", "spotify": "spotify", "deezer": "deezer"]
+    static let inviteSlugs = ["appleMusic": "apple", "youtubeMusic": "youtube", "spotify": "spotify", "deezer": "deezer", "tidal": "tidal", "amazonMusic": "amazon"]
     static func shareURL(_ url: String, from: Friend?) -> String {
         guard let from, let slug = inviteSlugs[from.platform], var components = URLComponents(string: url) else { return url }
         components.queryItems = [URLQueryItem(name: "from", value: from.name), URLQueryItem(name: "service", value: slug)]
@@ -252,7 +252,8 @@ final class ShareModel: ObservableObject {
         input.contains("music.apple.com/") ? "appleMusic"
             : input.contains("youtube.com/") || input.contains("youtu.be/") ? "youtubeMusic"
             : input.contains("open.spotify.com/") || input.contains("spotify.link/") ? "spotify"
-            : input.contains("deezer.com/") ? "deezer" : nil
+            : input.contains("deezer.com/") ? "deezer"
+            : input.contains("tidal.com/") ? "tidal" : nil
     }
 
     // Lets the API ask outdated builds to update (status 426), see apps/api/src/app.ts

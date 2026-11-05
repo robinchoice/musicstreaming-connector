@@ -18,6 +18,7 @@
     "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@types/nodemailer": "^8.0.2"
+    "@types/nodemailer": "^8.0.2",
+    "fast-check": "^4.10.2"
   }
 }

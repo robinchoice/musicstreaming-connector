@@ -9,7 +9,7 @@
   <p>Robin Wahl, Pleasance, Bugginger Straße 37, 79114 Freiburg<br />E-Mail: <a href="mailto:hello@pleasance.org">hello@pleasance.org</a></p>
 
   <h2>Leistung von Songgate</h2>
-  <p>Songgate wandelt Links zu Songs und Alben zwischen YouTube Music, Apple Music, Spotify und Deezer um und erstellt Links, die du mit anderen teilen kannst. Die Nutzung ist kostenlos und ohne Anmeldung möglich.</p>
+  <p>Songgate wandelt Links zu Songs und Alben zwischen YouTube Music, Apple Music, Spotify, Deezer und TIDAL um, bietet eine Suche bei Amazon Music an und erstellt Links, die du mit anderen teilen kannst. Die Nutzung ist kostenlos und ohne Anmeldung möglich.</p>
   <p>Songgate ist ein eigenständiger Dienst und gehört keinem der genannten Musikdienste. Für die Nutzung dieser Dienste gelten deren eigene Bedingungen und Datenschutzerklärungen. Songgate stellt keine Musik bereit und schließt keine Verträge über Musikinhalte für dich ab.</p>
 
   <h2>Treffer und Verfügbarkeit</h2>

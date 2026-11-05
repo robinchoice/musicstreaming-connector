@@ -1,6 +1,6 @@
 Songgate macht aus einem Song-Link einen Link, der bei deinen Freunden im eigenen Streamingdienst aufgeht.
 
-Du hörst einen Song und willst ihn teilen, aber deine Freunde nutzen einen anderen Musikdienst? Tippe in deiner Musik-App auf „Teilen“ und wähle Songgate. Songgate findet denselben Song auf Spotify, Apple Music, YouTube Music und Deezer und zeigt ihn mit Cover, Künstler und Album. Ganze Alben gehen genauso.
+Du hörst einen Song und willst ihn teilen, aber deine Freunde nutzen einen anderen Musikdienst? Tippe in deiner Musik-App auf „Teilen“ und wähle Songgate. Songgate findet denselben Song auf Spotify, Apple Music, YouTube Music, Deezer und TIDAL, sucht ihn bei Amazon Music und zeigt ihn mit Cover, Künstler und Album. Ganze Alben gehen genauso.
 
 SO GEHT'S
 • In deiner Musik-App auf „Teilen“ tippen und Songgate wählen
@@ -13,6 +13,6 @@ Merke dir, welcher Freund welchen Dienst nutzt, und fasse sie zu Gruppen zusamme
 OHNE ANMELDUNG
 Songgate braucht kein Konto und keinen Zugriff auf deine Musikdienste. Keine Werbung, kein Tracking. Songgate liest nur öffentliche Song-Angaben und spielt selbst keine Musik ab.
 
-Auf Deutsch und Englisch. Funktioniert mit Song- und Album-Links aus YouTube Music, Apple Music, Spotify und Deezer. Songgate ist ein unabhängiges Werkzeug und steht in keiner Verbindung zu diesen Diensten.
+Auf Deutsch und Englisch. Funktioniert mit Song- und Album-Links aus YouTube Music, Apple Music, Spotify, Deezer und TIDAL. Songgate ist ein unabhängiges Werkzeug und steht in keiner Verbindung zu diesen Diensten.
 
 Songgate ist ein Werkzeug von Pleasance aus Freiburg.

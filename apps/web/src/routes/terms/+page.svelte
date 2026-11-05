@@ -9,7 +9,7 @@
   <p>Robin Wahl, Pleasance, Bugginger Straße 37, 79114 Freiburg, Germany<br />Email: <a href="mailto:hello@pleasance.org">hello@pleasance.org</a></p>
 
   <h2>What Songgate does</h2>
-  <p>Songgate converts links to songs and albums between YouTube Music, Apple Music, Spotify and Deezer and creates links you can share with others. It is free and needs no sign-up.</p>
+  <p>Songgate converts links to songs and albums between YouTube Music, Apple Music, Spotify, Deezer and TIDAL, offers a search on Amazon Music and creates links you can share with others. It is free and needs no sign-up.</p>
   <p>Songgate is an independent service and belongs to none of these music services. Their own terms and privacy policies apply to using them. Songgate does not provide music and does not conclude contracts for music content on your behalf.</p>
 
   <h2>Matches and availability</h2>

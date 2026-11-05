@@ -1,8 +1,9 @@
 import type { Conversion, Platform } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, spotifyMeta, spotifyMetas, youtube, type MusicLink, type Session } from './providers';
+import { appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, pageMeta, pageMetas, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
+import { tidalAlbums, tidalCatalog, tidalPageMeta, tidalSearch } from './tidal';
 
 type Candidates = Conversion['candidates'];
 export type Album = { title: string; artist: string; url: string; artworkUrl: string | null; upc?: string; firstTrack?: string };
@@ -84,9 +85,18 @@ export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTu
       };
     } else if (link.platform === 'spotify') {
       const html = await current.spotifyPage(`album/${link.id}`);
-      const heading = spotifyMeta(html, 'og:title')?.match(/^Listen to (.+) - (?:Album|Single|EP|Compilation) by (.+) \| Spotify$/);
+      const heading = pageMeta(html, 'og:title')?.match(/^Listen to (.+) - (?:Album|Single|EP|Compilation) by (.+) \| Spotify$/);
       if (!heading) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      album = { title: heading[1]!, artist: heading[2]!, url: `https://open.spotify.com/album/${link.id}`, artworkUrl: https(spotifyMeta(html, 'og:image')) };
+      album = { title: heading[1]!, artist: heading[2]!, url: `https://open.spotify.com/album/${link.id}`, artworkUrl: https(pageMeta(html, 'og:image')) };
+    } else if (link.platform === 'tidal') {
+      // The page names the album without a key, the API adds its UPC and first track
+      const [html, found] = await Promise.all([
+        current.tidalPage(`album/${link.id}`),
+        tidalCatalog(`albums/${link.id}`, [['countryCode', 'DE'], ['include', 'items']], current).then(doc => doc && tidalAlbums(doc)[0], () => { codeFailure('UPC', 'tidal', signal); return undefined; }),
+      ]);
+      const meta = tidalPageMeta(pageMeta(html, 'og:title'), pageMeta(html, 'og:description'));
+      if (!meta) throw new ResolutionError('SOURCE_UNAVAILABLE');
+      album = { ...upcCode(found?.upc), ...meta, url: `https://tidal.com/album/${link.id}`, artworkUrl: https(pageMeta(html, 'og:image')), ...(found?.firstTrack ? { firstTrack: found.firstTrack } : {}) };
     } else {
       // Deezer reports unknown albums as an error object with status 200
       const body = await get(`https://api.deezer.com/album/${link.id}`, {});
@@ -114,6 +124,10 @@ async function upcCandidates(target: Platform, upc: string, country: string, cur
       // Deezer answers an unknown UPC with an error object, which does not parse as an album
       const album = deezerAlbum.safeParse(await current.get(`https://api.deezer.com/album/upc:${upc}`, {}));
       return album.success && album.data.available !== false ? [deezerCandidate(album.data)] : [];
+    }
+    if (target === 'tidal') {
+      const found = await tidalCatalog('albums', [['filter[barcodeId]', upc], ['countryCode', country]], current);
+      return found ? tidalAlbums(found).map(album => ({ title: album.title, url: album.url, artworkUrl: null })) : [];
     }
   } catch {
     codeFailure('UPC', target, current.signal);
@@ -147,13 +161,13 @@ async function spotifyAlbums(source: Album, current: Session, score: ReturnType<
     throw error;
   })));
   return pages.flatMap(html => {
-    const url = spotifyMeta(html, 'music:album');
+    const url = pageMeta(html, 'music:album');
     // "Artists · Album · Song · Year"
-    const parts = spotifyMeta(html, 'og:description')?.split(' · ') ?? [];
+    const parts = pageMeta(html, 'og:description')?.split(' · ') ?? [];
     const title = parts.slice(1, -2).join(' · ');
     if (!url || !/^https:\/\/open\.spotify\.com\/album\/[A-Za-z0-9]{22}$/.test(url) || !title) return [];
     const rank = score(title);
-    return rank ? [{ rank, candidate: { title, url, artworkUrl: https(spotifyMeta(html, 'og:image')) } }] : [];
+    return rank ? [{ rank, candidate: { title, url, artworkUrl: https(pageMeta(html, 'og:image')) } }] : [];
   });
 }
 
@@ -182,8 +196,16 @@ export function findAlbums(target: Platform, source: Album, country: string, cur
         const rank = album.success && album.data.available !== false ? score(album.data.title, [album.data.artist.name]) : 0;
         return album.success && rank ? [{ rank, candidate: deezerCandidate(album.data) }] : [];
       });
-    } else {
+    } else if (target === 'tidal') {
+      const found = await tidalSearch('albums', query, country, current);
+      ranked = (found ? tidalAlbums(found) : []).flatMap(album => {
+        const rank = score(album.title, album.artists);
+        return rank ? [{ rank, candidate: { title: album.title, url: album.url, artworkUrl: null } }] : [];
+      });
+    } else if (target === 'spotify') {
       ranked = await spotifyAlbums(source, current, score);
+    } else {
+      ranked = [];
     }
     const candidates = ranked.toSorted((a, b) => b.rank - a.rank).map(({ candidate }) => candidate);
     return [...new Map(candidates.map(candidate => [candidate.url, candidate])).values()].slice(0, 8);

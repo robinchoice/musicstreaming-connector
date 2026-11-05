@@ -1,6 +1,6 @@
 Songgate turns a song link into a link that opens in each friend's own streaming service.
 
-You're listening to a song and want to share it, but your friends use a different music service? Tap "Share" in your music app and choose Songgate. Songgate finds the same song on Spotify, Apple Music, YouTube Music and Deezer and shows it with cover, artist and album. Whole albums work the same way.
+You're listening to a song and want to share it, but your friends use a different music service? Tap "Share" in your music app and choose Songgate. Songgate finds the same song on Spotify, Apple Music, YouTube Music, Deezer and TIDAL, searches Amazon Music for it and shows it with cover, artist and album. Whole albums work the same way.
 
 HOW IT WORKS
 • Tap "Share" in your music app and choose Songgate
@@ -13,6 +13,6 @@ Save which music service each friend uses and put friends into groups. When shar
 NO ACCOUNT REQUIRED
 Songgate needs no account and no access to your music services. No ads, no tracking. It only reads public song information and does not play music itself.
 
-In English and German. Works with song and album links from YouTube Music, Apple Music, Spotify and Deezer. Songgate is an independent tool and is not affiliated with these services.
+In English and German. Works with song and album links from YouTube Music, Apple Music, Spotify, Deezer and TIDAL. Songgate is an independent tool and is not affiliated with these services.
 
 A tool by Pleasance, Freiburg, Germany.

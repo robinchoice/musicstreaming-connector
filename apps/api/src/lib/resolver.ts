@@ -13,6 +13,8 @@ export function searchUrl(target: Platform, source: { title: string; artist: str
   const query = title.toLowerCase().includes(artist.toLowerCase()) ? title : `${artist} ${title}`;
   if (target === 'spotify') return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
   if (target === 'deezer') return `https://www.deezer.com/search/${encodeURIComponent(query)}`;
+  if (target === 'tidal') return `https://tidal.com/search?${new URLSearchParams({ q: query })}`;
+  if (target === 'amazonMusic') return `https://${{ US: 'music.amazon.com', GB: 'music.amazon.co.uk' }[country] ?? 'music.amazon.de'}/search/${encodeURIComponent(query)}`;
   const url = new URL(target === 'appleMusic' ? `https://music.apple.com/${country.toLowerCase()}/search` : 'https://music.youtube.com/search');
   url.searchParams.set(target === 'appleMusic' ? 'term' : 'q', query);
   return url.toString();
