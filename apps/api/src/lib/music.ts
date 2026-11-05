@@ -253,8 +253,8 @@ async function lookup(parsed: MusicLink, current: Session, { search, albums, pod
   }
   const song = loadSource(parsed, current);
   if (parsed.platform === 'youtubeMusic') {
-    // A YouTube video may be a podcast episode, which only YouTube Music's player tells. A failed check
-    // leaves a song without a report: YouTube answers some server addresses without video details.
+    // A YouTube video may be a podcast episode, which only YouTube Music's queue tells. A failed check
+    // leaves a song without a report: YouTube may answer server addresses differently.
     song.catch(() => {});
     const episode = await podcasts.episode(parsed.id, current.signal).catch(() => null);
     if (episode) return podcastLookup({ ...parsed, kind: 'episode' }, episode, current, podcasts);

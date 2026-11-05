@@ -24,13 +24,27 @@ export type YouTubePodcasts = {
   episodes: (query: string, signal: AbortSignal) => Promise<YouTubeEpisode[]>;
 };
 
-const playerResponse = z.object({
-  videoDetails: z.object({
-    musicVideoType: z.string().optional(), title: z.string(), author: z.string(), lengthSeconds: z.string().optional(),
-    thumbnail: z.object({ thumbnails: z.array(z.object({ url: z.string() })) }).optional(),
-  }),
-  microformat: z.object({ microformatDataRenderer: z.object({ publishDate: z.string().optional() }).optional() }).optional(),
+const runs = z.object({ runs: z.array(z.object({ text: z.string() })) });
+// The video in YouTube Music's queue, which names its type, show and length
+const queueItem = z.object({
+  title: runs, shortBylineText: runs, lengthText: runs.optional(),
+  thumbnail: z.object({ thumbnails: z.array(z.object({ url: z.string() })) }).optional(),
+  navigationEndpoint: z.object({ watchEndpoint: z.object({ watchEndpointMusicSupportedConfigs: z.object({
+    watchEndpointMusicConfig: z.object({ musicVideoType: z.string().optional() }),
+  }) }) }),
 });
+function queueVideo(node: unknown, videoId: string): unknown {
+  if (!node || typeof node !== 'object') return undefined;
+  const item: unknown = 'playlistPanelVideoRenderer' in node ? node.playlistPanelVideoRenderer : undefined;
+  if (item && typeof item === 'object' && 'videoId' in item && item.videoId === videoId) return item;
+  for (const value of Object.values(node)) {
+    const found = queueVideo(value, videoId);
+    if (found) return found;
+  }
+  return undefined;
+}
+// "1:02:03"
+const clock = (text?: string) => text && /^\d+(?::\d{1,2}){1,2}$/.test(text) ? text.split(':').reduce((total, part) => total * 60 + Number(part), 0) : undefined;
 const showResponse = z.object({ microformat: z.object({ microformatDataRenderer: z.object({
   title: z.string(), description: z.string().default(''), urlCanonical: z.string().optional(),
   thumbnail: z.object({ thumbnails: z.array(z.object({ url: z.string() })) }).optional(),
@@ -38,16 +52,16 @@ const showResponse = z.object({ microformat: z.object({ microformatDataRenderer:
 const flex = (item: { flex_columns: { title: { toString(): string } }[] }, column: number) => item.flex_columns[column]?.title.toString() ?? '';
 
 export const youtubePodcasts: YouTubePodcasts = {
+  // The queue (/next), not the player: YouTube gives server addresses the player without video details
   async episode(videoId, signal) {
     const client = await youtube(signal);
-    const response = playerResponse.safeParse((await client.actions.execute('/player', { videoId, client: 'YTMUSIC' })).data).data;
-    const video = response?.videoDetails;
-    if (!video || video.musicVideoType !== 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE') return null;
-    const published = Date.parse(response?.microformat?.microformatDataRenderer?.publishDate ?? '');
-    const duration = Number(video.lengthSeconds);
+    const video = queueItem.safeParse(queueVideo((await client.actions.execute('/next', { videoId, client: 'YTMUSIC' })).data, videoId)).data;
+    if (video?.navigationEndpoint.watchEndpoint.watchEndpointMusicSupportedConfigs.watchEndpointMusicConfig.musicVideoType !== 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE') return null;
+    const show = video.shortBylineText.runs.map(run => run.text).join('');
+    const duration = clock(video.lengthText?.runs[0]?.text);
     return {
-      title: video.title, artist: video.author, show: video.author, url: `https://music.youtube.com/watch?v=${videoId}`,
-      artworkUrl: https(video.thumbnail?.thumbnails.at(-1)?.url), ...(published ? { released: published } : {}), ...(duration > 0 ? { durationSeconds: duration } : {}),
+      title: video.title.runs.map(run => run.text).join(''), artist: show, show, url: `https://music.youtube.com/watch?v=${videoId}`,
+      artworkUrl: https(video.thumbnail?.thumbnails.at(-1)?.url), ...(duration ? { durationSeconds: duration } : {}),
     };
   },
   async show(playlistId, signal) {
