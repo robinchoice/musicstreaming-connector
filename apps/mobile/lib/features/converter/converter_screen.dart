@@ -177,12 +177,16 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                   icon: const Icon(Icons.translate),
                   label: Text(t.otherLanguage),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
                   children: [
                     TextButton(
                       onPressed: () => _openPage('datenschutz', 'privacy'),
                       child: Text(t.privacy),
+                    ),
+                    TextButton(
+                      onPressed: () => _openPage('agb', 'terms'),
+                      child: Text(t.terms),
                     ),
                     TextButton(
                       onPressed: () => _openPage('impressum', 'imprint'),

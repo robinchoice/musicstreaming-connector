@@ -7,7 +7,7 @@ import { page } from '$app/state';
 export const t = () => messages[page.data.locale];
 
 // The legal pages have one URL per language, the footer switch goes to the other one
-const legal: Record<string, string> = { '/impressum': '/imprint', '/imprint': '/impressum', '/datenschutz': '/privacy', '/privacy': '/datenschutz' };
+const legal: Record<string, string> = { '/impressum': '/imprint', '/imprint': '/impressum', '/datenschutz': '/privacy', '/privacy': '/datenschutz', '/agb': '/terms', '/terms': '/agb' };
 
 export async function setLocale(locale: Locale) {
   document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;

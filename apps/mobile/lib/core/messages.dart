@@ -42,6 +42,7 @@ abstract class Messages {
   String get otherLanguage;
   String get privacy;
   String get imprint;
+  String get terms;
   String get sharedLinkUnreadable;
   String get clipboardEmpty;
   String get messageCopied;
@@ -217,6 +218,8 @@ class De extends Messages {
   String get privacy => 'Datenschutz';
   @override
   String get imprint => 'Impressum';
+  @override
+  String get terms => 'AGB';
   @override
   String get sharedLinkUnreadable =>
       'Der geteilte Link konnte nicht gelesen werden.';
@@ -537,6 +540,8 @@ class En extends Messages {
   String get privacy => 'Privacy';
   @override
   String get imprint => 'Imprint';
+  @override
+  String get terms => 'Terms';
   @override
   String get sharedLinkUnreadable => 'The shared link couldn’t be read.';
   @override

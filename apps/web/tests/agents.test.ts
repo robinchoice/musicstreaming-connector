@@ -24,7 +24,7 @@ test('every section of a page is in its Markdown', async ({ request }) => {
     const text = await (await request.get(`/llms.txt?lang=${lang}`)).text();
     const links = [...text.matchAll(/\]\((http[^)]+\.md)\?lang=\w+\)/g)]
       .map(match => match[1]!)
-      .filter(link => !/\/(impressum|datenschutz|imprint|privacy)\.md$/.test(link));
+      .filter(link => !/\/(impressum|datenschutz|agb|imprint|privacy|terms)\.md$/.test(link));
     expect(links.length).toBeGreaterThan(0);
     for (const link of links) {
       const html = await (await request.get(`${link.replace(/\/index\.md$/, '/').replace(/\.md$/, '')}?lang=${lang}`)).text();

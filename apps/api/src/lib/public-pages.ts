@@ -29,6 +29,7 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
       },
       { path: '/imprint', title: 'Imprint', description: `Provider and contact of ${APP_NAME}.`, body: fullText('/imprint') },
       { path: '/privacy', title: 'Privacy policy', description: `${APP_NAME} works without sign-up, without ads and without tracking.`, body: fullText('/privacy') },
+      { path: '/terms', title: 'Terms of use', description: `The terms for using ${APP_NAME}.`, body: fullText('/terms') },
     ];
   }
   return [
@@ -48,5 +49,6 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
     },
     { path: '/impressum', title: 'Impressum', description: `Anbieter und Kontakt von ${APP_NAME}.`, body: fullText('/impressum') },
     { path: '/datenschutz', title: 'Datenschutz', description: `${APP_NAME} funktioniert ohne Anmeldung, ohne Werbung und ohne Tracking.`, body: fullText('/datenschutz') },
+    { path: '/agb', title: 'Allgemeine Geschäftsbedingungen', description: `Die Bedingungen für die Nutzung von ${APP_NAME}.`, body: fullText('/agb') },
   ];
 }

@@ -150,6 +150,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
     expect(find.text('Datenschutz'), findsOneWidget);
+    expect(find.text('AGB'), findsOneWidget);
     expect(find.text('Impressum'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Testmodus'));

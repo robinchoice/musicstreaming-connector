@@ -19,7 +19,7 @@ const AGENT_PATH = /^\/llms(-full)?\.txt$|\.md$/;
 // From starter. The CSP comes from vite.config.ts. Browsers ignore HSTS over
 // plain HTTP, so it is harmless in dev.
 // The legal pages have one URL per language
-const LEGAL: Record<string, Locale> = { '/impressum': 'de', '/datenschutz': 'de', '/imprint': 'en', '/privacy': 'en' };
+const LEGAL: Record<string, Locale> = { '/impressum': 'de', '/datenschutz': 'de', '/agb': 'de', '/imprint': 'en', '/privacy': 'en', '/terms': 'en' };
 
 const SECURITY_HEADERS = {
   'strict-transport-security': 'max-age=31536000',

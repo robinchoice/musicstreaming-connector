@@ -12,6 +12,7 @@
   <button type="button" class="feedback" onclick={() => openFeedback('idea')}>{t().giveFeedback}</button>
   <a class="legal" href={t().imprintPath}>{t().imprint}</a>
   <a class="legal" href={t().privacyPath}>{t().privacy}</a>
+  <a class="legal" href={t().termsPath}>{t().terms}</a>
   <label class="legal" title={t().testModeHint}>
     <input type="checkbox" checked={testMode.on} onchange={e => setTestMode(e.currentTarget.checked)} />
     {t().testMode}
