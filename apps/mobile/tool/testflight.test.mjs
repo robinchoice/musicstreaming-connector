@@ -43,6 +43,9 @@ globalThis.fetch = async (url, options) => {
       { id: 'internal', attributes: { name: 'Internal', isInternalGroup: true, hasAccessToAllBuilds: !!scenario.automatic } },
       { id: 'external', attributes: { name: 'External', isInternalGroup: false } },
     ];
+  } else if (path.startsWith('/betaGroups/') && path.endsWith('/betaTesters')) {
+    assert.equal(path, '/betaGroups/internal/betaTesters');
+    data = scenario.noInternalTesters ? [] : [{ id: 'tester' }];
   } else if (path === '/builds') {
     assert.equal(query.get('filter[app]'), 'app');
     assert.equal(query.get('filter[version]'), '42');
@@ -58,7 +61,7 @@ globalThis.fetch = async (url, options) => {
     }
   } else if (path === '/builds/build-42/buildBetaDetail') {
     detailChecks++;
-    const internalBuildState = scenario.internalState || (scenario.waitingInternal && detailChecks === 1 ? 'IN_EXPORT_COMPLIANCE_REVIEW' : assigned.has('internal') ? 'IN_BETA_TESTING' : 'READY_FOR_BETA_TESTING');
+    const internalBuildState = scenario.internalState || (scenario.waitingInternal && detailChecks === 1 ? 'IN_EXPORT_COMPLIANCE_REVIEW' : assigned.has('internal') && !scenario.noInternalTesters ? 'IN_BETA_TESTING' : 'READY_FOR_BETA_TESTING');
     data = { id: 'detail-42', attributes: { internalBuildState, externalBuildState: scenario.reviewState || 'READY_FOR_BETA_SUBMISSION' } };
   } else {
     throw new Error('Unexpected request: ' + url);
@@ -135,6 +138,20 @@ test('release assigns internally first, then externally, and submits for the rev
   const result = run({ args: release });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.writes, [assignInternal, assignExternal, submit]);
+});
+
+test('without internal testers READY_FOR_BETA_TESTING is enough for the release', () => {
+  const result = run({ args: release, assigned: ['internal'], noInternalTesters: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.writes, [assignExternal, submit]);
+  assert.match(result.stdout, /POLLS 1/);
+});
+
+test('with internal testers READY_FOR_BETA_TESTING is waited for', () => {
+  const result = run({ args: release, assigned: ['internal'], internalState: 'READY_FOR_BETA_TESTING' });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /within an hour/);
+  assert.deepEqual(result.writes, []);
 });
 
 test('retry after the assignments only submits the pending review', () => {

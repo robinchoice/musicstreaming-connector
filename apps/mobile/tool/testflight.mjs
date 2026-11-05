@@ -1,9 +1,10 @@
 // Hands an uploaded iOS build to TestFlight groups and submits it for the beta
 // review when one of them is external. Every assignment mails the group's testers,
 // so external groups only get release builds (AGENTS.md, "Deploy"). The build only
-// counts as delivered once it is IN_BETA_TESTING and visible in every internal group;
-// external groups follow after that. Each step is checked first, so a run that failed
-// halfway can be repeated.
+// counts as delivered once it is IN_BETA_TESTING (READY_FOR_BETA_TESTING while the
+// internal groups have no testers) and visible in every internal group; external groups
+// follow after that. Each step is checked first, so a run that failed halfway can be
+// repeated.
 //
 //   ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_P8=<base64 .p8> node tool/testflight.mjs [--quiet] <build number> <group>…
 //
@@ -52,6 +53,9 @@ const groups = names.map(name => {
 const internals = groups.filter(group => group.attributes.isInternalGroup);
 const externals = groups.filter(group => !group.attributes.isInternalGroup);
 if (!internals.length) throw new Error('Name at least one internal group: external testers only get builds that work internally');
+// Without internal testers a build stays READY_FOR_BETA_TESTING and never becomes IN_BETA_TESTING
+const nobodyInternal = (await Promise.all(internals.map(group => api('GET', `/betaGroups/${group.id}/betaTesters?limit=1`)))).every(page => !page.data.length);
+if (nobodyInternal) console.log('The internal groups have no testers: READY_FOR_BETA_TESTING counts as delivered');
 
 const buildQuery = `/builds?filter[app]=${app.id}&filter[version]=${encodeURIComponent(number)}&filter[preReleaseVersion.platform]=IOS`;
 const inGroup = async group => (await api('GET', `${buildQuery}&filter[betaGroups]=${group.id}`)).data.length > 0;
@@ -89,7 +93,7 @@ for (;;) {
         if (error.status !== 404) throw error;
       }
     }
-    if (visible && internalState === 'IN_BETA_TESTING') break;
+    if (visible && (internalState === 'IN_BETA_TESTING' || (nobodyInternal && internalState === 'READY_FOR_BETA_TESTING'))) break;
   }
   if (Date.now() >= deadline) throw new Error(`Build ${number} was not processed and visible internally within an hour`);
   console.log(`Waiting for build ${number} to be processed and visible internally …`);
