@@ -111,8 +111,8 @@ class _FeedbackButtonState extends ConsumerState<FeedbackButton> {
             );
         final left = clampDouble(
           position.dx,
-          0,
-          max(0.0, constraints.maxWidth - _size),
+          padding.left,
+          max(padding.left, constraints.maxWidth - _size - padding.right),
         );
         final top = clampDouble(
           position.dy,

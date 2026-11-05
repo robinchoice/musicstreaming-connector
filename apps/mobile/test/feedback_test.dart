@@ -161,4 +161,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.bug_report_outlined), byDefault);
   });
+  testWidgets('bug button respects side safe areas through drag and resize', (
+    tester,
+  ) async {
+    savedTestMode = true;
+    await mount(tester);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(640, 360);
+    tester.view.padding = const FakeViewPadding(
+      left: 60,
+      right: 40,
+      bottom: 20,
+    );
+    await tester.pumpAndSettle();
+    final button = find.byIcon(Icons.bug_report_outlined);
+    expect(tester.getRect(button).right, lessThanOrEqualTo(600));
+    await tester.drag(button, const Offset(-1000, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(button).left, greaterThanOrEqualTo(60));
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.padding = const FakeViewPadding(
+      left: 24,
+      right: 24,
+      bottom: 20,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(button).left, greaterThanOrEqualTo(24));
+    expect(tester.getRect(button).right, lessThanOrEqualTo(296));
+    expect(tester.takeException(), isNull);
+  });
 }
