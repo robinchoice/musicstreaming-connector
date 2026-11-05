@@ -26,7 +26,7 @@
 </footer>
 
 <style>
-  footer { display: flex; align-items: center; gap: 24px; padding: 22px 0; border-top: 1px solid var(--border); color: var(--text); font-size: 12px; }
+  footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 22px 0; border-top: 1px solid var(--border); color: var(--text); font-size: 12px; }
   a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; white-space: nowrap; color: inherit; }
   .wordmark { width: 76px; height: 14px; background: currentColor; mask: url('/pleasance-wordmark.svg') left center / contain no-repeat; }
   .feedback { white-space: nowrap; padding: 0; border: none; background: none; color: var(--accent); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
