@@ -3,8 +3,11 @@ import * as monitoring from './monitoring';
 import { friendsMessage } from '@app/shared';
 import { resolve, resolveAll, sharePath, musicSource, type MusicSearch } from './lib/music';
 import type { Fetch } from './lib/resolver';
+import { youtubePodcasts } from './lib/podcasts';
 
 const diagnostics = spyOn(monitoring, 'captureMessage').mockImplementation(() => 'test');
+// YouTube videos are checked for podcast episodes against YouTube itself, which the faked services here leave out
+spyOn(youtubePodcasts, 'episode').mockImplementation(async () => null);
 afterEach(() => diagnostics.mockClear());
 afterAll(() => diagnostics.mockRestore());
 

@@ -40,10 +40,10 @@ const flex = (item: { flex_columns: { title: { toString(): string } }[] }, colum
 export const youtubePodcasts: YouTubePodcasts = {
   async episode(videoId, signal) {
     const client = await youtube(signal);
-    const response = playerResponse.parse((await client.actions.execute('/player', { videoId, client: 'YTMUSIC' })).data);
-    const video = response.videoDetails;
-    if (video.musicVideoType !== 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE') return null;
-    const published = Date.parse(response.microformat?.microformatDataRenderer?.publishDate ?? '');
+    const response = playerResponse.safeParse((await client.actions.execute('/player', { videoId, client: 'YTMUSIC' })).data).data;
+    const video = response?.videoDetails;
+    if (!video || video.musicVideoType !== 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE') return null;
+    const published = Date.parse(response?.microformat?.microformatDataRenderer?.publishDate ?? '');
     const duration = Number(video.lengthSeconds);
     return {
       title: video.title, artist: video.author, show: video.author, url: `https://music.youtube.com/watch?v=${videoId}`,

@@ -3,9 +3,12 @@ import fc from 'fast-check';
 import * as monitoring from './monitoring';
 import { resolve, resolveAll } from './lib/music';
 import type { Fetch } from './lib/resolver';
+import { youtubePodcasts } from './lib/podcasts';
 import { seconds, tidalPageMeta } from './lib/tidal';
 
 const diagnostics = spyOn(monitoring, 'captureMessage').mockImplementation(() => 'test');
+// YouTube videos are checked for podcast episodes against YouTube itself, which the faked services here leave out
+spyOn(youtubePodcasts, 'episode').mockImplementation(async () => null);
 afterEach(() => diagnostics.mockClear());
 afterAll(() => diagnostics.mockRestore());
 
