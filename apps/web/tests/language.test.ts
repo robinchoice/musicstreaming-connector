@@ -7,7 +7,7 @@ test('the footer switches to English and keeps it, the legal pages follow', asyn
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
   await page.reload();
-  await expect(page.getByLabel('Song or album link')).toBeVisible();
+  await expect(page.getByLabel('Link to a song, album or podcast')).toBeVisible();
   await page.getByRole('link', { name: 'Privacy' }).click();
   await expect(page).toHaveURL(/\/privacy$/);
   await page.getByRole('button', { name: 'Deutsch' }).click();

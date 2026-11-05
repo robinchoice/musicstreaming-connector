@@ -118,6 +118,36 @@ void main() {
       friendsMessage(album, const [Friend('Lisa', 'deezer')]),
       '💿 Random Access Memories – Daft Punk\nhttps://www.deezer.com/album/6575789\n\nGeteilt mit localhost:3000',
     );
+    // A show without publisher; TIDAL has no podcasts, its friends get the share page
+    final podcast = Song.fromJson({
+      'source': {'kind': 'podcast', 'title': 'The Daily', 'artist': ''},
+      'sharePath': '/s/podcast/dz/52913',
+      'links': {
+        'appleMusic': {'url': 'https://podcasts.apple.com/de/podcast/id1'},
+        'deezer': {'url': 'https://www.deezer.com/show/52913'},
+        'tidal': {'url': 'https://tidal.com/search?q=The+Daily'},
+      },
+      'apps': [
+        {'name': 'Overcast', 'url': 'https://overcast.fm/itunes1'},
+      ],
+    });
+    expect(podcast.apps.single.name, 'Overcast');
+    expect(servicesFor(podcast.kind), isNot(contains('tidal')));
+    expect(
+      friendsMessage(podcast, const [
+        Friend('Lisa', 'appleMusic'),
+        Friend('Ben', 'tidal'),
+        Friend('Jo', 'deezer'),
+      ]),
+      '🎙️ The Daily\n'
+      'Apple Podcasts (Lisa): https://podcasts.apple.com/de/podcast/id1\n'
+      'Deezer (Jo): https://www.deezer.com/show/52913\n'
+      'Andere: http://localhost:3000/s/podcast/dz/52913\n\nGeteilt mit localhost:3000',
+    );
+    expect(
+      friendsMessage(podcast, const [Friend('Ben', 'tidal')]),
+      '🎙️ The Daily\nhttp://localhost:3000/s/podcast/dz/52913\n\nGeteilt mit localhost:3000',
+    );
     // Group chats: no service means the share page only, tapped services need no friends
     expect(
       friendsMessage(song, const [], services: const []),

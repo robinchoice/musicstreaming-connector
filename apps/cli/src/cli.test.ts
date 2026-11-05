@@ -17,6 +17,19 @@ const song: Song = {
     amazonMusic: { url: 'https://music.amazon.de/search/Savior', found: false },
   },
 };
+const podcast: Song = {
+  source: { kind: 'podcast', platform: 'deezer', title: 'The Daily', artist: '', url: 'https://www.deezer.com/show/52913', artworkUrl: null },
+  sharePath: '/s/podcast/dz/52913',
+  links: {
+    youtubeMusic: { url: 'https://music.youtube.com/playlist?list=PLdMrbgYfVl-s16D_iT2BJCJ90pWtTO1A4', found: true },
+    appleMusic: { url: 'https://podcasts.apple.com/de/podcast/id1200361736', found: true },
+    spotify: { url: 'https://open.spotify.com/search/The%20Daily', found: false },
+    deezer: { url: 'https://www.deezer.com/show/52913', found: true },
+    tidal: { url: 'https://tidal.com/search?q=The+Daily', found: false },
+    amazonMusic: { url: 'https://music.amazon.de/search/The%20Daily', found: false },
+  },
+  apps: [{ name: 'Overcast', url: 'https://overcast.fm/itunes1200361736' }],
+};
 const album: Song = {
   source: { kind: 'album', platform: 'deezer', title: 'Random Access Memories', artist: 'Daft Punk', url: 'https://www.deezer.com/album/6575789', artworkUrl: null },
   sharePath: '/s/album/dz/6575789',
@@ -52,7 +65,7 @@ beforeAll(() => {
     undefined,
     async (input) => {
       looked.push(input);
-      return input.input.includes('/album/') ? album : song;
+      return input.input.includes('/album/') ? album : input.input.includes('/show/') ? podcast : song;
     },
   );
   server = Bun.serve({ port: 0, fetch: app.fetch });
@@ -86,6 +99,17 @@ test('convert shows the links on every service, as text and as JSON', async () =
   const json = await cli(['convert', 'https://youtu.be/UijW9hGpnzc', '--json']);
   expect(json.code).toBe(EXIT.ok);
   expect(json.json()).toEqual({ ...song, shareUrl: `${url}/s/yt/UijW9hGpnzc` });
+});
+
+test('convert takes podcasts, names Apple Podcasts and the other podcast apps, without TIDAL', async () => {
+  const json = await cli(['convert', 'https://www.deezer.com/show/52913', '--json']);
+  expect(json.json()).toEqual({ ...podcast, shareUrl: `${url}/s/podcast/dz/52913` });
+  const text = await cli(['convert', 'https://www.deezer.com/show/52913']);
+  expect(text.out.split('\n')[0]).toBe('The Daily');
+  expect(text.out).toMatch(/Apple Podcasts +https:\/\/podcasts\.apple\.com\/de\/podcast\/id1200361736/);
+  expect(text.out).not.toContain('tidal.com');
+  expect(text.out).toContain(`${de.otherApps}:`);
+  expect(text.out).toMatch(/Overcast +https:\/\/overcast\.fm\/itunes1200361736/);
 });
 
 test('convert takes albums like songs', async () => {

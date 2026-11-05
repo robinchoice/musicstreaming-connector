@@ -9,6 +9,7 @@ struct ShareTargetsTests {
             ("Hör mal: https://spotify.link/6tpneu0iVIb", "spotify"),
             ("https://open.spotify.com/track/2Foc5Q5nqNiosCNqttzHof", "spotify"),
             ("https://music.apple.com/de/song/945575419", "appleMusic"),
+            ("https://podcasts.apple.com/de/podcast/the-daily/id1200361736?i=1000799791974", "appleMusic"),
             ("https://music.youtube.com/watch?v=UijW9hGpnzc", "youtubeMusic"),
             ("https://youtu.be/UijW9hGpnzc", "youtubeMusic"),
             ("https://www.deezer.com/track/67238735", "deezer"),
@@ -31,6 +32,14 @@ struct ShareTargetsTests {
                   "youtubeMusic":{"url":"https://yt/x","found":true},"deezer":{"url":"https://dz/x","found":false}}}
         """
         let song = try! JSONDecoder().decode(Song.self, from: Data(json.utf8))
+        // A show without publisher, TIDAL has no podcasts
+        let podcastJSON = """
+        {"source":{"kind":"podcast","platform":"deezer","title":"The Daily","artist":"","url":"https://www.deezer.com/show/52913","artworkUrl":null},
+         "sharePath":"/s/podcast/dz/52913",
+         "links":{"appleMusic":{"url":"https://ap/x","found":true},"tidal":{"url":"https://td/x","found":false}},
+         "apps":[{"name":"Overcast","url":"https://overcast.fm/itunes1200361736"}]}
+        """
+        let podcast = try! JSONDecoder().decode(Song.self, from: Data(podcastJSON.utf8))
         let lisa = Friend(name: "Lisa", platform: "spotify")
         let me = Friend(name: "Robin", platform: "youtubeMusic")
         let messages: [(String, String)] = [
@@ -46,7 +55,13 @@ struct ShareTargetsTests {
              "🎵 Hey Jude – The Beatles\nhttps://sp/x\nAll services: https://songgate.app/s/yt/x?from=Robin&service=youtube\n\nShared with songgate.app"),
             (ShareModel.friendsMessage(song, friends: [lisa], origin: "https://songgate.app", from: nil, services: ["spotify", "appleMusic"], t: .en),
              "🎵 Hey Jude – The Beatles\nSpotify (Lisa): https://sp/x\nApple Music: https://am/x\nOthers: https://songgate.app/s/yt/x\n\nShared with songgate.app"),
+            (ShareModel.friendsMessage(podcast, friends: [], origin: "https://songgate.app", from: nil, services: ["appleMusic", "tidal"]),
+             "🎙️ The Daily\nhttps://ap/x\n\nGeteilt mit songgate.app"),
+            (ShareModel.friendsMessage(podcast, friends: [], origin: "https://songgate.app", from: nil, services: ["tidal"]),
+             "🎙️ The Daily\nhttps://songgate.app/s/podcast/dz/52913\n\nGeteilt mit songgate.app"),
         ]
+        precondition(ShareModel.serviceName("appleMusic", podcast.source.kind) == "Apple Podcasts")
+        precondition(!ShareModel.servicesFor(podcast.source.kind).contains("tidal"))
         // The app's choice wins, else the first device language we speak, else German
         let languages: [(String?, [String], String)] = [
             ("en", ["de-DE"], "en"),

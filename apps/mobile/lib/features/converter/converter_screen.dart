@@ -375,6 +375,11 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   List<Widget> _start(BuildContext context, Messages t) {
     final theme = Theme.of(context);
     final source = sourceOf(_input.text);
+    // Apple Podcasts links come from Apple's podcast hosts
+    final sourceKind =
+        RegExp(r'(?:podcasts|itunes)\.apple\.com/').hasMatch(_input.text)
+        ? 'podcast'
+        : 'song';
     final empty = _input.text.trim().isEmpty;
     return [
       Text(t.headline, style: theme.textTheme.headlineLarge),
@@ -467,7 +472,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                     text: t.linkFrom,
                     children: [
                       TextSpan(
-                        text: platforms[source],
+                        text: serviceName(source, sourceKind),
                         style: const TextStyle(
                           color: text,
                           fontWeight: FontWeight.w600,
@@ -529,7 +534,9 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final theme = Theme.of(context);
     final social = ref.read(socialProvider);
     final message = _message(song);
-    final services = _services.length;
+    // A friend's service without podcasts leaves the message, see friendsMessage
+    final shown = _services.where(servicesFor(song.kind).contains).toList();
+    final services = shown.length;
     return [
       Align(
         alignment: Alignment.centerLeft,
@@ -538,9 +545,13 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
           child: SizedBox.square(
             dimension: 220,
             child: song.artworkUrl == null
-                ? const ColoredBox(
+                ? ColoredBox(
                     color: raised,
-                    child: Icon(Icons.music_note, size: 64, color: muted),
+                    child: Icon(
+                      song.podcast ? Icons.podcasts : Icons.music_note,
+                      size: 64,
+                      color: muted,
+                    ),
                   )
                 : Image.network(
                     song.artworkUrl!,
@@ -552,16 +563,18 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       ),
       const SizedBox(height: 18),
       Text(
-        t.kindFrom(song.album, platforms[song.platform]),
+        t.kindFrom(song.kind, serviceName(song.platform, song.kind)),
         style: const TextStyle(color: muted),
       ),
       const SizedBox(height: 4),
       Text(song.title, style: theme.textTheme.headlineMedium),
-      const SizedBox(height: 4),
-      Text(
-        song.artist,
-        style: const TextStyle(fontSize: 17, color: Color(0xCCF2F0EA)),
-      ),
+      if (song.artist.isNotEmpty) ...[
+        const SizedBox(height: 4),
+        Text(
+          song.artist,
+          style: const TextStyle(fontSize: 17, color: Color(0xCCF2F0EA)),
+        ),
+      ],
       Align(
         alignment: Alignment.centerLeft,
         child: TextButton(
@@ -592,9 +605,10 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       LayoutBuilder(
         builder: (context, constraints) {
           final columns = constraints.maxWidth < 320 ? 1 : 2;
+          final order = servicesFor(song.kind);
           return Column(
             children: [
-              for (var row = 0; row < serviceOrder.length; row += columns)
+              for (var row = 0; row < order.length; row += columns)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: IntrinsicHeight(
@@ -602,11 +616,12 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (final platform
-                            in serviceOrder.skip(row).take(columns)) ...[
+                            in order.skip(row).take(columns)) ...[
                           Expanded(
                             child: _ServiceTile(
                               key: ValueKey('service-$platform'),
                               platform: platform,
+                              kind: song.kind,
                               selected: _services.contains(platform),
                               found: song.found[platform] ?? false,
                               detail: _tileDetail(song, platform, social, t),
@@ -625,8 +640,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                                     }),
                             ),
                           ),
-                          if (platform !=
-                              serviceOrder.skip(row).take(columns).last)
+                          if (platform != order.skip(row).take(columns).last)
                             const SizedBox(width: 10),
                         ],
                       ],
@@ -637,6 +651,36 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
           );
         },
       ),
+      if (song.apps.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            children: [
+              Text('${t.otherApps}:', style: const TextStyle(color: muted)),
+              for (final app in song.apps)
+                TextButton(
+                  key: ValueKey('app-${app.name}'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: text,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  onPressed: () => launchUrl(
+                    Uri.parse(app.url),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Text(
+                    app.name,
+                    style: const TextStyle(
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.all(16),
@@ -652,7 +696,10 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
               services == 0
                   ? t.hintEveryone
                   : services == 1
-                  ? t.hintOne(platforms[_services.first]!, social.me != null)
+                  ? t.hintOne(
+                      serviceName(shown.first, song.kind),
+                      social.me != null,
+                    )
                   : t.hintSeveral,
               style: theme.textTheme.bodySmall,
             ),
@@ -740,6 +787,7 @@ class _Backdrop extends StatelessWidget {
 /// A service in the message: tapped on its own or picked through friends.
 class _ServiceTile extends StatelessWidget {
   final String platform;
+  final String kind;
   final bool selected;
   final bool found;
   final String detail;
@@ -747,6 +795,7 @@ class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
     super.key,
     required this.platform,
+    required this.kind,
     required this.selected,
     required this.found,
     required this.detail,
@@ -764,7 +813,7 @@ class _ServiceTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          ServiceLogo(platform, size: 26),
+          ServiceLogo(platform, kind: kind, size: 26),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -774,7 +823,7 @@ class _ServiceTile extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 14),
                   child: Text(
-                    platforms[platform]!,
+                    serviceName(platform, kind),
                     maxLines: 2,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,

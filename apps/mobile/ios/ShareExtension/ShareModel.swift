@@ -93,7 +93,7 @@ struct ShareTexts {
         sharedWith: "Geteilt mit",
         missingServer: "Die Server-Adresse fehlt in dieser App-Version.",
         unreachable: "Der Dienst ist gerade nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
-        unreadable: "Der geteilte Link konnte nicht gelesen werden. Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL erneut."
+        unreadable: "Der geteilte Link konnte nicht gelesen werden. Teile einen Song, ein Album oder einen Podcast aus YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer oder TIDAL erneut."
     )
 
     static let en = ShareTexts(
@@ -120,12 +120,12 @@ struct ShareTexts {
         sharedWith: "Shared with",
         missingServer: "This version of the app is missing the server address.",
         unreachable: "The service can’t be reached right now. Check your connection and try again.",
-        unreadable: "The shared link couldn’t be read. Share a song or album from YouTube Music, Apple Music, Spotify, Deezer or TIDAL again."
+        unreadable: "The shared link couldn’t be read. Share a song, album or podcast from YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer or TIDAL again."
     )
 
-    func kindFrom(_ album: Bool, _ service: String) -> String {
-        let kind = album ? "Album" : "Song"
-        return code == "en" ? "\(kind) from \(service)" : "\(kind) aus \(service)"
+    func kindFrom(_ kind: String, _ service: String) -> String {
+        let name = (code == "en" ? ["album": "Album", "podcast": "Podcast", "episode": "Episode"] : ["album": "Album", "podcast": "Podcast", "episode": "Folge"])[kind] ?? "Song"
+        return code == "en" ? "\(name) from \(service)" : "\(name) aus \(service)"
     }
 
     func hintOne(_ service: String, _ withName: Bool) -> String {
@@ -148,6 +148,12 @@ struct ShareTexts {
 final class ShareModel: ObservableObject {
     static let platforms = ["appleMusic": "Apple Music", "youtubeMusic": "YouTube Music", "spotify": "Spotify", "deezer": "Deezer", "tidal": "TIDAL", "amazonMusic": "Amazon Music"]
     static let serviceOrder = ["spotify", "appleMusic", "youtubeMusic", "deezer", "tidal", "amazonMusic"]
+    static func isPodcast(_ kind: String) -> Bool { kind == "podcast" || kind == "episode" }
+    // TIDAL has no podcasts, Apple's live in Apple Podcasts; same as servicesFor and serviceName in packages/shared
+    static func servicesFor(_ kind: String) -> [String] { isPodcast(kind) ? serviceOrder.filter { $0 != "tidal" } : serviceOrder }
+    static func serviceName(_ platform: String, _ kind: String) -> String {
+        platform == "appleMusic" && isPodcast(kind) ? "Apple Podcasts" : platforms[platform] ?? platform
+    }
     private let preferences = UserDefaults(suiteName: "group.org.musiclink.prototype")
     private let country: String = {
         let region = Locale.current.region?.identifier ?? ""
@@ -222,7 +228,11 @@ final class ShareModel: ObservableObject {
     // Same as friendsMessage in packages/shared: no service gives the share page only,
     // one its link, several one line each plus the share page for everyone else.
     static func friendsMessage(_ song: Song, friends: [Friend], origin: String, from: Friend?, services: [String], t: ShareTexts = .de) -> String {
-        let head = "\(song.source.kind == "album" ? "💿" : "🎵") \(song.source.title) – \(song.source.artist)"
+        let kind = song.source.kind
+        let icon = isPodcast(kind) ? "🎙️" : kind == "album" ? "💿" : "🎵"
+        let head = "\(icon) \(song.source.artist.isEmpty ? song.source.title : "\(song.source.title) – \(song.source.artist)")"
+        // A friend whose service has no podcasts gets the share page
+        let services = services.filter(servicesFor(kind).contains)
         let everyone = shareURL(origin + song.sharePath, from: from)
         // Every message ends with where it was made, so recipients find Songgate too
         let footer = "\n\n\(t.sharedWith) \(origin.replacingOccurrences(of: "^https?://", with: "", options: .regularExpression))"
@@ -232,7 +242,7 @@ final class ShareModel: ObservableObject {
         }
         let lines = services.map { platform in
             let names = friends.filter { $0.platform == platform }.map(\.name).joined(separator: ", ")
-            return "\(platforms[platform] ?? platform)\(names.isEmpty ? "" : " (\(names))"): \(song.links[platform]?.url ?? "")"
+            return "\(serviceName(platform, kind))\(names.isEmpty ? "" : " (\(names))"): \(song.links[platform]?.url ?? "")"
         }
         return ([head] + lines + ["\(t.others): \(everyone)"]).joined(separator: "\n") + footer
     }
@@ -249,7 +259,7 @@ final class ShareModel: ObservableObject {
 
     // The service a shared link comes from, before the API has looked at it
     static func sourceOf(_ input: String) -> String? {
-        input.contains("music.apple.com/") ? "appleMusic"
+        input.contains("music.apple.com/") || input.contains("podcasts.apple.com/") || input.contains("itunes.apple.com/") ? "appleMusic"
             : input.contains("youtube.com/") || input.contains("youtu.be/") ? "youtubeMusic"
             : input.contains("open.spotify.com/") || input.contains("spotify.link/") ? "spotify"
             : input.contains("deezer.com/") ? "deezer"

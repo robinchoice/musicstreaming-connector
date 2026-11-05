@@ -4,7 +4,7 @@
   import Logo from '#lib/components/Logo.svelte';
   import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
   import { onMount } from 'svelte';
-  import { platforms, serviceOrder, type Platform } from '@app/shared';
+  import { platforms, serviceName, servicesFor, type Platform } from '@app/shared';
   import { t } from '#lib/i18n.ts';
   let { data } = $props();
   const song = $derived(data.song);
@@ -12,7 +12,7 @@
   // The service a visitor opened last comes first next time, kept on the device only
   const KEY = 'musiclink-service';
   let mine = $state<Platform | null>(null);
-  const order = $derived(serviceOrder.toSorted((a, b) => Number(b === mine) - Number(a === mine)));
+  const order = $derived(servicesFor(song.source.kind).toSorted((a, b) => Number(b === mine) - Number(a === mine)));
   onMount(() => {
     const saved = localStorage.getItem(KEY);
     if (saved && saved in platforms) mine = saved as Platform;
@@ -22,7 +22,7 @@
   }
 </script>
 
-<svelte:head><title>{song.source.title} · {song.source.artist} · Songgate</title></svelte:head>
+<svelte:head><title>{[song.source.title, song.source.artist].filter(Boolean).join(' · ')} · Songgate</title></svelte:head>
 
 {#if song.source.artworkUrl}<div class="backdrop" aria-hidden="true" style:background-image="url({JSON.stringify(song.source.artworkUrl)})"></div>{/if}
 <div class="shell">
@@ -34,18 +34,21 @@
         {#if from}<div class="from"><Avatar friend={from} size={30} /><span><b>{from.name}</b> {t().sentYou(song.source.kind)}</span></div>
         {:else}<div class="from">{t().forYou(song.source.kind)}</div>{/if}
         <h1>{song.source.title}</h1>
-        <p class="artist">{song.source.artist}</p>
-        <h2>{t().whereListen}</h2>
+        {#if song.source.artist}<p class="artist">{song.source.artist}</p>{/if}
+        <h2>{t().whereListen(song.source.kind)}</h2>
         <div class="tiles">
           {#each order as platform (platform)}
             {@const link = song.links[platform]}
             <a class="open" class:missing={!link.found} class:mine={platform === mine} href={link.url} rel="noreferrer" onclick={() => remember(platform)}>
-              <Logo {platform} size={platform === mine ? 38 : 32} />
-              <strong>{platforms[platform]}</strong>
+              <Logo {platform} kind={song.source.kind} size={platform === mine ? 38 : 32} />
+              <strong>{serviceName(platform, song.source.kind)}</strong>
               <small>{!link.found ? t().search : platform === mine ? t().lastUsed : t().open}</small>
             </a>
           {/each}
         </div>
+        {#if song.apps?.length}
+          <p class="apps">{t().otherApps}: {#each song.apps as app, i (app.name)}{i ? ', ' : ''}<a href={app.url} rel="noreferrer">{app.name}</a>{/each}</p>
+        {/if}
         {#if from}<section class="back"><Connect name={from.name} platform={from.platform} heading="h2" /></section>{/if}
         <section class="promo">
           <img src="/favicon.svg" alt="" width="44" height="44" />
@@ -83,6 +86,8 @@
   .open strong { flex: 1; font-weight: 650; min-width: 0; }
   .open small { color: var(--muted); font-size: 12.5px; }
   .open.missing { opacity: .6; }
+  .apps { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+  .apps a { color: var(--text); }
   .open.mine { grid-column: 1 / -1; padding: 20px; background: linear-gradient(rgb(40 39 46 / .92), rgb(40 39 46 / .92)) padding-box, var(--gradient) border-box; border: 1px solid transparent; }
   .back { margin-top: 22px; padding: 18px; border-radius: 18px; border: 1px dashed var(--border-strong); background: rgb(0 0 0 / .2); }
   .promo { display: flex; align-items: center; gap: 16px; margin-top: 22px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(rgb(40 39 46 / .92), rgb(40 39 46 / .92)) padding-box, var(--gradient) border-box; border: 1px solid transparent; }

@@ -1,4 +1,4 @@
-import type { Platform } from '@app/shared';
+import type { Kind, Platform } from '@app/shared';
 import { Innertube } from 'youtubei.js';
 import { z } from 'zod';
 import { captureMessage } from '../monitoring';
@@ -7,8 +7,9 @@ import { ResolutionError, type Fetch } from './resolver';
 
 // Plumbing shared by the song and the album lookups
 
-// Amazon Music has no open catalogue, so its links are never a source
-export type MusicLink = { kind: 'song' | 'album'; platform: Exclude<Platform, 'amazonMusic'>; id: string; country: string };
+// Amazon Music has no open catalogue, so its links are never a source.
+// show is the show's ID of an Apple Podcasts episode, whose links name both.
+export type MusicLink = { kind: Kind; platform: Exclude<Platform, 'amazonMusic'>; id: string; country: string; show?: string };
 
 export const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 export function recording(title: string, artists: string[]) {

@@ -61,7 +61,8 @@ abstract class Messages {
   String get shareDirectButton;
   String get shareAndroid;
   String get privacyNote;
-  String kindFrom(bool album, String? service);
+  String kindFrom(String kind, String? service);
+  String get otherApps;
   String get otherLink;
   String get hintEveryone;
   String hintOne(String service, bool withName);
@@ -238,9 +239,9 @@ class De extends Messages {
   String get headline => 'Teil Musik. Jeder hört sie in seinem Dienst.';
   @override
   String get intro =>
-      'Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music, Deezer und TIDAL.';
+      'Füge einen Link zu Song, Album oder Podcast ein. Songgate findet ihn bei Spotify, Apple, YouTube Music, Deezer und TIDAL.';
   @override
-  String get linkHint => 'Song- oder Albumlink';
+  String get linkHint => 'Link zu Song, Album oder Podcast';
   @override
   String get paste => 'Einfügen';
   @override
@@ -263,8 +264,10 @@ class De extends Messages {
   String get privacyNote =>
       'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer, TIDAL und ListenBrainz.';
   @override
-  String kindFrom(bool album, String? service) =>
-      '${album ? 'Album' : 'Song'}${service == null ? '' : ' aus $service'}';
+  String kindFrom(String kind, String? service) =>
+      '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Folge'}[kind] ?? 'Song'}${service == null ? '' : ' aus $service'}';
+  @override
+  String get otherApps => 'In anderen Podcast-Apps abonnieren';
   @override
   String get otherLink => 'Anderen Link einfügen';
   @override
@@ -558,9 +561,9 @@ class En extends Messages {
   String get headline => 'Share music. Everyone hears it on their own service.';
   @override
   String get intro =>
-      'Paste a song or album link. Songgate finds it on Spotify, Apple Music, YouTube Music, Deezer and TIDAL.';
+      'Paste a song, album or podcast link. Songgate finds it on Spotify, Apple, YouTube Music, Deezer and TIDAL.';
   @override
-  String get linkHint => 'Song or album link';
+  String get linkHint => 'Link to a song, album or podcast';
   @override
   String get paste => 'Paste';
   @override
@@ -583,8 +586,10 @@ class En extends Messages {
   String get privacyNote =>
       'No account. Friends and groups stay on your device. Your link goes to our service, the matches come from Apple, YouTube, Spotify, Deezer, TIDAL and ListenBrainz.';
   @override
-  String kindFrom(bool album, String? service) =>
-      '${album ? 'Album' : 'Song'}${service == null ? '' : ' from $service'}';
+  String kindFrom(String kind, String? service) =>
+      '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Episode'}[kind] ?? 'Song'}${service == null ? '' : ' from $service'}';
+  @override
+  String get otherApps => 'Subscribe in other podcast apps';
   @override
   String get otherLink => 'Paste another link';
   @override

@@ -1,4 +1,4 @@
-import { messages, type Conversion, type FailureCode, type Platform } from '@app/shared';
+import { isPodcast, messages, type Conversion, type FailureCode, type Kind, type Platform } from '@app/shared';
 import { z } from 'zod';
 
 export class ResolutionError extends Error {
@@ -7,10 +7,12 @@ export class ResolutionError extends Error {
   }
 }
 
-export function searchUrl(target: Platform, source: { title: string; artist: string }, country = 'DE') {
-  const artist = source.artist.replace(/VEVO$/i, '').trim();
+export function searchUrl(target: Platform, source: { title: string; artist: string }, country = 'DE', kind: Kind = 'song') {
+  // A show's publisher only gets in the way of finding it
+  const artist = kind === 'podcast' ? '' : source.artist.replace(/VEVO$/i, '').trim();
   const title = source.title.replace(/[\[(][^\])]*\b(?:official|video|audio|lyrics?|remaster(?:ed)?|4k|hd)\b[^\])]*[\])]/gi, '').replace(/\s+/g, ' ').trim();
   const query = title.toLowerCase().includes(artist.toLowerCase()) ? title : `${artist} ${title}`;
+  if (target === 'appleMusic' && isPodcast(kind)) return `https://podcasts.apple.com/${country.toLowerCase()}/search?${new URLSearchParams({ term: query })}`;
   if (target === 'spotify') return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
   if (target === 'deezer') return `https://www.deezer.com/search/${encodeURIComponent(query)}`;
   if (target === 'tidal') return `https://tidal.com/search?${new URLSearchParams({ q: query })}`;

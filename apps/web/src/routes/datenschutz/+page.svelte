@@ -14,14 +14,14 @@
   <h2>Songs umwandeln</h2>
   <p>Wenn du einen Link einfügst oder aus einer anderen App teilst, schickt Songgate ihn an unseren Server. Der Server liest Titel und Interpret bei der jeweiligen Plattform aus und sucht den Song bei der Zielplattform. Dafür fragt er öffentliche Schnittstellen dieser Anbieter ab:</p>
   <ul>
-    <li><strong>Apple</strong> (Apple Distribution International, Irland): iTunes Search API für Songs aus Apple Music</li>
-    <li><strong>YouTube</strong> (Google Ireland Limited, Irland): Suche und Song-Angaben von YouTube Music</li>
+    <li><strong>Apple</strong> (Apple Distribution International, Irland): iTunes Search API für Songs aus Apple Music und Podcasts aus Apple Podcasts</li>
+    <li><strong>YouTube</strong> (Google Ireland Limited, Irland): Suche und Angaben zu Songs und Podcasts von YouTube Music</li>
     <li><strong>ListenBrainz</strong> (MetaBrainz Foundation, USA): ordnet Titel und Interpret den passenden Spotify-Songs zu</li>
-    <li><strong>Spotify</strong> (Spotify AB, Schweden) und <strong>Deezer</strong> (Deezer S.A., Frankreich): Song-Angaben zu Links dieser Dienste</li>
+    <li><strong>Spotify</strong> (Spotify AB, Schweden) und <strong>Deezer</strong> (Deezer S.A., Frankreich): Angaben zu Songs und Podcasts aus Links dieser Dienste und die Suche nach Podcasts</li>
     <li><strong>TIDAL</strong> (TIDAL Music AS, Norwegen): Song-Angaben zu TIDAL-Links und Suche bei TIDAL</li>
   </ul>
   <p>Bei Amazon Music fragt Songgate nichts ab, es baut nur einen Link zur Suche dort.</p>
-  <p>Übermittelt werden nur der Song-Link bzw. Titel, Interpret und Album. Diese Abfragen stellt unser Server, deine IP-Adresse und andere Angaben zu dir gehen dabei nicht an die Anbieter. Links und Ergebnisse speichern wir nicht dauerhaft. Damit geteilte Song-Links schnell laden, behält der Server das Ergebnis bis zu 24 Stunden im Arbeitsspeicher, ohne Bezug zu dir. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
+  <p>Übermittelt werden nur der Link bzw. Titel, Interpret und Album, bei Podcasts der Name der Sendung und der Titel der Folge. Diese Abfragen stellt unser Server, deine IP-Adresse und andere Angaben zu dir gehen dabei nicht an die Anbieter. Links und Ergebnisse speichern wir nicht dauerhaft. Damit geteilte Song-Links schnell laden, behält der Server das Ergebnis bis zu 24 Stunden im Arbeitsspeicher, ohne Bezug zu dir. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.</p>
   <p>Die Cover der Ergebnisse lädt dein Gerät direkt von den Servern der Plattformen (Apple, Google, Spotify, Deezer, TIDAL). Dabei sehen diese deine IP-Adresse. Öffnest du einen Song in einer Musik-App oder auf einer Plattform, gilt deren Datenschutzerklärung.</p>
 
   <h2>Einstellungen auf deinem Gerät</h2>

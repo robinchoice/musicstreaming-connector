@@ -21,8 +21,21 @@ const serviceOrder = [
 ];
 const countries = ['DE', 'AT', 'CH', 'US', 'GB'];
 
+bool isPodcast(String kind) => kind == 'podcast' || kind == 'episode';
+
+/// TIDAL has no podcasts. Same as servicesFor in packages/shared.
+List<String> servicesFor(String kind) => isPodcast(kind)
+    ? serviceOrder.where((platform) => platform != 'tidal').toList()
+    : serviceOrder;
+
+/// Apple's podcasts live in Apple Podcasts. Same as serviceName in packages/shared.
+String serviceName(String platform, String kind) =>
+    platform == 'appleMusic' && isPodcast(kind)
+    ? 'Apple Podcasts'
+    : platforms[platform] ?? platform;
+
 const _sources = {
-  'appleMusic': r'music\.apple\.com/',
+  'appleMusic': r'(?:music|podcasts|itunes)\.apple\.com/',
   'youtubeMusic': r'youtu(?:be\.com|\.be)/',
   'spotify': r'open\.spotify\.com/|spotify\.link/',
   'deezer': r'deezer\.com/',
@@ -43,26 +56,40 @@ const _logoColors = {
   'deezer': Color(0xFFA238FF),
   'tidal': Color(0xFFFFFFFF),
   'amazonMusic': Color(0xFF25D1DA),
+  'applePodcasts': Color(0xFF9933CC),
 };
 
 class ServiceLogo extends StatelessWidget {
   final String platform;
+  final String kind;
   final double size;
-  const ServiceLogo(this.platform, {super.key, this.size = 24});
+  const ServiceLogo(
+    this.platform, {
+    super.key,
+    this.kind = 'song',
+    this.size = 24,
+  });
 
   @override
-  Widget build(BuildContext context) => SvgPicture.asset(
-    'assets/logos/$platform.svg',
-    width: size,
-    height: size,
-    colorFilter: ColorFilter.mode(_logoColors[platform]!, BlendMode.srcIn),
-    excludeFromSemantics: true,
-  );
+  Widget build(BuildContext context) {
+    final mark = platform == 'appleMusic' && isPodcast(kind)
+        ? 'applePodcasts'
+        : platform;
+    return SvgPicture.asset(
+      'assets/logos/$mark.svg',
+      width: size,
+      height: size,
+      colorFilter: ColorFilter.mode(_logoColors[mark]!, BlendMode.srcIn),
+      excludeFromSemantics: true,
+    );
+  }
 }
 
-/// The best link on every service for a song or an album, for sharing with friends.
+/// The best link on every service for a song, an album, a show or an
+/// episode, for sharing with friends.
 class Song {
-  final bool album;
+  // song, album, podcast or episode
+  final String kind;
   final String platform;
   final String title;
   final String artist;
@@ -71,8 +98,13 @@ class Song {
   final Map<String, String> links;
   // false when only a search on that service is left
   final Map<String, bool> found;
+  // Other podcast apps, shows and episodes only
+  final List<({String name, String url})> apps;
+  bool get album => kind == 'album';
+  bool get podcast => isPodcast(kind);
   Song.fromJson(Map<String, dynamic> json)
-    : album = (json['source'] as Map<String, dynamic>)['kind'] == 'album',
+    : kind =
+          (json['source'] as Map<String, dynamic>)['kind'] as String? ?? 'song',
       platform =
           (json['source'] as Map<String, dynamic>)['platform'] as String? ?? '',
       title = (json['source'] as Map<String, dynamic>)['title'] as String,
@@ -88,5 +120,12 @@ class Song {
         for (final entry in (json['links'] as Map<String, dynamic>).entries)
           entry.key:
               (entry.value as Map<String, dynamic>)['found'] as bool? ?? true,
-      };
+      },
+      apps = [
+        for (final app in json['apps'] as List<dynamic>? ?? const [])
+          (
+            name: (app as Map<String, dynamic>)['name'] as String,
+            url: app['url'] as String,
+          ),
+      ];
 }

@@ -7,7 +7,8 @@ export const APP_BAND = { from: 3.85, to: 4.55 };
 // the bug button waits for the test mode switch, see testMode in the web's feedback.svelte.ts.
 export const LIVE = true;
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
-export { type Locale, type Messages, messages, pickLocale } from './messages';
+export { type Kind, type Locale, type Messages, messages, pickLocale } from './messages';
+import type { Kind } from './messages';
 
 export const platformSchema = z.enum(['appleMusic', 'youtubeMusic', 'spotify', 'deezer', 'tidal', 'amazonMusic']);
 export type Platform = z.infer<typeof platformSchema>;
@@ -48,14 +49,19 @@ export const feedbackSchema = z.object({
 });
 
 const sources: [RegExp, Platform][] = [
-  [/music\.apple\.com\//, 'appleMusic'], [/youtu(?:be\.com|\.be)\//, 'youtubeMusic'],
+  [/(?:music|podcasts|itunes)\.apple\.com\//, 'appleMusic'], [/youtu(?:be\.com|\.be)\//, 'youtubeMusic'],
   [/open\.spotify\.com\/|spotify\.link\//, 'spotify'], [/deezer\.com\//, 'deezer'], [/tidal\.com\//, 'tidal'],
 ];
 
 // The service a pasted link comes from, before the API has looked at it
 export const sourceOf = (input: string): Platform | undefined => sources.find(([pattern]) => pattern.test(input))?.[1];
 
-export type Kind = 'song' | 'album';
+export const isPodcast = (kind: Kind) => kind === 'podcast' || kind === 'episode';
+// TIDAL has no podcasts, Apple's podcasts live in Apple Podcasts
+export const servicesFor = (kind: Kind): Platform[] => isPodcast(kind) ? serviceOrder.filter(platform => platform !== 'tidal') : serviceOrder;
+export const serviceName = (platform: Platform, kind: Kind) => platform === 'appleMusic' && isPodcast(kind) ? 'Apple Podcasts' : platforms[platform];
+// Other podcast apps, subscribed by Apple ID or RSS feed
+export interface PodcastApp { name: string; url: string }
 
 export interface Conversion {
   target: Platform;
@@ -69,6 +75,8 @@ export interface Song {
   sharePath: string;
   // found is false when only a search on that service is left
   links: Record<Platform, { url: string; found: boolean }>;
+  // Shows and episodes only
+  apps?: PodcastApp[];
 }
 
 // Friends live on the device only. An invite link carries a name and a service.
@@ -84,9 +92,12 @@ export function shareUrl(origin: string, path: string, from: Friend | null): str
 // One service gets its link, several get one line each plus the share page for everyone else.
 // With an own invite the share page comes along for one service too, so the recipient can save the sender.
 // The services default to those of the friends, who are named next to their service.
-export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null, services: Platform[] = [...new Set(friends.map(friend => friend.platform))], locale: Locale = 'de'): string {
+export function friendsMessage(song: Song, friends: Friend[], origin: string, from: Friend | null = null, chosen: Platform[] = [...new Set(friends.map(friend => friend.platform))], locale: Locale = 'de'): string {
   const m = messages[locale];
-  const head = `${song.source.kind === 'album' ? '💿' : '🎵'} ${song.source.title} – ${song.source.artist}`;
+  const { kind, title, artist } = song.source;
+  const head = `${isPodcast(kind) ? '🎙️' : kind === 'album' ? '💿' : '🎵'} ${artist ? `${title} – ${artist}` : title}`;
+  // A friend whose service has no podcasts gets the share page
+  const services = chosen.filter(platform => servicesFor(kind).includes(platform));
   const everyone = shareUrl(origin, song.sharePath, from);
   // Every message ends with where it was made, so recipients find Songgate too
   const footer = `\n\n${m.sharedWith} ${origin.replace(/^https?:\/\//, '')}`;
@@ -94,7 +105,7 @@ export function friendsMessage(song: Song, friends: Friend[], origin: string, fr
   if (services.length === 1) return [head, song.links[services[0]!].url, ...(from ? [`${m.allServices}: ${everyone}`] : [])].join('\n') + footer;
   const lines = services.map(platform => {
     const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name);
-    return `${platforms[platform]}${names.length ? ` (${names.join(', ')})` : ''}: ${song.links[platform].url}`;
+    return `${serviceName(platform, kind)}${names.length ? ` (${names.join(', ')})` : ''}: ${song.links[platform].url}`;
   });
   return [head, ...lines, `${m.others}: ${everyone}`].join('\n') + footer;
 }

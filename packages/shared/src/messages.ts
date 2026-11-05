@@ -1,14 +1,16 @@
 // Every text that web, API and CLI show, one object per language. TypeScript
 // reports any text that English lacks. The app has its own in lib/core/messages.dart.
+export type Kind = 'song' | 'album' | 'podcast' | 'episode';
+
 const de = {
   // Link previews and the start of llms.txt
   tagline: 'Ein Link für einen Song, der bei allen im eigenen Streamingdienst aufgeht.',
 
   // API errors. Custom zod messages in index.ts are keys from here.
   failures: {
-    INVALID_LINK: 'Teile bitte einen einzelnen Song oder ein Album aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL mit Songgate.',
-    UNSUPPORTED_LINK: 'Teile einen Song oder ein Album aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL und wähle einen anderen Zieldienst.',
-    SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song oder Album konnten nicht geladen werden.',
+    INVALID_LINK: 'Teile bitte einen einzelnen Song, ein Album oder einen Podcast aus YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer oder TIDAL mit Songgate.',
+    UNSUPPORTED_LINK: 'Teile einen Song, ein Album oder einen Podcast aus YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer oder TIDAL und wähle einen anderen Zieldienst.',
+    SOURCE_UNAVAILABLE: 'Die Angaben zu diesem Song, Album oder Podcast konnten nicht geladen werden.',
     NO_MATCH: 'Es wurde kein passender Treffer gefunden.',
     RATE_LIMITED: 'Der Musikdienst erhält gerade zu viele Anfragen. Versuche es später erneut.',
     NETWORK: 'Die Musikdienste sind gerade nicht erreichbar. Versuche es erneut.',
@@ -45,16 +47,17 @@ const de = {
   // Web: start page
   pageTitle: 'Songgate · Musik verbindet',
   headline: 'Teil Musik. Jeder hört sie in seinem Dienst.',
-  lede: 'Füge einen Song- oder Albumlink ein. Songgate findet ihn bei Spotify, Apple Music, YouTube Music, Deezer und TIDAL.',
-  linkLabel: 'Song- oder Albumlink',
-  linkPlaceholder: 'Link aus Spotify, Apple Music, YouTube Music, Deezer oder TIDAL',
+  lede: 'Füge einen Link zu Song, Album oder Podcast ein. Songgate findet ihn bei Spotify, Apple, YouTube Music, Deezer und TIDAL.',
+  linkLabel: 'Link zu Song, Album oder Podcast',
+  linkPlaceholder: 'Link aus Spotify, Apple Music, Apple Podcasts, YouTube Music, Deezer oder TIDAL',
   find: 'Finden',
   paste: 'Einfügen',
   searching: 'Suche bei allen Diensten …',
   notYet: 'Das hat noch nicht geklappt.',
   linkFrom: 'Link aus',
   privacyNote: 'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer, TIDAL und ListenBrainz.',
-  kindFrom: (kind: 'song' | 'album', service: string) => `${kind === 'album' ? 'Album' : 'Song'} aus ${service}`,
+  kindFrom: (kind: Kind, service: string) => `${{ song: 'Song', album: 'Album', podcast: 'Podcast', episode: 'Folge' }[kind]} aus ${service}`,
+  otherApps: 'In anderen Podcast-Apps abonnieren',
   otherLink: 'Anderen Link einfügen',
   servicesInMessage: 'Dienste in der Nachricht',
   searchOnly: 'Nur Suche',
@@ -105,9 +108,9 @@ const de = {
   askNewInvite: 'Bitte um einen neuen Einladungslink.',
 
   // Web: share page
-  sentYou: (kind: 'song' | 'album'): string => (kind === 'album' ? 'hat dir ein Album geschickt' : 'hat dir einen Song geschickt'),
-  forYou: (kind: 'song' | 'album'): string => (kind === 'album' ? 'Ein Album für dich' : 'Ein Song für dich'),
-  whereListen: 'Wo hörst du Musik?',
+  sentYou: (kind: Kind): string => `hat dir ${{ song: 'einen Song', album: 'ein Album', podcast: 'einen Podcast', episode: 'eine Podcast-Folge' }[kind]} geschickt`,
+  forYou: (kind: Kind): string => `${{ song: 'Ein Song', album: 'Ein Album', podcast: 'Ein Podcast', episode: 'Eine Podcast-Folge' }[kind]} für dich`,
+  whereListen: (kind: Kind): string => (kind === 'podcast' || kind === 'episode' ? 'Wo hörst du Podcasts?' : 'Wo hörst du Musik?'),
   search: 'Suchen',
   lastUsed: 'Zuletzt genutzt',
   open: 'Öffnen',
@@ -158,7 +161,7 @@ const de = {
   cliLangHelp: 'Sprache, sonst aus LANG',
   cliHelpHelp: 'Diese Hilfe',
   cliExitCodes: 'Exit-Codes: 0 erledigt, 1 Fehler, 2 falscher Aufruf',
-  cliConvertHelp: 'Links zum Song oder Album in allen Diensten, „-“ liest den Link von stdin',
+  cliConvertHelp: 'Links zu Song, Album oder Podcast in allen Diensten, „-“ liest den Link von stdin',
   cliConvertToHelp: 'Treffer in einem Dienst',
   cliCountryHelp: 'Land des Katalogs, Standard DE',
   cliSearchOnly: 'nur Suche',
@@ -176,9 +179,9 @@ const en: Messages = {
   tagline: 'One link for a song that opens in everyone’s own streaming service.',
 
   failures: {
-    INVALID_LINK: 'Please share a single song or album from YouTube Music, Apple Music, Spotify, Deezer or TIDAL with Songgate.',
-    UNSUPPORTED_LINK: 'Share a song or album from YouTube Music, Apple Music, Spotify, Deezer or TIDAL and pick another target service.',
-    SOURCE_UNAVAILABLE: 'The details of this song or album could not be loaded.',
+    INVALID_LINK: 'Please share a single song, album or podcast from YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer or TIDAL with Songgate.',
+    UNSUPPORTED_LINK: 'Share a song, album or podcast from YouTube Music, Apple Music, Apple Podcasts, Spotify, Deezer or TIDAL and pick another target service.',
+    SOURCE_UNAVAILABLE: 'The details of this song, album or podcast could not be loaded.',
     NO_MATCH: 'No matching result was found.',
     RATE_LIMITED: 'The music service is getting too many requests right now. Try again later.',
     NETWORK: 'The music services cannot be reached right now. Try again.',
@@ -212,16 +215,17 @@ const en: Messages = {
 
   pageTitle: 'Songgate · Music connects',
   headline: 'Share music. Everyone hears it in their own service.',
-  lede: 'Paste a song or album link. Songgate finds it on Spotify, Apple Music, YouTube Music, Deezer and TIDAL.',
-  linkLabel: 'Song or album link',
-  linkPlaceholder: 'Link from Spotify, Apple Music, YouTube Music, Deezer or TIDAL',
+  lede: 'Paste a song, album or podcast link. Songgate finds it on Spotify, Apple, YouTube Music, Deezer and TIDAL.',
+  linkLabel: 'Link to a song, album or podcast',
+  linkPlaceholder: 'Link from Spotify, Apple Music, Apple Podcasts, YouTube Music, Deezer or TIDAL',
   find: 'Find',
   paste: 'Paste',
   searching: 'Searching all services …',
   notYet: 'That didn’t work yet.',
   linkFrom: 'Link from',
   privacyNote: 'No account. Friends and groups stay on your device. Your link goes to our service, the matches come from Apple, YouTube, Spotify, Deezer, TIDAL and ListenBrainz.',
-  kindFrom: (kind, service) => `${kind === 'album' ? 'Album' : 'Song'} from ${service}`,
+  kindFrom: (kind, service) => `${{ song: 'Song', album: 'Album', podcast: 'Podcast', episode: 'Episode' }[kind]} from ${service}`,
+  otherApps: 'Subscribe in other podcast apps',
   otherLink: 'Paste another link',
   servicesInMessage: 'Services in the message',
   searchOnly: 'Search only',
@@ -270,9 +274,9 @@ const en: Messages = {
   inviteIncomplete: 'This invite is incomplete.',
   askNewInvite: 'Ask for a new invite link.',
 
-  sentYou: (kind) => (kind === 'album' ? 'sent you an album' : 'sent you a song'),
-  forYou: (kind) => (kind === 'album' ? 'An album for you' : 'A song for you'),
-  whereListen: 'Where do you listen to music?',
+  sentYou: (kind) => `sent you ${{ song: 'a song', album: 'an album', podcast: 'a podcast', episode: 'a podcast episode' }[kind]}`,
+  forYou: (kind) => `${{ song: 'A song', album: 'An album', podcast: 'A podcast', episode: 'A podcast episode' }[kind]} for you`,
+  whereListen: (kind) => (kind === 'podcast' || kind === 'episode' ? 'Where do you listen to podcasts?' : 'Where do you listen to music?'),
   search: 'Search',
   lastUsed: 'Last used',
   open: 'Open',
@@ -321,7 +325,7 @@ const en: Messages = {
   cliLangHelp: 'Language, else from LANG',
   cliHelpHelp: 'This help',
   cliExitCodes: 'Exit codes: 0 done, 1 error, 2 wrong usage',
-  cliConvertHelp: 'Links to the song or album on every service, "-" reads the link from stdin',
+  cliConvertHelp: 'Links to the song, album or podcast on every service, "-" reads the link from stdin',
   cliConvertToHelp: 'Matches on one service',
   cliCountryHelp: 'Country of the catalogue, default DE',
   cliSearchOnly: 'search only',

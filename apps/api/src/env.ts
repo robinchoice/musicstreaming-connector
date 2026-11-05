@@ -16,6 +16,8 @@ const envSchema = z.object({
   APPLE_MUSIC_KEY_BASE64: z.base64().or(unset).exactOptional(),
   TIDAL_CLIENT_ID: z.string().exactOptional(),
   TIDAL_CLIENT_SECRET: z.string().exactOptional(),
+  SPOTIFY_CLIENT_ID: z.string().exactOptional(),
+  SPOTIFY_CLIENT_SECRET: z.string().exactOptional(),
 });
 
 declare module 'bun' {

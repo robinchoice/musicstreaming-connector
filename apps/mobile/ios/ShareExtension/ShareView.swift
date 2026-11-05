@@ -52,10 +52,12 @@ extension Color {
 // with svgpath: svgpath(d).abs().unarc().unshort().round(3)
 struct ServiceLogo: View {
     let platform: String
+    var kind = "song"
     var size: CGFloat = 24
 
-    private static let colors: [String: UInt32] = ["appleMusic": 0xFA243C, "youtubeMusic": 0xFF0033, "spotify": 0x1ED760, "deezer": 0xA238FF, "tidal": 0xFFFFFF, "amazonMusic": 0x25D1DA]
+    private static let colors: [String: UInt32] = ["applePodcasts": 0x9933CC, "appleMusic": 0xFA243C, "youtubeMusic": 0xFF0033, "spotify": 0x1ED760, "deezer": 0xA238FF, "tidal": 0xFFFFFF, "amazonMusic": 0x25D1DA]
     private static let paths: [String: String] = [
+        "applePodcasts": "M5.34 0C3.923-0.003 2.563 0.558 1.561 1.561 0.558 2.563-0.003 3.923 0 5.34V18.66C-0.003 20.077 0.558 21.437 1.561 22.439 2.563 23.442 3.923 24.003 5.34 24H18.66C20.077 24.003 21.437 23.442 22.439 22.439 23.442 21.437 24.003 20.077 24 18.66V5.34C24.003 3.923 23.442 2.563 22.439 1.561 21.437 0.558 20.077-0.003 18.66 0ZM11.865 2.568C14.201 2.568 16.313 3.47 17.921 5.155 19.145 6.427 19.833 7.774 20.185 9.547 20.305 10.137 20.305 11.747 20.192 12.411 19.818 14.522 18.661 16.413 16.952 17.707 16.344 18.167 14.856 18.968 14.616 18.968 14.528 18.968 14.52 18.877 14.56 18.508 14.632 17.916 14.704 17.793 15.04 17.652 15.576 17.428 16.488 16.778 17.048 16.217 18.024 15.241 18.718 14.019 19.056 12.681 19.264 11.857 19.24 10.025 19.008 9.177 18.28 6.481 16.08 4.385 13.384 3.825 12.6 3.665 11.176 3.665 10.384 3.825 7.656 4.385 5.4 6.585 4.712 9.353 4.528 10.105 4.528 11.937 4.712 12.689 5.168 14.521 6.352 16.201 7.904 17.201 8.208 17.401 8.576 17.609 8.728 17.673 9.064 17.817 9.136 17.937 9.2 18.529 9.24 18.889 9.23 18.993 9.144 18.993 9.088 18.993 8.68 18.817 8.248 18.609L8.208 18.579C5.736 17.363 4.152 15.305 3.576 12.567 3.432 11.861 3.408 10.175 3.546 9.527 3.906 7.787 4.594 6.427 5.738 5.223 7.386 3.486 9.506 2.567 11.866 2.567ZM11.999 5.378C12.408 5.382 12.802 5.418 13.105 5.484 15.889 6.104 17.865 8.892 17.481 11.658 17.329 12.772 16.945 13.688 16.265 14.538 15.929 14.968 15.113 15.688 14.969 15.688 14.946 15.688 14.921 15.416 14.921 15.085V14.48L15.337 13.984C16.905 12.106 16.793 9.482 15.081 7.76 14.417 7.09 13.649 6.696 12.657 6.514 12.017 6.396 11.881 6.396 11.209 6.506 10.189 6.673 9.399 7.068 8.697 7.762 6.977 9.466 6.865 12.104 8.433 13.984L8.846 14.48V15.088C8.846 15.424 8.819 15.696 8.786 15.696 8.756 15.696 8.522 15.536 8.274 15.336L8.24 15.325C7.408 14.661 6.672 13.483 6.368 12.328 6.184 11.63 6.184 10.304 6.376 9.608 6.88 7.73 8.264 6.273 10.184 5.589 10.594 5.444 11.317 5.369 11.998 5.378ZM11.869 8.368C12.179 8.368 12.489 8.428 12.713 8.546 13.201 8.799 13.601 9.291 13.753 9.805 14.217 11.383 12.545 12.765 11.033 12.059H11.018C10.306 11.728 9.922 11.103 9.914 10.289 9.914 9.556 10.322 8.918 11.026 8.544 11.25 8.427 11.56 8.368 11.87 8.368ZM11.858 13.096C12.846 13.092 13.564 13.445 13.828 14.066 14.026 14.53 13.952 15.998 13.61 18.368 13.378 20.024 13.25 20.442 12.93 20.724 12.49 21.114 11.866 21.222 11.274 21.012H11.271C10.555 20.755 10.401 20.407 10.107 18.368 9.766 15.998 9.691 14.53 9.889 14.066 10.151 13.45 10.863 13.1 11.859 13.096Z",
         "appleMusic": "M23.994 6.124C24.002 5.387 23.921 4.652 23.754 3.934 23.437 2.624 22.692 1.624 21.574 0.891 21.004 0.525 20.365 0.278 19.697 0.165 19.18 0.076 18.657 0.026 18.133 0.015 18.093 0.012 18.05 0.005 18.009 0.002H5.986C5.834 0.012 5.683 0.019 5.531 0.028 4.784 0.071 4.041 0.151 3.338 0.428 2.002 0.958 1.038 1.88 0.473 3.208 0.281 3.656 0.181 4.133 0.11 4.616 0.054 5.008 0.022 5.401 0.01 5.796 0.01 5.828 0.003 5.858 0 5.889V18.112C0.01 18.252 0.017 18.395 0.027 18.536 0.077 19.351 0.181 20.16 0.524 20.909 1.174 22.329 2.262 23.262 3.758 23.71 4.178 23.837 4.614 23.897 5.051 23.938 5.606 23.991 6.161 23.998 6.718 23.998H17.748C18.273 23.998 18.797 23.964 19.318 23.898 20.14 23.792 20.914 23.548 21.613 23.088 22.442 22.552 23.096 21.785 23.493 20.881 23.679 20.461 23.786 20.011 23.863 19.557 23.976 18.882 24.001 18.199 24 17.517 23.998 13.717 24 9.922 23.997 6.124ZM17.571 10.114V15.826C17.571 16.243 17.513 16.653 17.327 17.032 17.037 17.622 16.567 17.994 15.939 18.172 15.589 18.272 15.233 18.329 14.869 18.345 13.919 18.39 13.096 17.745 12.926 16.809 12.779 15.978 13.204 15.152 13.964 14.787 14.287 14.627 14.634 14.537 14.982 14.463 15.36 14.381 15.74 14.31 16.116 14.223 16.39 14.16 16.573 13.993 16.626 13.707 16.64 13.644 16.646 13.579 16.646 13.514 16.646 11.699 16.646 9.884 16.644 8.071 16.643 8.008 16.635 7.946 16.618 7.886 16.578 7.736 16.468 7.643 16.314 7.652 16.154 7.662 15.996 7.687 15.839 7.718 15.079 7.868 14.319 8.021 13.559 8.174L11.234 8.644 9.86 8.922C9.844 8.925 9.828 8.932 9.812 8.935 9.535 9.012 9.435 9.138 9.422 9.425 9.42 9.467 9.422 9.511 9.422 9.555 9.42 12.157 9.422 14.759 9.419 17.36 9.419 17.78 9.372 18.196 9.204 18.587 8.926 19.227 8.434 19.627 7.77 19.82 7.42 19.92 7.06 19.98 6.695 19.992 5.735 20.028 4.94 19.392 4.775 18.448 4.635 17.636 5.005 16.763 5.929 16.373 6.286 16.223 6.659 16.141 7.037 16.063 7.324 16.003 7.612 15.947 7.897 15.886 8.28 15.803 8.48 15.563 8.497 15.172V15.022C8.497 12.062 8.497 9.1 8.499 6.14 8.499 6.017 8.512 5.89 8.541 5.77 8.611 5.485 8.814 5.322 9.087 5.252 9.342 5.186 9.602 5.14 9.861 5.087 10.594 4.937 11.327 4.791 12.061 4.643L14.331 4.183C15.001 4.049 15.671 3.913 16.341 3.78 16.561 3.737 16.783 3.692 17.004 3.674 17.314 3.649 17.527 3.844 17.558 4.156 17.566 4.229 17.57 4.304 17.57 4.379 17.572 6.289 17.572 8.201 17.57 10.111Z",
         "youtubeMusic": "M12 0C5.376 0 0 5.376 0 12 0 18.624 5.376 24 12 24 18.624 24 24 18.624 24 12 24 5.376 18.624 0 12 0ZM12 19.104C8.076 19.104 4.896 15.924 4.896 12 4.896 8.076 8.076 4.896 12 4.896 15.924 4.896 19.104 8.076 19.104 12 19.104 15.924 15.924 19.104 12 19.104ZM12 5.772C8.568 5.772 5.772 8.568 5.772 12 5.772 15.432 8.568 18.228 12 18.228 15.432 18.228 18.228 15.432 18.228 12 18.228 8.568 15.432 5.772 12 5.772ZM9.684 15.54V8.46L15.816 12 9.684 15.54Z",
         "spotify": "M12 0C5.4 0 0 5.4 0 12 0 18.6 5.4 24 12 24 18.6 24 24 18.6 24 12 24 5.4 18.66 0 12 0ZM17.521 17.34C17.281 17.699 16.861 17.82 16.5 17.58 13.68 15.84 10.14 15.479 5.939 16.439 5.521 16.561 5.16 16.26 5.04 15.9 4.92 15.479 5.22 15.12 5.58 15 10.14 13.979 14.1 14.4 17.22 16.32 17.64 16.5 17.699 16.979 17.521 17.34ZM18.961 14.04C18.66 14.46 18.12 14.64 17.699 14.34 14.46 12.36 9.54 11.76 5.76 12.96 5.281 13.08 4.74 12.84 4.62 12.36 4.5 11.88 4.74 11.339 5.22 11.219 9.6 9.9 15 10.561 18.72 12.84 19.081 13.021 19.26 13.62 18.961 14.04ZM19.081 10.68C15.24 8.4 8.82 8.16 5.16 9.301 4.56 9.48 3.96 9.12 3.78 8.58 3.6 7.979 3.96 7.38 4.5 7.199 8.76 5.939 15.78 6.179 20.221 8.82 20.76 9.12 20.94 9.84 20.64 10.38 20.341 10.801 19.62 10.979 19.081 10.68Z",
@@ -67,8 +69,9 @@ struct ServiceLogo: View {
     private static let parsedPaths = paths.mapValues(LogoShape.parse)
 
     var body: some View {
-        LogoShape(logo: Self.parsedPaths[platform] ?? Path())
-            .fill(Color(hex: Self.colors[platform] ?? 0x9A98A3))
+        let mark = platform == "appleMusic" && ShareModel.isPodcast(kind) ? "applePodcasts" : platform
+        return LogoShape(logo: Self.parsedPaths[mark] ?? Path())
+            .fill(Color(hex: Self.colors[mark] ?? 0x9A98A3))
             .frame(width: size, height: size)
             .accessibilityHidden(true)
     }
@@ -327,7 +330,7 @@ struct ShareView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .shadow(color: .black.opacity(0.4), radius: 20, y: 10)
                 .accessibilityHidden(true)
-                Text(model.t.kindFrom(song.source.kind == "album", ShareModel.platforms[song.source.platform] ?? song.source.platform))
+                Text(model.t.kindFrom(song.source.kind, ShareModel.serviceName(song.source.platform, song.source.kind)))
                     .font(.subheadline)
                     .foregroundStyle(Brand.muted)
                     .padding(.top, 16)
@@ -335,9 +338,11 @@ struct ShareView: View {
                     .font(Brand.displayFont(size: titleSize))
                     .tracking(-0.035 * titleSize)
                     .padding(.top, 4)
-                Text(song.source.artist)
-                    .foregroundStyle(Brand.text.opacity(0.8))
-                    .padding(.top, 2)
+                if !song.source.artist.isEmpty {
+                    Text(song.source.artist)
+                        .foregroundStyle(Brand.text.opacity(0.8))
+                        .padding(.top, 2)
+                }
                 friendsSection
                     .padding(.top, 20)
                 tiles(song)
@@ -397,15 +402,15 @@ struct ShareView: View {
     // All services, tapping one adds or removes its link from the message
     private func tiles(_ song: Song) -> some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-            ForEach(ShareModel.serviceOrder, id: \.self) { platform in
+            ForEach(ShareModel.servicesFor(song.source.kind), id: \.self) { platform in
                 let selected = model.services.contains(platform)
-                let name = ShareModel.platforms[platform] ?? platform
+                let name = ShareModel.serviceName(platform, song.source.kind)
                 Button {
                     model.toggle(service: platform)
                     copied = false
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
-                        ServiceLogo(platform: platform, size: 26)
+                        ServiceLogo(platform: platform, kind: song.source.kind, size: 26)
                         Text(name)
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(2)
@@ -438,9 +443,12 @@ struct ShareView: View {
     }
 
     private var hint: String {
-        guard let first = model.services.first else { return model.t.hintEveryone }
-        if model.services.count > 1 { return model.t.hintSeveral }
-        return model.t.hintOne(ShareModel.platforms[first] ?? first, model.me != nil)
+        // A friend's service without podcasts leaves the message, see friendsMessage
+        let kind = model.song?.source.kind ?? "song"
+        let shown = model.services.filter(ShareModel.servicesFor(kind).contains)
+        guard let first = shown.first else { return model.t.hintEveryone }
+        if shown.count > 1 { return model.t.hintSeveral }
+        return model.t.hintOne(ShareModel.serviceName(first, kind), model.me != nil)
     }
 
     private func messageBox(_ message: String) -> some View {

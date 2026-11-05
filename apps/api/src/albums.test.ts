@@ -30,7 +30,6 @@ test.each([
   expect(sharePath(source)).toBe(path);
 });
 test.each([
-  'https://music.youtube.com/playlist?list=PLx0sYbCqOb8TBPRdmBHs5Iftvv9TPboYG',
   'https://music.youtube.com/browse/UCabc',
   'https://user@open.spotify.com/album/4m2880jivSbbyEGAKfITCa',
   `${apple} ${deezer}`,

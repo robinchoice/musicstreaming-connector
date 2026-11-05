@@ -1,14 +1,17 @@
-import { countries, inviteSlugs, type Platform, platformSchema, platforms } from '@app/shared';
+import { countries, inviteSlugs, type Platform, platformSchema, serviceName, servicesFor } from '@app/shared';
 import { z } from 'zod';
 import { type Command, EXIT, Failure, str } from '../command';
 import { SLUG } from '../config';
 
-const kind = z.enum(['song', 'album']);
+const kind = z.enum(['song', 'album', 'podcast', 'episode']);
 const songSchema = z.object({
   source: z.object({ kind, platform: platformSchema, title: z.string(), artist: z.string(), url: z.string(), artworkUrl: z.string().nullable() }),
   sharePath: z.string(),
   links: z.record(platformSchema, z.object({ url: z.string(), found: z.boolean() })),
+  apps: z.array(z.object({ name: z.string(), url: z.string() })).exactOptional(),
 });
+// "Title – Artist", a show without publisher only by its title
+const heading = (source: { title: string; artist: string }) => (source.artist ? `${source.title} – ${source.artist}` : source.title);
 const conversionSchema = z.object({
   target: platformSchema,
   source: z.object({ kind, title: z.string(), artist: z.string(), url: z.string() }),
@@ -45,7 +48,7 @@ export const convert: Command = {
       return {
         data: { ...conversion, shareUrl },
         text: [
-          `${conversion.source.title} – ${conversion.source.artist} → ${platforms[target]}`,
+          `${heading(conversion.source)} → ${serviceName(target, conversion.source.kind)}`,
           ...conversion.candidates.map((hit) => `  ${[hit.title, hit.album].filter(Boolean).join(' · ')}  ${hit.url}`),
           `${m.cliForEveryone}: ${shareUrl}`,
         ].join('\n'),
@@ -54,15 +57,18 @@ export const convert: Command = {
 
     const song = await api.get(`/song?${new URLSearchParams({ input, country })}`, songSchema);
     const shareUrl = url + song.sharePath;
-    const width = Math.max(...Object.values(platforms).map((name) => name.length)) + 2;
+    const services = servicesFor(song.source.kind);
+    const names = services.map((platform) => serviceName(platform, song.source.kind));
+    const width = Math.max(...names.map((name) => name.length), ...(song.apps ?? []).map((app) => app.name.length)) + 2;
     return {
       data: { ...song, shareUrl },
       text: [
-        `${song.source.title} – ${song.source.artist}`,
-        ...platformSchema.options.map((platform) => {
+        heading(song.source),
+        ...services.map((platform, i) => {
           const { url, found } = song.links[platform];
-          return `  ${platforms[platform].padEnd(width)}${url}${found ? '' : `  (${m.cliSearchOnly})`}`;
+          return `  ${names[i]!.padEnd(width)}${url}${found ? '' : `  (${m.cliSearchOnly})`}`;
         }),
+        ...(song.apps?.length ? [`${m.otherApps}:`, ...song.apps.map((app) => `  ${app.name.padEnd(width)}${app.url}`)] : []),
         `${m.cliForEveryone}: ${shareUrl}`,
       ].join('\n'),
     };

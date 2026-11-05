@@ -186,13 +186,18 @@ String friendsMessage(
   AppLocale locale = AppLocale.de,
 }) {
   final t = locale.messages;
-  final head = '${song.album ? '💿' : '🎵'} ${song.title} – ${song.artist}';
+  final icon = song.podcast ? '🎙️' : (song.album ? '💿' : '🎵');
+  final head =
+      '$icon ${song.artist.isEmpty ? song.title : '${song.title} – ${song.artist}'}';
   final everyone = shareUrl(song.sharePath, from);
   // Every message ends with where it was made, so recipients find Songgate too
   final footer =
       '\n\n${t.sharedWith} ${_origin().replaceFirst(RegExp(r'^https?://'), '')}';
+  // A friend whose service has no podcasts gets the share page
   final chosen =
-      services ?? friends.map((friend) => friend.platform).toSet().toList();
+      (services ?? friends.map((friend) => friend.platform).toSet().toList())
+          .where(servicesFor(song.kind).contains)
+          .toList();
   if (chosen.isEmpty) return [head, everyone].join('\n') + footer;
   if (chosen.length == 1) {
     return [
@@ -206,6 +211,7 @@ String friendsMessage(
         head,
         for (final platform in chosen)
           _serviceLine(
+            serviceName(platform, song.kind),
             platform,
             friends.where((friend) => friend.platform == platform),
             song.links[platform],
@@ -215,7 +221,12 @@ String friendsMessage(
       footer;
 }
 
-String _serviceLine(String platform, Iterable<Friend> friends, String? url) {
+String _serviceLine(
+  String name,
+  String platform,
+  Iterable<Friend> friends,
+  String? url,
+) {
   final names = friends.map((friend) => friend.name).join(', ');
-  return '${platforms[platform]}${names.isEmpty ? '' : ' ($names)'}: $url';
+  return '$name${names.isEmpty ? '' : ' ($names)'}: $url';
 }

@@ -14,14 +14,14 @@
   <h2>Converting songs</h2>
   <p>When you paste a link or share it from another app, Songgate sends it to our server. The server reads title and artist from the source platform and looks the song up on the target platform. To do so it queries public interfaces of these providers:</p>
   <ul>
-    <li><strong>Apple</strong> (Apple Distribution International, Ireland): iTunes Search API for songs on Apple Music</li>
-    <li><strong>YouTube</strong> (Google Ireland Limited, Ireland): search and song details from YouTube Music</li>
+    <li><strong>Apple</strong> (Apple Distribution International, Ireland): iTunes Search API for songs on Apple Music and podcasts on Apple Podcasts</li>
+    <li><strong>YouTube</strong> (Google Ireland Limited, Ireland): search and details of songs and podcasts from YouTube Music</li>
     <li><strong>ListenBrainz</strong> (MetaBrainz Foundation, USA): maps title and artist to the matching Spotify songs</li>
-    <li><strong>Spotify</strong> (Spotify AB, Sweden) and <strong>Deezer</strong> (Deezer S.A., France): song details for links from these services</li>
+    <li><strong>Spotify</strong> (Spotify AB, Sweden) and <strong>Deezer</strong> (Deezer S.A., France): details of songs and podcasts from links of these services and the search for podcasts</li>
     <li><strong>TIDAL</strong> (TIDAL Music AS, Norway): song details for TIDAL links and search on TIDAL</li>
   </ul>
   <p>Songgate queries nothing at Amazon Music, it only builds a link to its search.</p>
-  <p>Only the song link or title, artist and album are sent. Our server makes these requests, so your IP address and other details about you do not reach the providers. We don't store links or results permanently. So that shared song links load quickly, the server keeps the result in memory for up to 24 hours, without any reference to you. Legal basis is Art. 6(1)(b) GDPR.</p>
+  <p>Only the link or title, artist and album are sent, for podcasts the name of the show and the title of the episode. Our server makes these requests, so your IP address and other details about you do not reach the providers. We don't store links or results permanently. So that shared song links load quickly, the server keeps the result in memory for up to 24 hours, without any reference to you. Legal basis is Art. 6(1)(b) GDPR.</p>
   <p>Your device loads the cover images of the results directly from the platforms' servers (Apple, Google, Spotify, Deezer, TIDAL), which see your IP address. When you open a song in a music app or on a platform, its privacy policy applies.</p>
 
   <h2>Settings on your device</h2>

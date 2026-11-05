@@ -18,9 +18,9 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
         title: APP_NAME,
         description: messages.en.tagline,
         body: [
-          'Share songs and albums from YouTube Music, Apple Music, Spotify, Deezer or TIDAL as a link for your people’s favourite player. No account, no stored song history.',
+          'Share songs and albums from YouTube Music, Apple Music, Spotify, Deezer or TIDAL as a link for your people’s favourite player, podcasts and episodes from Apple Podcasts, Spotify, Deezer and YouTube Music too. No account, no stored song history.',
           '## Paste a link',
-          'Copy a song or album link in your music app via “Share” and paste it. Songgate finds it on all services at once, on Amazon Music it offers a search.',
+          'Copy a song, album or podcast link in your music app via “Share” and paste it. Songgate finds it on all services at once, on Amazon Music it offers a search. For a podcast it also links Overcast, Pocket Casts, Castro, AntennaPod and the RSS feed.',
           '## One link for everyone',
           'By default the message carries one link for everyone, where each person picks their own service. In a group chat that gives a single preview with the cover.',
           '## Pick services, friends or groups',
@@ -38,9 +38,9 @@ export function publicPages(locale: Locale, url: string): PublicPage[] {
       title: APP_NAME,
       description: messages.de.tagline,
       body: [
-        'Teile Songs und Alben aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL als Link für den Lieblingsplayer deiner Menschen. Ohne Konto, ohne gespeicherte Song-Historie.',
+        'Teile Songs und Alben aus YouTube Music, Apple Music, Spotify, Deezer oder TIDAL als Link für den Lieblingsplayer deiner Menschen, dazu Podcasts und Folgen aus Apple Podcasts, Spotify, Deezer und YouTube Music. Ohne Konto, ohne gespeicherte Song-Historie.',
         '## Link einfügen',
-        'Den Song- oder Albumlink in deiner Musik-App über „Teilen“ kopieren und einfügen. Songgate findet ihn bei allen Diensten auf einmal, bei Amazon Music bietet es eine Suche an.',
+        'Den Link zu Song, Album oder Podcast in deiner App über „Teilen“ kopieren und einfügen. Songgate findet ihn bei allen Diensten auf einmal, bei Amazon Music bietet es eine Suche an. Bei Podcasts verlinkt es außerdem Overcast, Pocket Casts, Castro, AntennaPod und den RSS-Feed.',
         '## Ein Link für alle',
         'Voreingestellt enthält die Nachricht einen Link für alle, auf dem jeder seinen Dienst wählt. Im Gruppenchat gibt das eine einzige Vorschau mit Cover.',
         '## Dienste, Freunde oder Gruppen wählen',
