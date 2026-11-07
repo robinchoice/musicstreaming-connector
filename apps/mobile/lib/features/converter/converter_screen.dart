@@ -45,6 +45,9 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   // Friends fill the services, the tiles can be tapped on their own
   List<String> _chosen = [];
   List<String> _services = [];
+  // Shared to a friend or group among Android's Direct Share targets: the
+  // share sheet follows as soon as the links are there
+  bool _shareWhenFound = false;
 
   void _setPeople(List<String> names, List<String> services) {
     setState(() {
@@ -78,7 +81,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     setState(() => _ready = true);
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       _channel.setMethodCallHandler((call) async {
-        if (call.method == 'sharedText') _receive(call.arguments as String);
+        if (call.method == 'sharedText') _receive(call.arguments as Map);
       });
       _readSharedText();
     }
@@ -215,8 +218,8 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
 
   Future<void> _readSharedText() async {
     try {
-      final text = await _channel.invokeMethod<String>('getSharedText');
-      if (text != null && mounted) _receive(text);
+      final shared = await _channel.invokeMethod<Map>('getSharedText');
+      if (shared != null && mounted) _receive(shared);
     } on PlatformException {
       if (mounted) {
         setState(
@@ -226,9 +229,29 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     }
   }
 
-  void _receive(String text) {
+  /// The shared text, and with `friend:<name>` or `group:<name>` in `to`
+  /// the friends it goes to, see MainActivity.publishShortcuts.
+  void _receive(Map shared) {
     if (!mounted) return;
-    _input.text = text;
+    _input.text = shared['text'] as String;
+    final to = shared['to'];
+    final social = ref.read(socialProvider);
+    final names = [
+      for (final group in social.groups)
+        if (to == 'group:${group.name}') ...group.members,
+      if (to is String && to.startsWith('friend:')) to.substring(7),
+    ].where((name) => social.friends.any((friend) => friend.name == name));
+    _shareWhenFound = names.isNotEmpty;
+    if (_shareWhenFound) {
+      _setPeople(names.toList(), [
+        for (final platform in serviceOrder)
+          if (social.friends.any(
+            (friend) =>
+                names.contains(friend.name) && friend.platform == platform,
+          ))
+            platform,
+      ]);
+    }
     _reset();
     _find();
   }
@@ -258,6 +281,10 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       final song = await ref.read(apiProvider).song(input, country: _country);
       if (!mounted || id != _requestId) return;
       setState(() => _song = song);
+      if (_shareWhenFound) {
+        _shareWhenFound = false;
+        _share(_message(song));
+      }
     } on ApiException catch (error) {
       if (mounted && id == _requestId) setState(() => _error = error.message);
     } finally {
@@ -288,14 +315,16 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     }
   }
 
-  Future<void> _share(BuildContext buttonContext, String message) async {
-    final box = buttonContext.findRenderObject()! as RenderBox;
+  Future<void> _share(String message, [BuildContext? buttonContext]) async {
+    final box = buttonContext?.findRenderObject() as RenderBox?;
     setState(() => _sharing = true);
     try {
       await SharePlus.instance.share(
         ShareParams(
           text: message,
-          sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
         ),
       );
     } on PlatformException {
@@ -721,7 +750,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                         builder: (context) => FilledButton.icon(
                           onPressed: _sharing
                               ? null
-                              : () => _share(context, message),
+                              : () => _share(message, context),
                           icon: const Icon(Icons.ios_share, size: 18),
                           label: Text(t.share),
                         ),

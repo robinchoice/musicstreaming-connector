@@ -171,6 +171,8 @@ final class ShareModel: ObservableObject {
     // Picking friends picks their services, the tiles change the services on their own
     @Published private(set) var chosen: [String] = []
     @Published private(set) var services: [String] = []
+    // Opened from a suggestion: the share sheet follows as soon as the links are there
+    var shareWhenFound = false
 
     private var request: Task<Void, Never>?
     private(set) var input: String?
@@ -194,6 +196,22 @@ final class ShareModel: ObservableObject {
 
     func toggle(_ name: String) {
         pick(chosen.contains(name) ? chosen.filter { $0 != name } : chosen + [name])
+    }
+
+    // A suggestion in the share sheet names one friend ("friend:<name>") or a group ("group:<name>"),
+    // see ShareViewController and AppDelegate
+    func pick(conversation id: String) {
+        if let group = groups.first(where: { "group:\($0.name)" == id }) {
+            pick(group.members.filter { member in friends.contains { $0.name == member } })
+        } else if let friend = friends.first(where: { "friend:\($0.name)" == id }) {
+            pick([friend.name])
+        }
+    }
+
+    // What was sent to: the picked group, else every picked friend
+    var conversations: [String] {
+        if let group = groups.first(where: isGroupChosen) { return ["group:\(group.name)"] }
+        return chosen.map { "friend:\($0)" }
     }
 
     func isGroupChosen(_ group: FriendGroup) -> Bool {

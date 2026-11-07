@@ -269,7 +269,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           channel,
-          (_) async => 'https://youtu.be/UijW9hGpnzc',
+          (_) async => {'text': 'https://youtu.be/UijW9hGpnzc'},
         );
     await mount(tester, (_) async => ok(result()));
     expect(find.text('Paul Kalkbrenner'), findsOneWidget);
@@ -361,6 +361,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a Direct Share friend gets their link in the share sheet', (
+    tester,
+  ) async {
+    const share = MethodChannel('dev.fluttercommunity.plus/share');
+    Map? params;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      ..setMockMethodCallHandler(share, (call) async {
+        params = call.arguments as Map;
+        return '';
+      })
+      ..setMockMethodCallHandler(
+        preferences,
+        (call) async => call.method == 'getSocial'
+            ? jsonEncode({
+                'friends': [
+                  {'name': 'Alex', 'platform': 'spotify'},
+                  {'name': 'Kim', 'platform': 'deezer'},
+                ],
+              })
+            : <String, String>{},
+      )
+      ..setMockMethodCallHandler(
+        channel,
+        (call) async => {
+          'text': 'https://youtu.be/UijW9hGpnzc',
+          'to': 'friend:Alex',
+        },
+      );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(share, null),
+    );
+    await mount(tester, (_) async => ok(result()));
+    final text = params?['text'] as String;
+    expect(text, contains('https://open.spotify.com/track/1'));
+    expect(text, isNot(contains('deezer')));
+    expect(text, isNot(contains('/s/yt/')));
+  });
+
   testWidgets('a new Android share wins over an older pending request', (
     tester,
   ) async {
@@ -382,7 +421,9 @@ void main() {
     tester.binding.channelBuffers.push(
       channel.name,
       const StandardMethodCodec().encodeMethodCall(
-        const MethodCall('sharedText', 'https://youtu.be/Z19cVpmYIkw'),
+        const MethodCall('sharedText', {
+          'text': 'https://youtu.be/Z19cVpmYIkw',
+        }),
       ),
       (_) {},
     );

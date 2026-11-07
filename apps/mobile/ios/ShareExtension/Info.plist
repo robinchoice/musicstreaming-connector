@@ -17,6 +17,11 @@
 	<dict>
 		<key>NSExtensionAttributes</key>
 		<dict>
+			<!-- Friends and groups among the share sheet's suggestions, see ShareViewController -->
+			<key>IntentsSupported</key>
+			<array>
+				<string>INSendMessageIntent</string>
+			</array>
 			<key>NSExtensionActivationRule</key>
 			<dict>
 				<key>NSExtensionActivationSupportsWebURLWithMaxCount</key>

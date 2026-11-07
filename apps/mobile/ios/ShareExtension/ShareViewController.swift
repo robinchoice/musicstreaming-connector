@@ -1,3 +1,4 @@
+import Intents
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -9,7 +10,12 @@ final class ShareViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let host = UIHostingController(rootView: ShareView(model: model) { [weak self] in self?.finish() })
+        // Tapped on a friend or group among the share sheet's suggestions
+        if let id = (extensionContext?.intent as? INSendMessageIntent)?.conversationIdentifier {
+            model.pick(conversation: id)
+            model.shareWhenFound = !model.chosen.isEmpty
+        }
+        let host = UIHostingController(rootView: ShareView(model: model, sent: { [weak self] in self?.donate() }) { [weak self] in self?.finish() })
         addChild(host)
         view.addSubview(host.view)
         host.view.translatesAutoresizingMaskIntoConstraints = false
@@ -51,6 +57,27 @@ final class ShareViewController: UIViewController {
                 self.model.resolve(inputs.joined(separator: "\n"))
             }
         }
+    }
+
+    // iOS suggests whom one recently sent to, so every send is reported
+    private func donate() {
+        for id in model.conversations {
+            let names = id.hasPrefix("group:") ? model.groups.first { "group:\($0.name)" == id }?.members ?? [] : [String(id.dropFirst("friend:".count))]
+            Self.donate(id, names: names)
+        }
+    }
+
+    // The same as conversations in AppDelegate: a group carries its name, a friend only the person
+    private static func donate(_ id: String, names: [String]) {
+        let recipients = names.map {
+            INPerson(personHandle: INPersonHandle(value: "friend:\($0)", type: .unknown), nameComponents: nil, displayName: $0, image: nil, contactIdentifier: nil, customIdentifier: "friend:\($0)")
+        }
+        let group = id.hasPrefix("group:") ? INSpeakableString(spokenPhrase: String(id.dropFirst("group:".count))) : nil
+        let intent = INSendMessageIntent(recipients: recipients, outgoingMessageType: .outgoingMessageText, content: nil, speakableGroupName: group, conversationIdentifier: id, serviceName: nil, sender: nil, attachments: nil)
+        let interaction = INInteraction(intent: intent, response: nil)
+        interaction.direction = .outgoing
+        interaction.groupIdentifier = id
+        interaction.donate(completion: nil)
     }
 
     private func finish() {

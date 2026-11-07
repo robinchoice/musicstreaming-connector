@@ -195,6 +195,8 @@ private struct PickChip<Leading: View>: View {
 
 struct ShareView: View {
     @ObservedObject var model: ShareModel
+    // Sent or copied for the picked friends
+    let sent: () -> Void
     let finish: () -> Void
     @State private var shareItem: SharedItem?
     @State private var copied = false
@@ -263,6 +265,11 @@ struct ShareView: View {
         }
         .tint(Brand.accent)
         .preferredColorScheme(.dark)
+        .onChange(of: model.song?.sharePath) { _ in
+            guard model.shareWhenFound, let message = model.message else { return }
+            model.shareWhenFound = false
+            shareItem = SharedItem(items: [message])
+        }
         .sheet(isPresented: $showingGuide) {
             NavigationStack {
                 Form {
@@ -288,7 +295,10 @@ struct ShareView: View {
         .popover(item: $shareItem) { item in
             ActivitySheet(items: item.items) { completed in
                 shareItem = nil
-                if completed { finish() }
+                if completed {
+                    sent()
+                    finish()
+                }
             }
         }
     }
@@ -477,6 +487,7 @@ struct ShareView: View {
             Button {
                 UIPasteboard.general.string = message
                 copied = true
+                sent()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { finish() }
             } label: {
                 Label(copied ? model.t.copied : model.t.copy, systemImage: "doc.on.doc")

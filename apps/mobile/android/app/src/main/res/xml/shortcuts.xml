@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Friends and groups as Direct Share targets, published by MainActivity.publishShortcuts -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <share-target android:targetClass="org.pleasance.songgate.MainActivity">
+        <data android:mimeType="text/plain" />
+        <category android:name="org.pleasance.songgate.FRIEND" />
+    </share-target>
+</shortcuts>
