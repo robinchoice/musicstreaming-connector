@@ -1,7 +1,7 @@
 import type { Conversion, Platform, PodcastApp } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { https, normalize, pageMeta, providerCall, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, https, normalize, pageMeta, providerCall, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
 import { spotifyApi } from './spotify';
 
@@ -50,6 +50,10 @@ const showResponse = z.object({ microformat: z.object({ microformatDataRenderer:
   thumbnail: z.object({ thumbnails: z.array(z.object({ url: z.string() })) }).optional(),
 }) }) });
 const flex = (item: { flex_columns: { title: { toString(): string } }[] }, column: number) => item.flex_columns[column]?.title.toString() ?? '';
+async function musicItems(query: string, filter: 'Podcasts' | 'Episodes', signal: AbortSignal) {
+  const results = await (await (await youtube(signal)).music.search(query, { type: 'all' })).applyFilter(filter);
+  return results.contents?.flatMap(shelf => shelf.is(YTNodes.MusicShelf) ? shelf.contents.filterType(YTNodes.MusicResponsiveListItem) : []) ?? [];
+}
 
 export const youtubePodcasts: YouTubePodcasts = {
   // The queue (/next), not the player: YouTube gives server addresses the player without video details
@@ -76,15 +80,13 @@ export const youtubePodcasts: YouTubePodcasts = {
     return { title: show.title, artist: publisher[1]!, show: show.title, url: `https://music.youtube.com/playlist?list=${playlistId}`, artworkUrl: https(show.thumbnail?.thumbnails.at(-1)?.url) };
   },
   async shows(query, signal) {
-    const results = await (await (await youtube(signal)).music.search(query, { type: 'all' })).applyFilter('Podcasts');
-    return results.contents?.flatMap(shelf => shelf.is(YTNodes.MusicShelf) ? shelf.contents.filterType(YTNodes.MusicResponsiveListItem) : []).flatMap(item =>
-      item.id?.startsWith('MPSP') ? [{ id: item.id.slice(4), title: flex(item, 0), publisher: flex(item, 1), artworkUrl: item.thumbnail?.contents[0]?.url ?? null }] : []) ?? [];
+    return (await musicItems(query, 'Podcasts', signal)).flatMap(item =>
+      item.id?.startsWith('MPSP') ? [{ id: item.id.slice(4), title: flex(item, 0), publisher: flex(item, 1), artworkUrl: item.thumbnail?.contents[0]?.url ?? null }] : []);
   },
   async episodes(query, signal) {
-    const results = await (await (await youtube(signal)).music.search(query, { type: 'all' })).applyFilter('Episodes');
     // The second column reads "18h ago • Show"
-    return results.contents?.flatMap(shelf => shelf.is(YTNodes.MusicShelf) ? shelf.contents.filterType(YTNodes.MusicResponsiveListItem) : []).flatMap(item =>
-      item.id ? [{ id: item.id, title: flex(item, 0), show: flex(item, 1).split(' • ').at(-1) ?? '', artworkUrl: item.thumbnail?.contents[0]?.url ?? null }] : []) ?? [];
+    return (await musicItems(query, 'Episodes', signal)).flatMap(item =>
+      item.id ? [{ id: item.id, title: flex(item, 0), show: flex(item, 1).split(' • ').at(-1) ?? '', artworkUrl: item.thumbnail?.contents[0]?.url ?? null }] : []);
   },
 };
 
@@ -112,10 +114,12 @@ const parsed = <T extends z.ZodType>(schema: T, items: unknown[]): z.infer<T>[] 
   const result = schema.safeParse(item);
   return result.success ? [result.data] : [];
 });
+// How far an episode's release date may be off on another service
+const releaseSlack = 3 * 86_400_000;
 // "2026-11-04 10:51:32" from Deezer is UTC like the others
 const time = (value?: string) => (value ? Date.parse(/^\d{4}-\d{2}-\d{2} /.test(value) ? `${value.replace(' ', 'T')}Z` : value) : NaN) || undefined;
 const feed = (value?: string) => value && /^https?:\/\//.test(value) ? value : undefined;
-const appleArtwork = (show: { artworkUrl600?: string | undefined; artworkUrl100?: string | undefined }) => https(show.artworkUrl600 ?? show.artworkUrl100?.replace('/100x100bb.', '/600x600bb.'));
+const appleArtwork = (show: { artworkUrl600?: string | undefined; artworkUrl100?: string | undefined }) => https(show.artworkUrl600 ?? appleArtwork600(show.artworkUrl100));
 const appleShowUrl = (country: string, id: number | string) => `https://podcasts.apple.com/${country.toLowerCase()}/podcast/id${id}`;
 const appleEpisodeUrl = (country: string, show: number | string, episode: number | string) => `${appleShowUrl(country, show)}?i=${episode}`;
 
@@ -241,7 +245,7 @@ const byScore = <T>(items: T[], score: (item: T) => number) => items.map(item =>
 export function episodeScore(source: Podcast) {
   const title = normalize(source.title);
   return (candidate: string, released?: number) => {
-    if (source.released && released && Math.abs(source.released - released) > 3 * 86_400_000) return 0;
+    if (source.released && released && Math.abs(source.released - released) > releaseSlack) return 0;
     const other = normalize(candidate);
     if (!other || !title) return 0;
     if (other === title) return 2;
@@ -294,10 +298,12 @@ async function findEpisodes(target: Platform, source: Podcast, country: string, 
       return rank ? [{ rank, candidate: { title: episode.title, url: `https://music.youtube.com/watch?v=${episode.id}`, artworkUrl: https(episode.artworkUrl) } }] : [];
     });
   } else if (target === 'appleMusic') {
+    // The search finds older episodes too, the show's list the newest 200 when the search misses
+    const searching = current.get('https://itunes.apple.com/search', { term: `${source.show} ${source.title}`, entity: 'podcastEpisode', country, limit: '25' });
+    searching.catch(() => {});
     const shows = await appleShows(source, country, current, found);
     const ids = new Set(shows.map(show => show.collectionId));
-    // The search finds older episodes too, the show's list the newest 200 when the search misses
-    const search = parsed(appleEpisode, results(await current.get('https://itunes.apple.com/search', { term: `${source.show} ${source.title}`, entity: 'podcastEpisode', country, limit: '25' })));
+    const search = parsed(appleEpisode, results(await searching));
     let episodes = search.filter(episode => ids.has(episode.collectionId));
     if (!episodes.some(episode => score(episode.trackName, time(episode.releaseDate))) && shows[0]) {
       episodes = parsed(appleEpisode, results(await current.get('https://itunes.apple.com/lookup', { id: String(shows[0].collectionId), country, entity: 'podcastEpisode', limit: '200' })));
@@ -316,7 +322,7 @@ async function findEpisodes(target: Platform, source: Podcast, country: string, 
       let { episodes, total } = await page(0);
       // The list starts with the newest episode. An older one is looked for once more, where the show's pace puts it.
       const [newest, oldest] = [time(episodes[0]?.release_date), time(episodes.at(-1)?.release_date)];
-      if (source.released && newest && oldest && newest > oldest && source.released < oldest - 3 * 86_400_000 && total > episodes.length) {
+      if (source.released && newest && oldest && newest > oldest && source.released < oldest - releaseSlack && total > episodes.length) {
         const index = Math.round((newest - source.released) / ((newest - oldest) / (episodes.length - 1))) - 50;
         episodes = (await page(Math.max(episodes.length, Math.min(index, total - 100)))).episodes;
       }

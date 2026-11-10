@@ -23,6 +23,8 @@ export function recording(title: string, artists: string[]) {
   };
 }
 export const https = (url?: string | null) => url?.startsWith('https://') ? url : null;
+// Apple's artwork URLs name their size, the iTunes API hands out 100×100
+export const appleArtwork600 = (url?: string | null) => url?.replace('/100x100bb.', '/600x600bb.');
 
 export function appleUrl(link: string, keepSongId: boolean) {
   const url = new URL(link);

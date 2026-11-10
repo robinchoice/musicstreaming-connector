@@ -1,7 +1,7 @@
 import type { Conversion, Platform } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, pageMeta, pageMetas, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, pageMeta, pageMetas, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
 import { tidalAlbums, tidalCatalog, tidalPageMeta, tidalSearch } from './tidal';
 
@@ -81,7 +81,7 @@ export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTu
       const firstTrack = results.values().map(item => appleTrack.safeParse(item).data).find(Boolean)?.trackName;
       album = {
         ...upcCode(upc), title: appleName(collection.collectionName), artist: collection.artistName, url: `https://music.apple.com/${link.country.toLowerCase()}/album/${link.id}`,
-        artworkUrl: https(collection.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')), ...(firstTrack ? { firstTrack } : {}),
+        artworkUrl: https(appleArtwork600(collection.artworkUrl100)), ...(firstTrack ? { firstTrack } : {}),
       };
     } else if (link.platform === 'spotify') {
       const html = await current.spotifyPage(`album/${link.id}`);

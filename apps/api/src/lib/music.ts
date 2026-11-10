@@ -2,7 +2,7 @@ import { isPodcast, platformSchema, type Conversion, type ConversionInput, type 
 import { z } from 'zod';
 import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
 import { findPodcasts, loadPodcast, podcastApps, youtubePodcasts, type AppleShow, type Podcast, type YouTubePodcasts } from './podcasts';
-import { appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, pageMeta, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, pageMeta, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, YOUTUBE_HOSTS, type Fetch } from './resolver';
 import { tidalCatalog, tidalPageMeta, tidalSearch, tidalTracks } from './tidal';
 
@@ -163,7 +163,7 @@ function loadSource(parsed: MusicLink, current: Session): Promise<Track> {
       ]);
       const track = appleTracks(body).find(track => String(track.trackId) === parsed.id);
       if (!track) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      source = { ...isrcCode(isrc), title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(track.artworkUrl100?.replace('/100x100bb.', '/600x600bb.')) };
+      source = { ...isrcCode(isrc), title: track.trackName, artist: track.artistName, url: `https://music.apple.com/${parsed.country.toLowerCase()}/song/${parsed.id}`, ...(track.trackTimeMillis ? { durationSeconds: track.trackTimeMillis / 1000 } : {}), artworkUrl: https(appleArtwork600(track.artworkUrl100)) };
     } else if (parsed.platform === 'spotify') {
       const html = await current.spotifyPage(`track/${parsed.id}`);
       const duration = Number(pageMeta(html, 'music:duration'));
@@ -296,7 +296,7 @@ export async function resolveAll(input: { input: string; country: string }, requ
     const links = Object.fromEntries(targets.map((target, i) => [target, target === parsed.platform ? { url: source.url, found: true }
       : bests[i] ? { url: bests[i].url, found: true } : { url: searchUrl(target, source, input.country, link.kind), found: false }])) as Song['links'];
     // YouTube thumbnails of songs and episodes are letterboxed video frames, a square cover from another service looks better
-    const artworkUrl = link.platform === 'youtubeMusic' && (link.kind === 'song' || link.kind === 'episode') ? bests.find(best => best?.artworkUrl)?.artworkUrl?.replace('/100x100bb.', '/600x600bb.') ?? source.artworkUrl : source.artworkUrl;
+    const artworkUrl = link.platform === 'youtubeMusic' && (link.kind === 'song' || link.kind === 'episode') ? appleArtwork600(bests.find(best => best?.artworkUrl)?.artworkUrl) ?? source.artworkUrl : source.artworkUrl;
     return { source: { kind: link.kind, platform: link.platform, title: source.title, artist: source.artist, url: source.url, artworkUrl }, sharePath: sharePath(link), links, ...(apps ? { apps: apps() } : {}) };
   });
 }
