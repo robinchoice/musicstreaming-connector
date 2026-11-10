@@ -62,9 +62,9 @@ import UIKit
         let before = Self.conversations(preferences.string(forKey: "social"))
         preferences.set(value, forKey: "social")
         let after = Self.conversations(value)
-        // New friends and groups appear among the share sheet's suggestions, removed ones leave
+        // New friends and groups, and groups with changed members, appear among the share sheet's suggestions, removed ones leave
         for id in before.keys where after[id] == nil { INInteraction.delete(with: id, completion: nil) }
-        for (id, names) in after where before[id] == nil { Self.donate(id, names: names) }
+        for (id, names) in after where before[id] != names { Self.donate(id, names: names) }
         result(nil)
       // Whether the bug button shows, nil until someone flips the switch
       case "getTestMode":

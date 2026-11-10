@@ -92,7 +92,7 @@ export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTu
       // The page names the album without a key, the API adds its UPC and first track
       const [html, found] = await Promise.all([
         current.tidalPage(`album/${link.id}`),
-        tidalCatalog(`albums/${link.id}`, [['countryCode', 'DE'], ['include', 'items']], current).then(doc => doc && tidalAlbums(doc)[0], () => { codeFailure('UPC', 'tidal', signal); return undefined; }),
+        tidalCatalog(`albums/${link.id}`, [['countryCode', link.country], ['include', 'items']], current).then(doc => doc && tidalAlbums(doc)[0], () => { codeFailure('UPC', 'tidal', signal); return undefined; }),
       ]);
       const meta = tidalPageMeta(pageMeta(html, 'og:title'), pageMeta(html, 'og:description'));
       if (!meta) throw new ResolutionError('SOURCE_UNAVAILABLE');

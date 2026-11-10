@@ -172,7 +172,7 @@ function loadSource(parsed: MusicLink, current: Session): Promise<Track> {
       // The page names the song without a key, the API adds its ISRC and duration
       const [html, found] = await Promise.all([
         current.tidalPage(`track/${parsed.id}`),
-        tidalCatalog(`tracks/${parsed.id}`, [['countryCode', 'DE']], current).then(doc => doc && tidalTracks(doc)[0], () => { codeFailure('ISRC', 'tidal', signal); return undefined; }),
+        tidalCatalog(`tracks/${parsed.id}`, [['countryCode', parsed.country]], current).then(doc => doc && tidalTracks(doc)[0], () => { codeFailure('ISRC', 'tidal', signal); return undefined; }),
       ]);
       const meta = tidalPageMeta(pageMeta(html, 'og:title'), pageMeta(html, 'og:description'));
       if (!meta) throw new ResolutionError('SOURCE_UNAVAILABLE');
@@ -245,7 +245,9 @@ function podcastLookup(link: MusicLink, source: Podcast, current: Session, podca
 }
 
 // Source and matcher of a song, an album, a show or an episode, so resolve and resolveAll treat them alike
-async function lookup(parsed: MusicLink, current: Session, { search, albums, podcasts }: YouTube): Promise<Lookup> {
+async function lookup(link: MusicLink, country: string, current: Session, { search, albums, podcasts }: YouTube): Promise<Lookup> {
+  // TIDAL links name no country, its API reads the source in the request's
+  const parsed = link.platform === 'tidal' ? { ...link, country } : link;
   if (isPodcast(parsed.kind)) return podcastLookup(parsed, await loadPodcast(parsed, current, podcasts), current, podcasts);
   if (parsed.kind === 'album') {
     const source = await loadAlbum(parsed, current, albums);
@@ -276,7 +278,7 @@ async function withSession<T>(input: string, requestSignal: AbortSignal | undefi
 export async function resolve(input: ConversionInput, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums, podcasts: YouTubePodcasts = youtubePodcasts): Promise<Conversion> {
   return withSession(input.input, requestSignal, fetcher, async (parsed, current) => {
     if (parsed.platform === input.target) throw new ResolutionError('UNSUPPORTED_LINK');
-    const { link, source, find } = await lookup(parsed, current, { search, albums, podcasts });
+    const { link, source, find } = await lookup(parsed, input.country, current, { search, albums, podcasts });
     const candidates = await find(input.target, input.country);
     if (!candidates.length) throw new ResolutionError('NO_MATCH', searchUrl(input.target, source, input.country, link.kind));
     return { source: { kind: link.kind, title: source.title, artist: source.artist, url: source.url }, target: input.target, candidates, sharePath: sharePath(link) };
@@ -287,7 +289,7 @@ export async function resolve(input: ConversionInput, requestSignal?: AbortSigna
 // that finds nothing or fails gets a search link, so one slow service never blocks the rest.
 export async function resolveAll(input: { input: string; country: string }, requestSignal?: AbortSignal, fetcher: Fetch = fetch, search: MusicSearch = searchYouTube, albums: YouTubeAlbums = youtubeAlbums, podcasts: YouTubePodcasts = youtubePodcasts): Promise<Song> {
   return withSession(input.input, requestSignal, fetcher, async (parsed, current) => {
-    const { link, source, find, apps } = await lookup(parsed, current, { search, albums, podcasts });
+    const { link, source, find, apps } = await lookup(parsed, input.country, current, { search, albums, podcasts });
     const targets = platformSchema.options;
     const bests = await Promise.all(targets.map(target => target === parsed.platform ? undefined
       : find(target, input.country).then(candidates => candidates[0], () => undefined)));

@@ -75,6 +75,23 @@ export async function providerCall<T>(provider: Platform, signal: AbortSignal, c
   }
 }
 
+// App tokens from the client credentials flow (TIDAL, Spotify), kept until a minute before they expire
+const tokens = new Map<string, { client: string; token: string; expires: number }>();
+export async function clientToken(tokenUrl: string, client: string | undefined, secret: string | undefined, { fetcher, signal }: Session) {
+  if (!client || !secret) return null;
+  const cached = tokens.get(tokenUrl);
+  const now = Date.now();
+  if (cached?.client === client && cached.expires - now > 60_000) return cached.token;
+  const response = await fetcher(new URL(tokenUrl), {
+    method: 'POST', signal, redirect: 'error', body: new URLSearchParams({ grant_type: 'client_credentials' }),
+    headers: { authorization: `Basic ${btoa(`${client}:${secret}`)}`, 'content-type': 'application/x-www-form-urlencoded' },
+  });
+  if (!response.ok) throw new ResolutionError('NETWORK');
+  const body = z.object({ access_token: z.string().min(1), expires_in: z.number() }).parse(await response.json());
+  tokens.set(tokenUrl, { client, token: body.access_token, expires: now + body.expires_in * 1000 });
+  return body.access_token;
+}
+
 export async function appleCatalog<T extends z.ZodType>(path: string, params: Record<string, string>, item: T, { request }: Session): Promise<z.infer<T>[]> {
   const token = await appleMusicToken();
   if (!token) return [];

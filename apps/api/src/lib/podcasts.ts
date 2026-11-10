@@ -66,12 +66,14 @@ export const youtubePodcasts: YouTubePodcasts = {
   },
   async show(playlistId, signal) {
     const client = await youtube(signal);
-    // YouTube answers a playlist that is no podcast with 400
-    const response = await client.actions.execute('/browse', { browseId: `MPSP${playlistId}`, client: 'YTMUSIC' }).catch(() => { throw new ResolutionError('UNSUPPORTED_LINK'); });
+    // YouTube answers a playlist that is no podcast with 400; youtubei.js names the status only in its message
+    const response = await client.actions.execute('/browse', { browseId: `MPSP${playlistId}`, client: 'YTMUSIC' }).catch((error: unknown) => {
+      throw error instanceof Error && / status code 4\d\d$/.test(error.message) ? new ResolutionError('UNSUPPORTED_LINK') : error;
+    });
     const show = showResponse.parse(response.data).microformat.microformatDataRenderer;
     const publisher = show.description.match(/^Podcast\s*•\s*(.*)$/);
     if (!publisher) throw new ResolutionError('UNSUPPORTED_LINK');
-    return { title: show.title, artist: publisher[1]!, show: show.title, url: `https://music.youtube.com/playlist?list=${playlistId}`, artworkUrl: https(show.thumbnail?.thumbnails[0]?.url) };
+    return { title: show.title, artist: publisher[1]!, show: show.title, url: `https://music.youtube.com/playlist?list=${playlistId}`, artworkUrl: https(show.thumbnail?.thumbnails.at(-1)?.url) };
   },
   async shows(query, signal) {
     const results = await (await (await youtube(signal)).music.search(query, { type: 'all' })).applyFilter('Podcasts');

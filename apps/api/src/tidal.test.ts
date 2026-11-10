@@ -81,8 +81,8 @@ describe('with a TIDAL key', () => {
 
   test('YouTube → TIDAL searches and names the artists of the hits', async () => {
     const result = await resolve({ input: 'https://music.youtube.com/watch?v=5NV6Rdv1a3I', target: 'tidal', country: 'DE' }, undefined, tidal(url => {
-      if (url.pathname === '/v2/searchResults') {
-        expect(url.searchParams.get('filter[query]')).toBe('Daft Punk Get Lucky');
+      if (url.pathname.startsWith('/v2/searchResults/')) {
+        expect(url.pathname).toBe('/v2/searchResults/Daft%20Punk%20Get%20Lucky');
         return { data: { id: 'Daft Punk Get Lucky', type: 'searchResults', relationships: { tracks: { data: [{ id: '1', type: 'tracks' }, { id: '2', type: 'tracks' }, { id: 'x', type: 'tracks' }] } } } };
       }
       expect(url.pathname).toBe('/v2/tracks');

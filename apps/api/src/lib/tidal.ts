@@ -1,25 +1,9 @@
 import { z } from 'zod';
-import type { Session } from './providers';
-import { ResolutionError } from './resolver';
+import { clientToken, type Session } from './providers';
 
 // The TIDAL API (JSON:API) with an app token from the client credentials flow.
 // Without TIDAL_CLIENT_ID and TIDAL_CLIENT_SECRET Songgate reads TIDAL links from their pages
 // and offers only a search on TIDAL.
-let cached: { client: string; token: string; expires: number } | undefined;
-
-async function tidalToken({ fetcher, signal }: Session, env: Record<string, string | undefined> = process.env, now = Date.now()) {
-  const { TIDAL_CLIENT_ID: client, TIDAL_CLIENT_SECRET: secret } = env;
-  if (!client || !secret) return null;
-  if (cached?.client === client && cached.expires - now > 60_000) return cached.token;
-  const response = await fetcher(new URL('https://auth.tidal.com/v1/oauth2/token'), {
-    method: 'POST', signal, redirect: 'error', body: new URLSearchParams({ grant_type: 'client_credentials' }),
-    headers: { authorization: `Basic ${btoa(`${client}:${secret}`)}`, 'content-type': 'application/x-www-form-urlencoded' },
-  });
-  if (!response.ok) throw new ResolutionError('NETWORK');
-  const body = z.object({ access_token: z.string().min(1), expires_in: z.number() }).parse(await response.json());
-  cached = { client, token: body.access_token, expires: now + body.expires_in * 1000 };
-  return cached.token;
-}
 
 const identifier = z.object({ id: z.string(), type: z.string() });
 const resource = identifier.extend({
@@ -33,7 +17,7 @@ export type TidalDocument = { data: Resource[]; included: Resource[] };
 
 // Array parameters such as include repeat their key, as in the API's OpenAPI description
 export async function tidalCatalog(path: string, params: [string, string][], current: Session): Promise<TidalDocument | null> {
-  const token = await tidalToken(current);
+  const token = await clientToken('https://auth.tidal.com/v1/oauth2/token', process.env.TIDAL_CLIENT_ID, process.env.TIDAL_CLIENT_SECRET, current);
   if (!token) return null;
   const response = await current.request(`https://openapi.tidal.com/v2/${path}`, params, { authorization: `Bearer ${token}`, accept: 'application/vnd.api+json' });
   const body = document.parse(await response.json());
@@ -85,9 +69,9 @@ export function tidalAlbums(doc: TidalDocument) {
   });
 }
 
-// Search results carry only IDs worth knowing; the second call names their artists
+// Search results, whose ID is the query, carry only IDs worth knowing; the second call names their artists
 export async function tidalSearch(kind: 'tracks' | 'albums', query: string, country: string, current: Session) {
-  const results = await tidalCatalog('searchResults', [['filter[query]', query.slice(0, 256)], ['countryCode', country], ['include', kind]], current);
+  const results = await tidalCatalog(`searchResults/${encodeURIComponent(Array.from(query).slice(0, 256).join(''))}`, [['countryCode', country], ['include', kind]], current);
   const ids = (results?.data[0]?.relationships[kind]?.data ?? []);
   const found = (Array.isArray(ids) ? ids : [ids]).map(link => link.id).filter(id => /^\d{1,12}$/.test(id)).slice(0, 10);
   if (!found.length) return null;
