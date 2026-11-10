@@ -45,6 +45,26 @@ describe('YouTube links', () => {
   ])('rejects %s', input => expect(() => musicSource(input)).toThrow());
 });
 
+describe('Own share links', () => {
+  const own = 'https://app.test';
+  process.env.APP_URL = own;
+
+  test.each([
+    [`${own}/s/yt/UijW9hGpnzc?from=Robin&service=spotify`, { kind: 'song', platform: 'youtubeMusic', id: 'UijW9hGpnzc' }],
+    [`${own}/s/am/de/1440841766`, { kind: 'song', platform: 'appleMusic', id: '1440841766', country: 'DE' }],
+    [`${own}/s/album/td/12345`, { kind: 'album', platform: 'tidal', id: '12345' }],
+    [`${own}/s/episode/am/de/1200361736/1000799791974`, { kind: 'episode', platform: 'appleMusic', id: '1000799791974', show: '1200361736' }],
+    // A service link next to the share page wins, even when the share page came from another service
+    [`🎵 Savior\nhttps://open.spotify.com/track/${first}\nAlle Dienste: ${own}/s/yt/UijW9hGpnzc`, { platform: 'spotify', id: first }],
+  ])('accepts %s', (input, expected) => expect(musicSource(input)).toMatchObject(expected));
+
+  test.each([
+    `${own}/s/xx/1`,
+    `${own}/s/yt/a/b`,
+    'https://songgate.example/s/yt/UijW9hGpnzc',
+  ])('rejects %s', input => expect(() => musicSource(input)).toThrow());
+});
+
 test('resolves metadata without tracking or credentials', async () => {
   const conversion = await resolve(input, undefined, mock({ inspect: url => {
     expect(url.toString()).not.toContain('secretTracking');

@@ -1,37 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { countries, messages, serviceName, servicesFor, type Song } from '@app/shared';
+import { countries, messages, serviceName, servicesFor, type Song, sourceLink } from '@app/shared';
 import { platformForSlug } from '#lib/friends.svelte.ts';
 import type { PageServerLoad } from './$types';
-
-// The inverse of sharePath in the API: back to a link the resolver understands
-function sourceLink(path: string) {
-  const [kind, a, b, c, d, e] = path.split('/');
-  if (kind === 'yt' && a && !b) return `https://music.youtube.com/watch?v=${a}`;
-  if (kind === 'am' && a && b && !c) return `https://music.apple.com/${a}/song/${b}`;
-  if (kind === 'sp' && a && !b) return `https://open.spotify.com/track/${a}`;
-  if (kind === 'dz' && a && !b) return `https://www.deezer.com/track/${a}`;
-  if (kind === 'td' && a && !b) return `https://tidal.com/track/${a}`;
-  if (kind === 'podcast') {
-    if (a === 'yt' && b && !c) return `https://music.youtube.com/playlist?list=${b}`;
-    if (a === 'am' && b && c && !d) return `https://podcasts.apple.com/${b}/podcast/id${c}`;
-    if (a === 'sp' && b && !c) return `https://open.spotify.com/show/${b}`;
-    if (a === 'dz' && b && !c) return `https://www.deezer.com/show/${b}`;
-    return;
-  }
-  if (kind === 'episode') {
-    if (a === 'yt' && b && !c) return `https://music.youtube.com/watch?v=${b}`;
-    if (a === 'am' && b && c && d && !e) return `https://podcasts.apple.com/${b}/podcast/id${c}?i=${d}`;
-    if (a === 'sp' && b && !c) return `https://open.spotify.com/episode/${b}`;
-    if (a === 'dz' && b && !c) return `https://www.deezer.com/episode/${b}`;
-    return;
-  }
-  if (kind !== 'album') return;
-  if (a === 'yt' && b && !c) return b.startsWith('MPREb_') ? `https://music.youtube.com/browse/${b}` : `https://music.youtube.com/playlist?list=${b}`;
-  if (a === 'am' && b && c) return `https://music.apple.com/${b}/album/${c}`;
-  if (a === 'sp' && b && !c) return `https://open.spotify.com/album/${b}`;
-  if (a === 'dz' && b && !c) return `https://www.deezer.com/album/${b}`;
-  if (a === 'td' && b && !c) return `https://tidal.com/album/${b}`;
-}
 
 export const load: PageServerLoad = async ({ params, fetch, request, url, locals }) => {
   const m = messages[locals.locale];

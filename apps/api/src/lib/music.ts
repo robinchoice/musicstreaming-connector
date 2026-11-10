@@ -1,4 +1,4 @@
-import { isPodcast, platformSchema, type Conversion, type ConversionInput, type Platform, type PodcastApp, type Song } from '@app/shared';
+import { isPodcast, platformSchema, type Conversion, type ConversionInput, type Platform, type PodcastApp, type Song, sourceLink } from '@app/shared';
 import { z } from 'zod';
 import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
 import { findPodcasts, loadPodcast, podcastApps, youtubePodcasts, type AppleShow, type Podcast, type YouTubePodcasts } from './podcasts';
@@ -28,12 +28,18 @@ export type MusicSearch = (query: string, signal: AbortSignal) => Promise<YouTub
 
 // A song or an album: Apple albums without ?i=, Spotify, Deezer and TIDAL /album/, YouTube Music album playlists and pages.
 // A podcast or an episode: Apple Podcasts, Spotify and Deezer /show/ and /episode/, YouTube Music podcast playlists and pages.
+// Songgate's own share links count only without another link, as in a message that names one service plus the share page.
 export function musicSource(input: string): MusicLink {
   const links = new Map<string, MusicLink>();
+  const shared: string[] = [];
   for (const link of input.match(/https?:\/\/[^\s<>]+/gi) ?? []) {
     let url: URL;
     try { url = new URL(link.replace(/[.,!)\]]+$/, '')); } catch { throw new ResolutionError('INVALID_LINK'); }
-    if (url.hostname === 'music.apple.com') {
+    if (process.env.APP_URL && url.host === new URL(process.env.APP_URL).host && url.pathname.startsWith('/s/')) {
+      const source = sourceLink(url.pathname.slice(3));
+      if (url.username || url.password || !source) throw new ResolutionError('INVALID_LINK');
+      shared.push(source);
+    } else if (url.hostname === 'music.apple.com') {
       const parts = url.pathname.split('/').filter(Boolean);
       const song = parts[1] === 'album' ? url.searchParams.get('i') : parts[1] === 'song' ? parts.at(-1) : null;
       const album = parts[1] === 'album' && !url.searchParams.has('i') ? parts.at(-1) : null;
@@ -82,6 +88,7 @@ export function musicSource(input: string): MusicLink {
     }
   }
   if (links.size > 1) throw new ResolutionError('INVALID_LINK');
+  if (!links.size && shared.length) return musicSource(shared.join(' '));
   if (!links.size) throw new ResolutionError(input.match(/https?:\/\//i) ? 'UNSUPPORTED_LINK' : 'INVALID_LINK');
   return [...links.values()][0]!;
 }

@@ -88,6 +88,36 @@ export function shareUrl(origin: string, path: string, from: Friend | null): str
   return from ? `${origin}${path}?${new URLSearchParams({ from: from.name, service: inviteSlugs[from.platform] })}` : `${origin}${path}`;
 }
 
+// The inverse of sharePath in the API: a share page path after /s/ back to the link it was made from
+export function sourceLink(path: string): string | undefined {
+  const [kind, a, b, c, d, e] = path.split('/');
+  if (kind === 'yt' && a && !b) return `https://music.youtube.com/watch?v=${a}`;
+  if (kind === 'am' && a && b && !c) return `https://music.apple.com/${a}/song/${b}`;
+  if (kind === 'sp' && a && !b) return `https://open.spotify.com/track/${a}`;
+  if (kind === 'dz' && a && !b) return `https://www.deezer.com/track/${a}`;
+  if (kind === 'td' && a && !b) return `https://tidal.com/track/${a}`;
+  if (kind === 'podcast') {
+    if (a === 'yt' && b && !c) return `https://music.youtube.com/playlist?list=${b}`;
+    if (a === 'am' && b && c && !d) return `https://podcasts.apple.com/${b}/podcast/id${c}`;
+    if (a === 'sp' && b && !c) return `https://open.spotify.com/show/${b}`;
+    if (a === 'dz' && b && !c) return `https://www.deezer.com/show/${b}`;
+    return;
+  }
+  if (kind === 'episode') {
+    if (a === 'yt' && b && !c) return `https://music.youtube.com/watch?v=${b}`;
+    if (a === 'am' && b && c && d && !e) return `https://podcasts.apple.com/${b}/podcast/id${c}?i=${d}`;
+    if (a === 'sp' && b && !c) return `https://open.spotify.com/episode/${b}`;
+    if (a === 'dz' && b && !c) return `https://www.deezer.com/episode/${b}`;
+    return;
+  }
+  if (kind !== 'album') return;
+  if (a === 'yt' && b && !c) return b.startsWith('MPREb_') ? `https://music.youtube.com/browse/${b}` : `https://music.youtube.com/playlist?list=${b}`;
+  if (a === 'am' && b && c) return `https://music.apple.com/${b}/album/${c}`;
+  if (a === 'sp' && b && !c) return `https://open.spotify.com/album/${b}`;
+  if (a === 'dz' && b && !c) return `https://www.deezer.com/album/${b}`;
+  if (a === 'td' && b && !c) return `https://tidal.com/album/${b}`;
+}
+
 // Without services only the share page, for group chats where everyone picks their own.
 // One service gets its link, several get one line each plus the share page for everyone else.
 // With an own invite the share page comes along for one service too, so the recipient can save the sender.

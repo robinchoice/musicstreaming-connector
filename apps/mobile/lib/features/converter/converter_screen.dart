@@ -22,7 +22,9 @@ import 'conversion.dart';
 import 'share_setup.dart';
 
 class ConverterScreen extends ConsumerStatefulWidget {
-  const ConverterScreen({super.key});
+  /// A share page link (songgate.app/s/…) opened in the app instead of the browser.
+  final String? link;
+  const ConverterScreen({super.key, this.link});
   @override
   ConsumerState<ConverterScreen> createState() => _ConverterScreenState();
 }
@@ -79,12 +81,57 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     }
     if (!mounted) return;
     setState(() => _ready = true);
+    if (widget.link != null) _openLink(widget.link!);
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       _channel.setMethodCallHandler((call) async {
         if (call.method == 'sharedText') _receive(call.arguments as Map);
       });
       _readSharedText();
     }
+  }
+
+  @override
+  void didUpdateWidget(ConverterScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final link = widget.link;
+    if (_ready && link != null && link != oldWidget.link) {
+      // Not while the router builds: the notice changes the ScaffoldMessenger above
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openLink(link);
+      });
+    }
+  }
+
+  /// Shows the song of a share page and, when the page names its sender
+  /// (`?from=<name>&service=<slug>`), offers to save them like the web page.
+  void _openLink(String link) {
+    _input.text = link;
+    _shareWhenFound = false;
+    _reset();
+    _find();
+    final uri = Uri.parse(link);
+    final name = (uri.queryParameters['from'] ?? '').trim();
+    final platform = platformForSlug(uri.queryParameters['service']);
+    final social = ref.read(socialProvider);
+    if (name.isEmpty ||
+        name.length > 40 ||
+        platform == null ||
+        social.friends.any((friend) => friend.name == name)) {
+      return;
+    }
+    final t = ref.read(messagesProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(t.friendListensOn(name, platforms[platform]!)),
+        duration: const Duration(seconds: 10),
+        action: SnackBarAction(
+          label: t.saveName(name),
+          onPressed: () => ref
+              .read(socialProvider.notifier)
+              .addFriend(Friend(name, platform)),
+        ),
+      ),
+    );
   }
 
   void _reset() {

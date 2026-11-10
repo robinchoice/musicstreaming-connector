@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:musiclink/app.dart';
 import 'package:musiclink/core/api.dart';
+import 'package:musiclink/core/router.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -453,6 +454,45 @@ void main() {
     expect(text, contains('https://open.spotify.com/track/1'));
     expect(text, isNot(contains('deezer')));
     expect(text, isNot(contains('/s/yt/')));
+  });
+
+  testWidgets('a share page link opens its song and offers the sender', (
+    tester,
+  ) async {
+    String? saved;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(preferences, (call) async {
+          if (call.method == 'setSocial') saved = call.arguments as String;
+          return call.method == 'getSocial' ? null : <String, String>{};
+        });
+    final inputs = <String?>[];
+    await mount(tester, (request) async {
+      inputs.add(request.url.queryParameters['input']);
+      return ok(result());
+    });
+    ProviderScope.containerOf(
+      tester.element(find.byType(App)),
+    ).read(routerProvider).go('/s/yt/UijW9hGpnzc?from=Lea&service=deezer');
+    await tester.pumpAndSettle();
+    expect(inputs, [
+      'http://localhost:3000/s/yt/UijW9hGpnzc?from=Lea&service=deezer',
+    ]);
+    expect(find.text('Plätscher'), findsOneWidget);
+    expect(find.text('Lea hört auf Deezer'), findsOneWidget);
+    await tester.tap(find.text('Lea speichern'));
+    await tester.pumpAndSettle();
+    expect(jsonDecode(saved!)['friends'], [
+      {'name': 'Lea', 'platform': 'deezer'},
+    ]);
+  });
+
+  testWidgets('an invite page link opens the invite', (tester) async {
+    await mount(tester, (_) async => ok(result()));
+    ProviderScope.containerOf(
+      tester.element(find.byType(App)),
+    ).read(routerProvider).go('/f/spotify?name=Lea');
+    await tester.pumpAndSettle();
+    expect(find.text('Lea hört auf Spotify'), findsOneWidget);
   });
 
   testWidgets('a new Android share wins over an older pending request', (
