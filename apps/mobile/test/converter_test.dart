@@ -9,6 +9,26 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:musiclink/app.dart';
 import 'package:musiclink/core/api.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+/// Records opened links; `apps` false acts as if no app takes the link.
+class FakeLauncher extends UrlLauncherPlatform with MockPlatformInterfaceMixin {
+  final bool apps;
+  final opened = <(String, PreferredLaunchMode)>[];
+  FakeLauncher({this.apps = true});
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    opened.add((url, options.mode));
+    return apps ||
+        options.mode != PreferredLaunchMode.externalNonBrowserApplication;
+  }
+}
 
 Map<String, dynamic> result({String title = 'Plätscher'}) => {
   'source': {
@@ -237,6 +257,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Ein Link für alle'), findsOneWidget);
   });
+
+  for (final apps in [true, false]) {
+    testWidgets('a tapped service opens in its app (installed: $apps)', (
+      tester,
+    ) async {
+      final launcher = FakeLauncher(apps: apps);
+      final previous = UrlLauncherPlatform.instance;
+      UrlLauncherPlatform.instance = launcher;
+      addTearDown(() => UrlLauncherPlatform.instance = previous);
+      await mount(tester, (_) async => ok(result()));
+      await submit(tester);
+      expect(find.byKey(const ValueKey('open-spotify')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('service-spotify')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('In Spotify öffnen'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('In Spotify öffnen'));
+      await tester.pumpAndSettle();
+      expect(launcher.opened, [
+        (
+          'https://open.spotify.com/track/1',
+          PreferredLaunchMode.externalNonBrowserApplication,
+        ),
+        if (!apps)
+          (
+            'https://open.spotify.com/track/1',
+            PreferredLaunchMode.externalApplication,
+          ),
+      ]);
+    });
+  }
 
   testWidgets('a failed lookup can be retried', (tester) async {
     var calls = 0;

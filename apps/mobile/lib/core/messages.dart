@@ -69,6 +69,8 @@ abstract class Messages {
   String get hintSeveral;
   String get share;
   String get copy;
+  String openIn(String service);
+  String get openFailed;
   String get searchOnly;
   String get source;
   String get found;
@@ -283,6 +285,10 @@ class De extends Messages {
   String get share => 'Teilen';
   @override
   String get copy => 'Kopieren';
+  @override
+  String openIn(String service) => 'In $service öffnen';
+  @override
+  String get openFailed => 'Der Link konnte nicht geöffnet werden.';
   @override
   String get searchOnly => 'Nur Suche';
   @override
@@ -605,6 +611,10 @@ class En extends Messages {
   String get share => 'Share';
   @override
   String get copy => 'Copy';
+  @override
+  String openIn(String service) => 'Open in $service';
+  @override
+  String get openFailed => 'The link couldn’t be opened.';
   @override
   String get searchOnly => 'Search only';
   @override

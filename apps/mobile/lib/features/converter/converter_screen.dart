@@ -336,6 +336,23 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     }
   }
 
+  /// Opens a link in the service's app, or in the browser without it.
+  Future<void> _open(String link) async {
+    final uri = Uri.parse(link);
+    try {
+      if (await launchUrl(
+            uri,
+            mode: LaunchMode.externalNonBrowserApplication,
+          ) ||
+          await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        return;
+      }
+    } on PlatformException {
+      // Reported below
+    }
+    if (mounted) _notice(ref.read(messagesProvider).openFailed);
+  }
+
   void _notice(String message) =>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -768,6 +785,20 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                 );
               },
             ),
+            for (final platform in shown)
+              if (song.links[platform] case final link?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: ValueKey('open-$platform'),
+                      onPressed: _sharing ? null : () => _open(link),
+                      icon: ServiceLogo(platform, kind: song.kind, size: 18),
+                      label: Text(t.openIn(serviceName(platform, song.kind))),
+                    ),
+                  ),
+                ),
           ],
         ),
       ),
