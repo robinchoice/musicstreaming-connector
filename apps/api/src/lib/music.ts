@@ -32,10 +32,11 @@ export type MusicSearch = (query: string, signal: AbortSignal) => Promise<YouTub
 export function musicSource(input: string): MusicLink {
   const links = new Map<string, MusicLink>();
   const shared: string[] = [];
+  const ownHost = process.env.APP_URL && new URL(process.env.APP_URL).host;
   for (const link of input.match(/https?:\/\/[^\s<>]+/gi) ?? []) {
     let url: URL;
     try { url = new URL(link.replace(/[.,!)\]]+$/, '')); } catch { throw new ResolutionError('INVALID_LINK'); }
-    if (process.env.APP_URL && url.host === new URL(process.env.APP_URL).host && url.pathname.startsWith('/s/')) {
+    if (ownHost && url.host === ownHost && url.pathname.startsWith('/s/')) {
       const source = sourceLink(url.pathname.slice(3));
       if (url.username || url.password || !source) throw new ResolutionError('INVALID_LINK');
       shared.push(source);

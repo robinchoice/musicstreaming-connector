@@ -299,11 +299,12 @@ async function findEpisodes(target: Platform, source: Podcast, country: string, 
     });
   } else if (target === 'appleMusic') {
     // The search finds older episodes too, the show's list the newest 200 when the search misses
-    const searching = current.get('https://itunes.apple.com/search', { term: `${source.show} ${source.title}`, entity: 'podcastEpisode', country, limit: '25' });
-    searching.catch(() => {});
-    const shows = await appleShows(source, country, current, found);
+    const [searched, shows] = await Promise.all([
+      current.get('https://itunes.apple.com/search', { term: `${source.show} ${source.title}`, entity: 'podcastEpisode', country, limit: '25' }),
+      appleShows(source, country, current, found),
+    ]);
     const ids = new Set(shows.map(show => show.collectionId));
-    const search = parsed(appleEpisode, results(await searching));
+    const search = parsed(appleEpisode, results(searched));
     let episodes = search.filter(episode => ids.has(episode.collectionId));
     if (!episodes.some(episode => score(episode.trackName, time(episode.releaseDate))) && shows[0]) {
       episodes = parsed(appleEpisode, results(await current.get('https://itunes.apple.com/lookup', { id: String(shows[0].collectionId), country, entity: 'podcastEpisode', limit: '200' })));
