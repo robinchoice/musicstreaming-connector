@@ -59,7 +59,9 @@ async function play() {
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
   });
-  const token = (await response.json()).access_token;
+  const body = await response.json();
+  if (!response.ok) throw new Error(`POST oauth2 token: ${response.status} ${body.error ?? ''}`);
+  const token = body.access_token;
   const base = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/org.pleasance.songgate';
 
   console.log('Google Play: org.pleasance.songgate');

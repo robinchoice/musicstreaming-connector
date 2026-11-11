@@ -474,9 +474,7 @@ void main() {
       tester.element(find.byType(App)),
     ).read(routerProvider).go('/s/yt/UijW9hGpnzc?from=Lea&service=deezer');
     await tester.pumpAndSettle();
-    expect(inputs, [
-      'http://localhost:3000/s/yt/UijW9hGpnzc?from=Lea&service=deezer',
-    ]);
+    expect(inputs, ['http://localhost:3000/s/yt/UijW9hGpnzc']);
     expect(find.text('Plätscher'), findsOneWidget);
     expect(find.text('Lea hört auf Deezer'), findsOneWidget);
     await tester.tap(find.text('Lea speichern'));

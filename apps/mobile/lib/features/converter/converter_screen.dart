@@ -105,7 +105,8 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   /// Shows the song of a share page and, when the page names its sender
   /// (`?from=<name>&service=<slug>`), offers to save them like the web page.
   void _openLink(String link) {
-    _input.text = link;
+    // The API reads only the path, the sender stays on the device
+    _input.text = link.split('?').first;
     _shareWhenFound = false;
     _reset();
     _find();

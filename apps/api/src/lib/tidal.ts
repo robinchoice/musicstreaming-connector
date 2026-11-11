@@ -69,9 +69,10 @@ export function tidalAlbums(doc: TidalDocument) {
   });
 }
 
-// Search results, whose ID is the query, carry only IDs worth knowing; the second call names their artists
+// Search results, whose ID is the query, carry only IDs worth knowing; the second call names their artists.
+// A slash (AC/DC) would be %2F in the path segment, which gateways may reject or decode, so it searches as a space.
 export async function tidalSearch(kind: 'tracks' | 'albums', query: string, country: string, current: Session) {
-  const results = await tidalCatalog(`searchResults/${encodeURIComponent(Array.from(query).slice(0, 256).join(''))}`, [['countryCode', country], ['include', kind]], current);
+  const results = await tidalCatalog(`searchResults/${encodeURIComponent(Array.from(query.replaceAll('/', ' ')).slice(0, 256).join(''))}`,[['countryCode', country], ['include', kind]], current);
   const ids = (results?.data[0]?.relationships[kind]?.data ?? []);
   const found = (Array.isArray(ids) ? ids : [ids]).map(link => link.id).filter(id => /^\d{1,12}$/.test(id)).slice(0, 10);
   if (!found.length) return null;
