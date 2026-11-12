@@ -201,6 +201,9 @@ jobs:
               assert entitlements['application-identifier'] == f'T2F442364K.{identifier}'
               assert entitlements['com.apple.security.application-groups'] == ['group.org.musiclink.prototype']
               assert not entitlements.get('get-task-allow', False)
+              # Share pages and invites open in the app (Universal Links, AGENTS.md „App Links“)
+              if bundle == app:
+                  assert entitlements['com.apple.developer.associated-domains'] == ['applinks:songgate.app']
               print(f'{bundle.name}: Distribution signature and App Group verified')
           PY
 
