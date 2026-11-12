@@ -476,7 +476,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         : 'song';
     final empty = _input.text.trim().isEmpty;
     return [
-      Text(t.headline, style: theme.textTheme.headlineLarge),
+      Text(t.headline, style: theme.textTheme.headlineMedium),
       const SizedBox(height: 14),
       Text(t.intro, style: theme.textTheme.bodyLarge),
       const SizedBox(height: 26),
@@ -579,48 +579,21 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
               : const SizedBox(height: 20),
         ),
       ),
-      const SizedBox(height: 10),
-      const Divider(color: hairline),
-      const SizedBox(height: 8),
-      FriendsBar(
-        selected: _chosen,
-        services: _services,
-        enabled: !_loading,
-        onChanged: _setPeople,
-      ),
-      const SizedBox(height: 28),
+      const SizedBox(height: 24),
       if (_isIOS)
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0x0AFFFFFF),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: hairline),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                t.shareDirectTitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(t.shareDirectBody),
-              TextButton.icon(
-                onPressed: _loading ? null : _openGuide,
-                icon: const Icon(Icons.star_outline),
-                label: Text(t.shareDirectButton),
-              ),
-            ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: muted),
+            onPressed: _loading ? null : _openGuide,
+            icon: const Icon(Icons.star_outline, size: 18),
+            label: Text(t.shareDirectTitle),
           ),
         )
       else
-        Text(t.shareAndroid),
-      const SizedBox(height: 24),
+        Text(t.shareAndroid, style: theme.textTheme.bodySmall),
+      const SizedBox(height: 8),
       Text(t.privacyNote, style: theme.textTheme.bodySmall),
-      const PleasanceFooter(),
     ];
   }
 

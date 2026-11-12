@@ -552,12 +552,12 @@ void main() {
       await mount(tester, (_) async => ok(result()));
       expect(find.text('Teilen-Menü einrichten'), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('So richtest du es ein'),
+        find.text('Nächstes Mal direkt teilen'),
         250,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('So richtest du es ein'));
+      await tester.tap(find.text('Nächstes Mal direkt teilen'));
       await tester.pumpAndSettle();
       expect(find.text('„Mehr“ öffnen'), findsOneWidget);
     },
@@ -624,7 +624,14 @@ void main() {
         bottom: 20,
       );
       await tester.pumpAndSettle();
-      expect(find.text('https://youtu.be/UijW9hGpnzc'), findsOneWidget);
+      // In a short landscape window the field may sit below the fold
+      final field = find.text(
+        'https://youtu.be/UijW9hGpnzc',
+        skipOffstage: false,
+      );
+      expect(field, findsOneWidget);
+      await tester.ensureVisible(field);
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     }
     await tester.tap(find.text('Finden'));

@@ -57,8 +57,6 @@ abstract class Messages {
   String get searching;
   String get linkFrom;
   String get shareDirectTitle;
-  String get shareDirectBody;
-  String get shareDirectButton;
   String get shareAndroid;
   String get privacyNote;
   String kindFrom(String kind, String? service);
@@ -255,16 +253,11 @@ class De extends Messages {
   @override
   String get shareDirectTitle => 'Nächstes Mal direkt teilen';
   @override
-  String get shareDirectBody =>
-      'Hole Songgate nach vorne ins Teilen-Menü. Dann sparst du dir das Einfügen.';
-  @override
-  String get shareDirectButton => 'So richtest du es ein';
-  @override
   String get shareAndroid =>
       'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.';
   @override
   String get privacyNote =>
-      'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät. Dein Link geht an unseren Dienst, die Treffer liefern Apple, YouTube, Spotify, Deezer, TIDAL und ListenBrainz.';
+      'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät.';
   @override
   String kindFrom(String kind, String? service) =>
       '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Folge'}[kind] ?? 'Song'}${service == null ? '' : ' aus $service'}';
@@ -581,16 +574,11 @@ class En extends Messages {
   @override
   String get shareDirectTitle => 'Share directly next time';
   @override
-  String get shareDirectBody =>
-      'Move Songgate to the front of the share menu and skip the pasting.';
-  @override
-  String get shareDirectButton => 'How to set it up';
-  @override
   String get shareAndroid =>
       'Straight from your music app: open the share menu on a song and pick Songgate.';
   @override
   String get privacyNote =>
-      'No account. Friends and groups stay on your device. Your link goes to our service, the matches come from Apple, YouTube, Spotify, Deezer, TIDAL and ListenBrainz.';
+      'No account. Friends and groups stay on your device.';
   @override
   String kindFrom(String kind, String? service) =>
       '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Episode'}[kind] ?? 'Song'}${service == null ? '' : ' from $service'}';
