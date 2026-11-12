@@ -11,12 +11,13 @@ const env = process.env;
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const now = () => Math.floor(Date.now() / 1000);
 
-async function get(url, token, method = 'GET') {
-  const response = await fetch(url, { method, headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
+async function request(url, init) {
+  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(30_000) });
   const text = await response.text();
-  if (!response.ok) throw new Error(`${method} ${url.split('?')[0]}: ${response.status} ${text.slice(0, 200)}`);
+  if (!response.ok) throw new Error(`${init.method} ${url.split('?')[0]}: ${response.status} ${text.slice(0, 200)}`);
   return text ? JSON.parse(text) : null;
 }
+const get = (url, token, method = 'GET') => request(url, { method, headers: { authorization: `Bearer ${token}` } });
 
 async function appStore() {
   const key = createPrivateKey(Buffer.from(env.ASC_KEY_P8, 'base64').toString());
@@ -54,15 +55,11 @@ async function play() {
   const account = JSON.parse(Buffer.from(env.GOOGLE_MUSICLINK_PLAY_KEY_BASE64, 'base64').toString());
   const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({ iss: account.client_email, scope: 'https://www.googleapis.com/auth/androidpublisher', aud: 'https://oauth2.googleapis.com/token', iat: now(), exp: now() + 600 })}`;
   const assertion = `${unsigned}.${sign('sha256', Buffer.from(unsigned), createPrivateKey(account.private_key)).toString('base64url')}`;
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const { access_token: token } = await request('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }),
-    signal: AbortSignal.timeout(30_000),
   });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`POST oauth2 token: ${response.status} ${text.slice(0, 200)}`);
-  const token = JSON.parse(text).access_token;
   const base = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/org.pleasance.songgate';
 
   console.log('Google Play: org.pleasance.songgate');
