@@ -3,7 +3,7 @@
   import Friends from '#lib/components/Friends.svelte';
   import Logo from '#lib/components/Logo.svelte';
   import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
-  import { countries, friendsMessage, platforms, serviceName, serviceOrder, servicesFor, sourceOf, type Platform, type Song } from '@app/shared';
+  import { APP_STORE_URL, PLAY_STORE_URL, countries, friendsMessage, platforms, serviceName, serviceOrder, servicesFor, sourceOf, type Platform, type Song } from '@app/shared';
   import { page } from '$app/state';
   import { api } from '#lib/api.ts';
   import { social } from '#lib/friends.svelte.ts';
@@ -113,6 +113,11 @@
         </div>
         <div class="people"><Friends bind:selected={chosen} bind:services disabled={loading} /></div>
         <p class="note">{t().privacyNote}</p>
+        <div class="stores">
+          <p>{t().getApp}</p>
+          <a class="button ghost" href={APP_STORE_URL} rel="noreferrer" target="_blank">App Store</a>
+          <a class="button ghost" href={PLAY_STORE_URL} rel="noreferrer" target="_blank">Google Play</a>
+        </div>
       </section>
     {:else}
       <section class="record">
@@ -178,6 +183,9 @@
   .error strong { color: var(--text); font-weight: 600; }
   .people { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
   .note { margin-top: 32px; color: var(--muted); font-size: 13px; }
+  .stores { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
+  .stores p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 14px; }
+  .stores .button { text-decoration: none; }
 
   .record { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 44px; align-items: start; animation: rise .45s ease-out; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } }

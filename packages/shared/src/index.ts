@@ -6,6 +6,9 @@ export const APP_BAND = { from: 3.85, to: 4.55 };
 // True once Songgate is live as 1.0 (starter README, "Live als 1.0"). From then on
 // the bug button waits for the test mode switch, see testMode in the web's feedback.svelte.ts.
 export const LIVE = true;
+// The same as appStoreUrl and playStoreUrl in the app's config.dart
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6819013473';
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=org.pleasance.songgate';
 export { bandColor, bandGradient, DEEP, GLOW } from './band';
 export { type Kind, type Locale, type Messages, messages, pickLocale } from './messages';
 import type { Kind } from './messages';
