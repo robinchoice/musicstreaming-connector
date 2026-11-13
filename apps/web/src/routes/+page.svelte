@@ -94,7 +94,12 @@
 
 {#if song?.source.artworkUrl}<div class="backdrop" aria-hidden="true" style:background-image="url({JSON.stringify(song.source.artworkUrl)})"></div>{/if}
 <div class="shell">
-  <header><a href="/" class="brand" onclick={reset}><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a></header>
+  <header><a href="/" class="brand" onclick={reset}><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a>
+    <nav class="stores" aria-label={t().getApp}>
+      <a href={APP_STORE_URL} rel="noreferrer" target="_blank">App Store</a>
+      <a href={PLAY_STORE_URL} rel="noreferrer" target="_blank">Google Play</a>
+    </nav>
+  </header>
   <main>
     {#if !song}
       <section class="start">
@@ -113,11 +118,6 @@
         </div>
         <div class="people"><Friends bind:selected={chosen} bind:services disabled={loading} /></div>
         <p class="note">{t().privacyNote}</p>
-        <div class="stores">
-          <p>{t().getApp}</p>
-          <a class="button ghost" href={APP_STORE_URL} rel="noreferrer" target="_blank">App Store</a>
-          <a class="button ghost" href={PLAY_STORE_URL} rel="noreferrer" target="_blank">Google Play</a>
-        </div>
       </section>
     {:else}
       <section class="record">
@@ -161,7 +161,10 @@
   .backdrop { position: fixed; inset: -10%; background: center / cover; filter: blur(90px) saturate(1.3); opacity: .26; pointer-events: none; animation: fade .8s ease-out; }
   @keyframes fade { from { opacity: 0; } }
   .shell { position: relative; max-width: 1040px; min-height: 100dvh; margin: auto; padding: 0 32px; display: flex; flex-direction: column; }
-  header { padding: 22px 0; }
+  header { padding: 22px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .stores { display: flex; gap: 8px; }
+  .stores a { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text); font-size: 14px; text-decoration: none; white-space: nowrap; }
+  .stores a:hover { background: rgb(255 255 255 / .08); }
   .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 24px; text-decoration: none; color: var(--text); }
   .brand-icon { width: 34px; height: 34px; }
   main { flex: 1; padding: 48px 0 64px; }
@@ -183,9 +186,6 @@
   .error strong { color: var(--text); font-weight: 600; }
   .people { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
   .note { margin-top: 32px; color: var(--muted); font-size: 13px; }
-  .stores { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
-  .stores p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 14px; }
-  .stores .button { text-decoration: none; }
 
   .record { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 44px; align-items: start; animation: rise .45s ease-out; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
@@ -217,6 +217,9 @@
 
   @media(max-width: 860px) {
     .shell { padding: 0 18px; }
+    header { flex-wrap: wrap; }
+    .stores { gap: 6px; }
+    .stores a { padding: 6px 10px; font-size: 13px; }
     main { padding: 24px 0 40px; }
     .lede { font-size: 16px; margin-bottom: 26px; }
     #song { font-size: 16px; }
