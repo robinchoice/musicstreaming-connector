@@ -125,11 +125,11 @@ Android symbols are separated into `aab/` for Play installations and `apk/` for 
 
 ## Abweichungen vom Standard
 
-- Songgate keeps the existing repo `musicstreaming-connector`, iOS bundle IDs `org.musiclink.prototype` / `org.musiclink.prototype.share`, app group, `musiclink://` URL scheme, device storage keys, TestFlight group names and infrastructure identifiers (Coolify, images, tokens). Android uses `org.pleasance.songgate`; share `/s/…` and invite `/f/…` links remain valid.
+- The repo is `robinchoice/songgate` (renamed from `musicstreaming-connector` on 13 November 2026; GitHub redirects the old URLs). Songgate keeps the iOS bundle IDs `org.musiclink.prototype` / `org.musiclink.prototype.share`, app group, `musiclink://` URL scheme, device storage keys, TestFlight group names and infrastructure identifiers (Coolify, images, tokens). Android uses `org.pleasance.songgate`; share `/s/…` and invite `/f/…` links remain valid.
 
 - The converter throttle in `app.ts` (60 lookups per minute) counts in process memory, not in Postgres: it guards the upstream services' per-IP limits, so a count per instance is right, and the converter runs without a database.
 - Signal colours: only the error signal, Songgate has no „your turn“ or „new“ states.
-- No README: the sections „Secret scan“, „For agents“, „CLI“ and „Release builds“, which starter keeps in its README, are here.
+- The README is only a short introduction for visitors: the sections „Secret scan“, „For agents“, „CLI“ and „Release builds“, which starter keeps in its README, are here.
 - The legal pages are not copied into `publicPages` as Markdown: their Markdown has title, description and a link to the HTML page, so there is only one binding version of Impressum, Datenschutz and AGB.
   The `<h2>` check therefore leaves them out.
 - Magic-link verification limits and ALTCHA before login mails do not apply: Songgate has no accounts or login routes and sends only feedback notifications.
