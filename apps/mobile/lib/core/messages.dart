@@ -239,7 +239,7 @@ class De extends Messages {
   String get headline => 'Teil Musik. Jeder hört sie in seinem Dienst.';
   @override
   String get intro =>
-      'Füge einen Link zu Song, Album oder Podcast ein. Songgate findet ihn bei Spotify, Apple, YouTube Music, Deezer und TIDAL.';
+      'Funktioniert mit Spotify, Apple, YouTube Music, Deezer und TIDAL.';
   @override
   String get linkHint => 'Link zu Song, Album oder Podcast';
   @override
@@ -560,7 +560,7 @@ class En extends Messages {
   String get headline => 'Share music. Everyone hears it on their own service.';
   @override
   String get intro =>
-      'Paste a song, album or podcast link. Songgate finds it on Spotify, Apple, YouTube Music, Deezer and TIDAL.';
+      'Works with Spotify, Apple, YouTube Music, Deezer and TIDAL.';
   @override
   String get linkHint => 'Link to a song, album or podcast';
   @override
