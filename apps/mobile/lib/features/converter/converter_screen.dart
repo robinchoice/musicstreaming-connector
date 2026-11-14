@@ -428,13 +428,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       appBar: AppBar(
         title: const SonggateBrand(),
         backgroundColor: Colors.transparent,
-        leading: song == null
-            ? null
-            : IconButton(
-                tooltip: t.backToInput,
-                onPressed: _sharing ? null : _reset,
-                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              ),
         actions: [
           IconButton(
             tooltip: t.settings,
@@ -451,13 +444,29 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
-                child: ListView(
-                  key: ValueKey(song == null ? 'input' : 'result'),
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                  children: song == null
-                      ? _start(context, t)
-                      : _result(song, t),
-                ),
+                child: song == null
+                    // The box in the middle, the share steps at the bottom,
+                    // scrolling only when the screen is too small for both
+                    ? CustomScrollView(
+                        key: const ValueKey('input'),
+                        slivers: [
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: _start(t),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView(
+                        key: const ValueKey('result'),
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                        children: _result(song, t),
+                      ),
               ),
             ),
           ),
@@ -466,8 +475,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     );
   }
 
-  List<Widget> _start(BuildContext context, Messages t) {
-    final theme = Theme.of(context);
+  List<Widget> _start(Messages t) {
     final source = sourceOf(_input.text);
     // Apple Podcasts links come from Apple's podcast hosts
     final sourceKind =
@@ -476,10 +484,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         : 'song';
     final empty = _input.text.trim().isEmpty;
     return [
-      Text(t.headline, style: theme.textTheme.headlineMedium),
-      const SizedBox(height: 14),
-      Text(t.intro, style: theme.textTheme.bodyLarge),
-      const SizedBox(height: 26),
+      const Spacer(),
       Container(
         padding: const EdgeInsets.fromLTRB(16, 6, 6, 6),
         decoration: BoxDecoration(
@@ -519,7 +524,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   disabledBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onSubmitted: (_) => _find(),
               ),
@@ -579,22 +584,83 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
               : const SizedBox(height: 20),
         ),
       ),
+      const Spacer(),
       const SizedBox(height: 24),
-      if (_isIOS)
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: muted),
-            onPressed: _loading ? null : _openGuide,
-            icon: const Icon(Icons.star_outline, size: 18),
-            label: Text(t.shareDirectTitle),
-          ),
-        )
-      else
-        Text(t.shareAndroid, style: theme.textTheme.bodySmall),
-      const SizedBox(height: 8),
-      Text(t.privacyNote, style: theme.textTheme.bodySmall),
+      _quicker(t),
     ];
+  }
+
+  /// Sharing from the music app in three steps, the fastest way in.
+  Widget _quicker(Messages t) {
+    Widget step(Widget icon, String label) => Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: raised,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: icon,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: muted, height: 1.25),
+          ),
+        ],
+      ),
+    );
+    const arrow = Padding(
+      padding: EdgeInsets.only(top: 13),
+      child: Icon(Icons.chevron_right, size: 18, color: Color(0xFF55545C)),
+    );
+    return Container(
+      key: const ValueKey('quicker'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            t.quicker,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              step(const ServiceLogo('spotify', size: 24), t.stepOpen),
+              arrow,
+              step(
+                Icon(
+                  _isIOS ? Icons.ios_share : Icons.share,
+                  size: 21,
+                  color: text,
+                ),
+                t.stepShare,
+              ),
+              arrow,
+              step(const SonggateMark(size: 30), t.stepPick),
+            ],
+          ),
+          if (_isIOS)
+            TextButton(
+              onPressed: _loading ? null : _openGuide,
+              child: Text(t.howToSetUp),
+            )
+          else
+            const SizedBox(height: 4),
+        ],
+      ),
+    );
   }
 
   List<Widget> _result(Song song, Messages t) {
@@ -603,65 +669,69 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final message = _message(song);
     // A friend's service without podcasts leaves the message, see friendsMessage
     final shown = _services.where(servicesFor(song.kind).contains).toList();
-    final services = shown.length;
     return [
-      Align(
-        alignment: Alignment.centerLeft,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: SizedBox.square(
-            dimension: 220,
-            child: song.artworkUrl == null
-                ? ColoredBox(
-                    color: raised,
-                    child: Icon(
-                      song.podcast ? Icons.podcasts : Icons.music_note,
-                      size: 64,
-                      color: muted,
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox.square(
+              dimension: 68,
+              child: song.artworkUrl == null
+                  ? ColoredBox(
+                      color: raised,
+                      child: Icon(
+                        song.podcast ? Icons.podcasts : Icons.music_note,
+                        size: 30,
+                        color: muted,
+                      ),
+                    )
+                  : Image.network(
+                      song.artworkUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          const ColoredBox(color: raised),
                     ),
-                  )
-                : Image.network(
-                    song.artworkUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const ColoredBox(color: raised),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  song.title,
+                  style: theme.textTheme.headlineMedium?.copyWith(fontSize: 26),
+                ),
+                if (song.artist.isNotEmpty)
+                  Text(
+                    song.artist,
+                    style: const TextStyle(color: Color(0xCCF2F0EA)),
                   ),
+                Text(
+                  t.kindFrom(song.kind, serviceName(song.platform, song.kind)),
+                  style: const TextStyle(color: muted, fontSize: 13),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-      const SizedBox(height: 18),
-      Text(
-        t.kindFrom(song.kind, serviceName(song.platform, song.kind)),
-        style: const TextStyle(color: muted),
-      ),
-      const SizedBox(height: 4),
-      Text(song.title, style: theme.textTheme.headlineMedium),
-      if (song.artist.isNotEmpty) ...[
-        const SizedBox(height: 4),
-        Text(
-          song.artist,
-          style: const TextStyle(fontSize: 17, color: Color(0xCCF2F0EA)),
-        ),
-      ],
-      Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: muted,
-            padding: EdgeInsets.zero,
+          IconButton(
+            key: const ValueKey('other-link'),
+            tooltip: t.otherLink,
+            style: IconButton.styleFrom(
+              backgroundColor: const Color(0x14FFFFFF),
+            ),
+            onPressed: _sharing
+                ? null
+                : () {
+                    _input.clear();
+                    _reset();
+                  },
+            icon: const Icon(Icons.close, size: 18, color: muted),
           ),
-          onPressed: _sharing
-              ? null
-              : () {
-                  _input.clear();
-                  _reset();
-                },
-          child: Text(
-            t.otherLink,
-            style: const TextStyle(decoration: TextDecoration.underline),
-          ),
-        ),
+        ],
       ),
-      const SizedBox(height: 4),
+      const SizedBox(height: 14),
       FriendsBar(
         selected: _chosen,
         services: _services,
@@ -759,18 +829,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              services == 0
-                  ? t.hintEveryone
-                  : services == 1
-                  ? t.hintOne(
-                      serviceName(shown.first, song.kind),
-                      social.me != null,
-                    )
-                  : t.hintSeveral,
-              style: theme.textTheme.bodySmall,
-            ),
-            const SizedBox(height: 8),
             SelectableText(message),
             const SizedBox(height: 14),
             LayoutBuilder(
@@ -823,7 +881,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
           ],
         ),
       ),
-      const PleasanceFooter(),
     ];
   }
 

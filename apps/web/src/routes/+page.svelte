@@ -1,232 +1,63 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import Friends from '#lib/components/Friends.svelte';
   import Logo from '#lib/components/Logo.svelte';
   import PleasanceFooter from '#lib/components/PleasanceFooter.svelte';
-  import { APP_STORE_URL, PLAY_STORE_URL, countries, friendsMessage, platforms, serviceName, serviceOrder, servicesFor, sourceOf, type Platform, type Song } from '@app/shared';
+  import { APP_STORE_URL, PLAY_STORE_URL, serviceOrder } from '@app/shared';
   import { page } from '$app/state';
-  import { api } from '#lib/api.ts';
-  import { social } from '#lib/friends.svelte.ts';
   import { t } from '#lib/i18n.ts';
-  import { toast, toastError } from '#lib/toast.svelte.ts';
 
-  let input = $state('');
-  let country = 'DE';
-  let loading = $state(false);
-  let song = $state<Song | null>(null);
-  let error = $state('');
-  let canShare = $state(false);
-  let canPaste = $state(false);
-  // Friends fill the services, the tiles can be tapped on their own
-  let chosen = $state<string[]>([]);
-  let services = $state<Platform[]>([]);
-  let request: AbortController | undefined;
-  const source = $derived(sourceOf(input));
-  // Apple Podcasts links come from Apple's podcast hosts
-  const sourceKind = $derived(/(?:podcasts|itunes)\.apple\.com\//.test(input) ? 'podcast' : 'song');
-  const friends = $derived(social.friends.filter(friend => chosen.includes(friend.name)));
-  const message = $derived(song ? friendsMessage(song, friends, location.origin, social.me, serviceOrder.filter(platform => services.includes(platform)), page.data.locale) : '');
-  // A friend's service without podcasts leaves the message, see friendsMessage
-  const shown = $derived(song ? services.filter(platform => servicesFor(song!.source.kind).includes(platform)) : services);
-  const what = $derived(!shown.length ? t().forEveryone
-    : shown.length === 1 ? t().directLink(serviceName(shown[0]!, song?.source.kind ?? 'song'), !!social.me)
-    : t().linePerService);
-
-  onMount(() => {
-    canShare = typeof navigator.share === 'function';
-    canPaste = typeof navigator.clipboard?.readText === 'function';
-    const region = navigator.language.split('-')[1]?.toUpperCase();
-    if (countries.some(code => code === region)) country = region!;
-    // Bookmarklets and shortcuts open /?q=<link> to convert right away
-    const shared = new URL(location.href).searchParams.get('q')?.trim();
-    if (shared) {
-      input = shared.slice(0, 4096);
-      find();
-    }
-  });
-  onDestroy(() => request?.abort());
-
-  function reset() { request?.abort(); loading = false; song = null; error = ''; }
-
-  async function find(event?: SubmitEvent) {
-    event?.preventDefault();
-    if (!input.trim()) return;
-    request?.abort();
-    const current = new AbortController();
-    request = current;
-    loading = true;
-    error = '';
-    try {
-      const result = await api.get<Song>(`/song?${new URLSearchParams({ input, country })}`, current.signal);
-      if (current.signal.aborted) return;
-      song = result;
-      scrollTo({ top: 0 });
-    } catch (e) {
-      if (current.signal.aborted) return;
-      error = e instanceof Error ? e.message : t().requestFailed;
-    } finally {
-      if (!current.signal.aborted) loading = false;
-    }
-  }
-
-  async function paste() {
-    try { input = (await navigator.clipboard.readText()).trim().slice(0, 4096); }
-    catch { toastError(t().pasteFailed); return; }
-    if (input) find();
-  }
-
-  function toggle(platform: Platform) {
-    services = services.includes(platform) ? services.filter(other => other !== platform) : [...services, platform];
-    // No service left means everyone again
-    if (!services.length) chosen = [];
-  }
-
-  async function copy() {
-    try { await navigator.clipboard.writeText(message); toast(t().copied); }
-    catch { toastError(t().copyFailed); }
-  }
-
-  async function share() {
-    try { await navigator.share({ text: message }); }
-    catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) toastError(t().shareFailedCopy); }
-  }
+  let { data } = $props();
+  const locale = $derived(page.data.locale);
 </script>
 
-{#if song?.source.artworkUrl}<div class="backdrop" aria-hidden="true" style:background-image="url({JSON.stringify(song.source.artworkUrl)})"></div>{/if}
+{#snippet appStore()}<a class="badge" href={APP_STORE_URL} rel="noreferrer"><img src="/badges/app-store-{locale}.svg" alt={t().appStore} height="54" /></a>{/snippet}
+{#snippet googlePlay()}<a class="badge" href={PLAY_STORE_URL} rel="noreferrer"><img src="/badges/google-play-{locale}.png" alt={t().googlePlay} height="54" /></a>{/snippet}
+
 <div class="shell">
-  <header><a href="/" class="brand" onclick={reset}><img class="brand-icon" src="/favicon.svg" alt="" width="34" height="34" /> Songgate</a>
-    <nav class="stores" aria-label={t().getApp}>
-      <a href={APP_STORE_URL} rel="noreferrer" target="_blank">App Store</a>
-      <a href={PLAY_STORE_URL} rel="noreferrer" target="_blank">Google Play</a>
-    </nav>
-  </header>
+  <header><a href="/" class="brand"><img class="brand-icon" src="/favicon.svg" alt="" width="30" height="30" /> Songgate</a></header>
   <main>
-    {#if !song}
-      <section class="start">
-        <h1>{t().headline}</h1>
-        <p class="lede">{t().lede}</p>
-        <form class="field" onsubmit={find}>
-          <span class="src">{#if source}<Logo platform={source} kind={sourceKind} size={24} />{:else}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>{/if}</span>
-          <input id="song" name="song" aria-label={t().linkLabel} bind:value={input} oninput={() => (error = '')} required maxlength="4096" placeholder={t().linkPlaceholder} autocomplete="off" spellcheck="false" disabled={loading} />
-          {#if input.trim() || !canPaste}<button class="button primary" type="submit" disabled={loading || !input.trim()}>{t().find}</button>
-          {:else}<button class="button ghost" type="button" onclick={paste}>{t().paste}</button>{/if}
-        </form>
-        <div class="detected" aria-live="polite">
-          {#if loading}<span class="loading"><span class="spinner"></span>{t().searching}</span>
-          {:else if error}<span class="error" role="alert"><strong>{t().notYet}</strong> {error}</span>
-          {:else if source}{t().linkFrom} <b>{serviceName(source, sourceKind)}</b>{/if}
-        </div>
-        <div class="people"><Friends bind:selected={chosen} bind:services disabled={loading} /></div>
-        <p class="note">{t().privacyNote}</p>
-      </section>
-    {:else}
-      <section class="record">
-        {#if song.source.artworkUrl}<img class="cover" src={song.source.artworkUrl} alt="" referrerpolicy="no-referrer" />{:else}<span class="cover placeholder" aria-hidden="true">♪</span>{/if}
-        <div>
-          <div class="meta">{t().kindFrom(song.source.kind, serviceName(song.source.platform, song.source.kind))}</div>
-          <h1>{song.source.title}</h1>
-          {#if song.source.artist}<p class="artist">{song.source.artist}</p>{/if}
-          <button class="newlink" type="button" onclick={() => { reset(); input = ''; }}>{t().otherLink}</button>
-          <Friends bind:selected={chosen} bind:services />
-          <div class="tiles" role="group" aria-label={t().servicesInMessage}>
-            {#each servicesFor(song.source.kind) as platform (platform)}
-              {@const link = song.links[platform]}
-              {@const names = friends.filter(friend => friend.platform === platform).map(friend => friend.name)}
-              <button type="button" class="tile" class:missing={!link.found} aria-pressed={services.includes(platform)} onclick={() => toggle(platform)}>
-                <Logo {platform} kind={song.source.kind} size={32} />
-                <span><strong>{serviceName(platform, song.source.kind)}</strong><small>{!link.found ? t().searchOnly : names.length ? names.join(', ') : platform === song.source.platform ? t().sourceService : t().found}</small></span>
-                <span class="check" aria-hidden="true">{services.includes(platform) ? '✓' : ''}</span>
-              </button>
-            {/each}
-          </div>
-          {#if song.apps?.length}
-            <p class="apps">{t().otherApps}: {#each song.apps as app, i (app.name)}{i ? ', ' : ''}<a href={app.url} rel="noreferrer" target="_blank">{app.name}</a>{/each}</p>
-          {/if}
-          <div class="out" aria-live="polite">
-            <p class="what">{what}</p>
-            <pre>{message}</pre>
-            <div class="actions">
-              {#if canShare}<button class="button primary" type="button" onclick={share}>{t().share}</button>{/if}
-              <button class="button {canShare ? 'ghost' : 'primary'}" type="button" onclick={copy}>{t().copy}</button>
-            </div>
-          </div>
-        </div>
-      </section>
-    {/if}
+    <img class="icon" src="/favicon.svg" alt="" width="76" height="76" />
+    <h1>{t().headline}</h1>
+    <p class="lede">{t().lede}</p>
+    <div class="services" aria-hidden="true">{#each serviceOrder.filter(platform => platform !== 'amazonMusic') as platform (platform)}<Logo {platform} size={26} />{/each}</div>
+    <nav class="badges" aria-label={t().getApp}>
+      {#if data.device !== 'android'}{@render appStore()}{/if}
+      {#if data.device !== 'ios'}{@render googlePlay()}{/if}
+    </nav>
+    <a class="web" href="/app">{t().openInBrowser} →</a>
+    {#if data.device}<p class="other">{t().otherPhone(data.device)} <a href={data.device === 'ios' ? PLAY_STORE_URL : APP_STORE_URL} rel="noreferrer">{data.device === 'ios' ? 'Google Play' : 'App Store'}</a></p>{/if}
   </main>
   <PleasanceFooter />
 </div>
 
 <style>
-  .backdrop { position: fixed; inset: -10%; background: center / cover; filter: blur(90px) saturate(1.3); opacity: .26; pointer-events: none; animation: fade .8s ease-out; }
-  @keyframes fade { from { opacity: 0; } }
-  .shell { position: relative; max-width: 1040px; min-height: 100dvh; margin: auto; padding: 0 32px; display: flex; flex-direction: column; }
-  header { padding: 22px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .stores { display: flex; gap: 8px; }
-  .stores a { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text); font-size: 14px; text-decoration: none; white-space: nowrap; }
-  .stores a:hover { background: rgb(255 255 255 / .08); }
-  .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 24px; text-decoration: none; color: var(--text); }
-  .brand-icon { width: 34px; height: 34px; }
-  main { flex: 1; padding: 48px 0 64px; }
+  .shell { max-width: 1040px; min-height: 100dvh; margin: auto; padding: 0 32px; display: flex; flex-direction: column; }
+  header { padding: 20px 0; }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-size: 22px; text-decoration: none; color: var(--text); }
+  main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px 0 32px; }
+  .icon { width: 76px; height: 76px; border-radius: 18px; box-shadow: 0 18px 50px -18px rgb(100 204 158 / .4); margin-bottom: 22px; }
+  h1 { font-size: clamp(36px, 6vw, 60px); margin: 0 0 14px; max-width: 20ch; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 36ch; margin: 0 0 20px; }
+  .services { display: flex; gap: 14px; margin-bottom: 30px; }
+  .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 18px; }
+  .badge { display: block; line-height: 0; border-radius: 10px; transition: transform .15s; }
+  .badge:hover { transform: translateY(-1px); }
+  .badge img { height: 54px; width: auto; }
+  .web { color: var(--muted); font-size: 15px; text-decoration: none; border-bottom: 1px solid var(--border-strong); padding-bottom: 1px; }
+  .web:hover { color: var(--text); }
+  .other { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+  .other a { color: var(--text); }
 
-  .start { max-width: 700px; }
-  .start h1 { font-size: clamp(40px, 7vw, 64px); margin: 0 0 14px; max-width: 13ch; }
-  .lede { color: var(--muted); margin: 0 0 34px; font-size: 17px; }
-  .field { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px; border-radius: 22px; background: rgb(255 255 255 / .05); border: 1px solid var(--border-strong); }
-  .field:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-  .src { width: 26px; height: 26px; display: grid; place-items: center; color: var(--muted); flex-shrink: 0; }
-  #song { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 17px; padding: 14px 0; }
-  #song::placeholder { color: #6E6C76; }
-  .detected { margin: 10px 0 0 18px; font-size: 14px; color: var(--muted); min-height: 22px; }
-  .detected b { color: var(--text); font-weight: 600; }
-  .loading { display: inline-flex; align-items: center; gap: 10px; }
-  .spinner { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 25%, #80CD84, #57C6BB); mask: radial-gradient(circle, transparent 6px, #000 7px); animation: spin .9s linear infinite; }
-  @keyframes spin { to { transform: rotate(1turn); } }
-  .error { display: block; padding-left: 12px; border-left: 3px solid var(--error); color: var(--muted); }
-  .error strong { color: var(--text); font-weight: 600; }
-  .people { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--border); }
-  .note { margin-top: 32px; color: var(--muted); font-size: 13px; }
-
-  .record { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 44px; align-items: start; animation: rise .45s ease-out; }
-  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
-  .record > div { min-width: 0; }
-  .cover { width: 340px; height: 340px; border-radius: 16px; object-fit: cover; box-shadow: 0 40px 80px -30px rgb(0 0 0 / .9); position: sticky; top: 24px; }
-  .placeholder { display: grid; place-items: center; background: var(--raised); font-size: 72px; color: var(--muted); }
-  .meta { color: var(--muted); font-size: 14px; }
-  .record h1 { font-size: clamp(40px, 5.6vw, 64px); margin: 6px 0 4px; overflow-wrap: anywhere; }
-  .artist { font-size: 18px; margin: 0 0 18px; color: rgb(242 240 234 / .8); }
-  .newlink { border: 0; background: none; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 0; margin-bottom: 22px; }
-
-  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .tile { position: relative; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 18px; background: rgb(255 255 255 / .06); border: 1px solid var(--border); color: var(--text); text-align: left; min-width: 0; }
-  .tile:hover { background: rgb(255 255 255 / .1); }
-  .tile > span:not(.check) { min-width: 0; }
-  .tile strong { display: block; font-weight: 650; padding-right: 18px; }
-  .tile small { display: block; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tile[aria-pressed="true"] { background: linear-gradient(rgb(36 35 42 / .92), rgb(36 35 42 / .92)) padding-box, var(--gradient) border-box; border-color: transparent; }
-  .tile.missing { opacity: .6; }
-  .apps { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
-  .apps a { color: var(--text); }
-  .check { position: absolute; top: 10px; right: 12px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; font-size: 12px; color: var(--ink); }
-  .tile[aria-pressed="true"] .check { background: var(--raised); color: var(--text); border-color: var(--accent); }
-
-  .out { margin-top: 18px; padding: 16px 18px; border-radius: 18px; background: rgb(0 0 0 / .25); border: 1px solid var(--border); }
-  .what { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
-  pre { margin: 0 0 14px; font: inherit; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  @media(max-width: 860px) {
+  @media(max-width: 650px) {
     .shell { padding: 0 18px; }
-    header { flex-wrap: wrap; }
-    .stores { gap: 6px; }
-    .stores a { padding: 6px 10px; font-size: 13px; }
-    main { padding: 24px 0 40px; }
-    .lede { font-size: 16px; margin-bottom: 26px; }
-    #song { font-size: 16px; }
-    .record { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-    .cover { position: static; width: 100%; height: auto; aspect-ratio: 1; max-width: 220px; }
-    .record h1 { font-size: 36px; }
-    .tile { padding: 14px; gap: 10px; }
-    .actions .button { flex: 1; }
+    header { padding: 14px 0; }
+    .icon { width: 60px; height: 60px; margin-bottom: 16px; }
+    h1 { font-size: 36px; }
+    .lede { font-size: 16px; margin-bottom: 18px; }
+    .services { margin-bottom: 24px; }
+  }
+  /* Short phone screens behind browser bars: everything stays on one screen */
+  @media(max-height: 720px) {
+    .icon { display: none; }
+    main { padding-bottom: 16px; }
   }
 </style>

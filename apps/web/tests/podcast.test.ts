@@ -17,7 +17,7 @@ const podcast: Song = {
 
 test('a podcast shows Apple Podcasts instead of TIDAL and the other podcast apps', async ({ page }) => {
   await page.route('**/api/v1/song?*', route => route.fulfill({ json: podcast }));
-  await page.goto('/');
+  await page.goto('/app');
   await page.getByLabel('Link zu Song, Album oder Podcast').fill('https://www.deezer.com/show/52913');
   await page.getByRole('button', { name: 'Finden' }).click();
   await expect(page.getByText('Podcast aus Deezer')).toBeVisible();

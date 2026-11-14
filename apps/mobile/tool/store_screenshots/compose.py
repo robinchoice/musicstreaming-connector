@@ -44,9 +44,9 @@ CAPTIONS = {
     'en': {
         'share': ('Share as usual.\nChoose Songgate.', 'Directly from your music app'),
         'song': ('Same song.\nEvery service.', 'Spotify, Apple Music, YouTube Music, Deezer'),
-        'group': ('A link for\nevery friend.', 'For friends and whole groups'),
+        'group': ('Everyone gets\ntheir own link.', 'For one person or whole groups'),
         'album': ('Whole albums\nwork the same.', 'With cover, artist and title'),
-        'friends': ('Your friends stay\non your device.', 'No sign-up. No tracking.'),
+        'friends': ('Your contacts stay\non your device.', 'No sign-up. No tracking.'),
     },
 }
 STORE_LOCALES = {'de': 'de-DE', 'en': 'en-US'}

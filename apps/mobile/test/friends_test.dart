@@ -341,7 +341,7 @@ void main() {
       const ProviderScope(child: MaterialApp(home: FriendsScreen())),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Freund von Hand hinzufügen'));
+    await tester.tap(find.text('Kontakt von Hand hinzufügen'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Alex');
     tester.view.viewInsets = const FakeViewPadding(bottom: 180);

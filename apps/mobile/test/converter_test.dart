@@ -239,7 +239,6 @@ void main() {
     await submit(tester);
     await tester.tap(find.byKey(const ValueKey('service-spotify')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Direktlink für Spotify'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('service-appleMusic')));
     await tester.pumpAndSettle();
     expect(
@@ -256,7 +255,10 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('pick-all')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Ein Link für alle'), findsOneWidget);
+    expect(
+      await copyMessage(tester),
+      '🎵 Plätscher – Paul Kalkbrenner\nhttp://localhost:3000/s/yt/UijW9hGpnzc\n\nGeteilt mit localhost:3000',
+    );
   });
 
   for (final apps in [true, false]) {
@@ -310,13 +312,13 @@ void main() {
     expect(find.text('Paul Kalkbrenner'), findsOneWidget);
   });
 
-  testWidgets('back clears the result and keeps the link', (tester) async {
+  testWidgets('close clears the result and the link', (tester) async {
     await mount(tester, (_) async => ok(result()));
     await submit(tester);
-    await tester.tap(find.byTooltip('Zurück zum Musiklink'));
+    await tester.tap(find.byTooltip('Anderer Link'));
     await tester.pumpAndSettle();
     expect(find.text('Paul Kalkbrenner'), findsNothing);
-    expect(find.text('Finden'), findsOneWidget);
+    expect(find.text('Einfügen'), findsOneWidget);
   });
 
   testWidgets('cold Android share starts the lookup without manual input', (
@@ -470,9 +472,9 @@ void main() {
       inputs.add(request.url.queryParameters['input']);
       return ok(result());
     });
-    ProviderScope.containerOf(
-      tester.element(find.byType(App)),
-    ).read(routerProvider).go('/s/yt/UijW9hGpnzc?from=Lea&service=deezer');
+    ProviderScope.containerOf(tester.element(find.byType(App)))
+        .read(routerProvider)
+        .go('/s/yt/UijW9hGpnzc?from=Lea&service=deezer');
     await tester.pumpAndSettle();
     expect(inputs, ['http://localhost:3000/s/yt/UijW9hGpnzc']);
     expect(find.text('Plätscher'), findsOneWidget);
@@ -486,9 +488,9 @@ void main() {
 
   testWidgets('an invite page link opens the invite', (tester) async {
     await mount(tester, (_) async => ok(result()));
-    ProviderScope.containerOf(
-      tester.element(find.byType(App)),
-    ).read(routerProvider).go('/f/spotify?name=Lea');
+    ProviderScope.containerOf(tester.element(find.byType(App)))
+        .read(routerProvider)
+        .go('/f/spotify?name=Lea');
     await tester.pumpAndSettle();
     expect(find.text('Lea hört auf Spotify'), findsOneWidget);
   });
@@ -552,12 +554,12 @@ void main() {
       await mount(tester, (_) async => ok(result()));
       expect(find.text('Teilen-Menü einrichten'), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('Nächstes Mal direkt teilen'),
+        find.text('So richtest du es ein'),
         250,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Nächstes Mal direkt teilen'));
+      await tester.tap(find.text('So richtest du es ein'));
       await tester.pumpAndSettle();
       expect(find.text('„Mehr“ öffnen'), findsOneWidget);
     },

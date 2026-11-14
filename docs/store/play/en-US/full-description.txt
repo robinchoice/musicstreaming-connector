@@ -4,11 +4,11 @@ You're listening to a song and want to share it, but your friends use a differen
 
 HOW IT WORKS
 • Tap "Share" in your music app and choose Songgate
-• Pick friends, a group or services
+• Pick contacts, a group or services
 • Send or copy the finished message
 
-FRIENDS AND GROUPS
-Save which music service each friend uses and put friends into groups. When sharing, one tap on the group is enough: everyone gets a line with the link for their service, everyone else one link that works for all. Your friends and groups stay on your device.
+CONTACTS AND GROUPS
+Save which music service each contact uses and put contacts into groups. When sharing, one tap on the group is enough: everyone gets a line with the link for their service, everyone else one link that works for all. Your contacts and groups stay on your device.
 
 NO ACCOUNT REQUIRED
 Songgate needs no account and no access to your music services. No ads, no tracking. It only reads public song information and does not play music itself.

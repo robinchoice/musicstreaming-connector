@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 test('the footer switches to English and keeps it, the legal pages follow', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'English' }).click();
-  await expect(page.getByRole('heading', { name: 'Share music. Everyone hears it in their own service.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Share music. Everyone hears it in their app.' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
-  await page.reload();
+  await page.goto('/app');
   await expect(page.getByLabel('Link to a song, album or podcast')).toBeVisible();
   await page.getByRole('link', { name: 'Privacy' }).click();
   await expect(page).toHaveURL(/\/privacy$/);
@@ -14,7 +14,7 @@ test('the footer switches to English and keeps it, the legal pages follow', asyn
   await expect(page).toHaveURL(/\/datenschutz$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Datenschutz' })).toBeVisible();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Teil Musik. Jeder hört sie in seinem Dienst.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Teil Musik. Alle hören sie in ihrer App.' })).toBeVisible();
 });
 
 test('the API answers errors in the chosen language', async ({ request }) => {

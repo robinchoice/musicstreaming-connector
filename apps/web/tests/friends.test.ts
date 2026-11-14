@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { findSavior } from './fixtures.ts';
 
 // Console errors fail the test, CSP violations included
 let errors: string[] = [];
@@ -20,13 +21,13 @@ test('invalid saved entries preserve valid friends and groups after saving', asy
       me: {},
     }));
   });
-  await page.goto('/');
+  await findSavior(page);
   await expect(page.getByRole('button', { name: /Alex/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'WG', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Neu', exact: false }).click();
   await page.getByPlaceholder('Name', { exact: true }).fill('Sam');
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
-  await page.reload();
+  await findSavior(page);
   await expect(page.getByRole('button', { name: /Alex/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Sam/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'WG', exact: true })).toBeVisible();
@@ -42,7 +43,7 @@ test('an invite saves its sender and the own invite shows as a QR code', async (
   await page.goto('/f/spotify?name=Lea');
   await page.getByRole('button', { name: 'Hier im Browser speichern' }).click();
   await expect(page.getByRole('button', { name: '✓ Lea ist gespeichert' })).toBeDisabled();
-  await page.goto('/');
+  await findSavior(page);
   await expect(page.getByRole('button', { name: /Lea/ })).toBeVisible();
   await page.getByRole('button', { name: 'Meine Einladung' }).click();
   await expect(page.getByRole('img', { name: 'QR-Code deiner Einladung' })).toHaveCount(0);
@@ -52,7 +53,7 @@ test('an invite saves its sender and the own invite shows as a QR code', async (
 
 
 test('draft and result selection survive live window changes without overflow', async ({ page }) => {
-  await page.goto('/');
+  await findSavior(page);
   await page.getByRole('button', { name: 'Meine Einladung' }).click();
   await page.getByPlaceholder('Dein Name').fill('Alex');
   for (const [width, height] of [[320, 640], [640, 320], [768, 1024], [1024, 768], [1440, 900], [320, 480]]) {
@@ -61,22 +62,6 @@ test('draft and result selection survive live window changes without overflow', 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.getByRole('button', { name: 'Meine Einladung' }).click();
-  await page.route('**/api/v1/song?**', route => route.fulfill({ json: {
-    source: { kind: 'song', platform: 'youtubeMusic', title: 'Savior', artist: 'RHCP',
-      url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', artworkUrl: null },
-    sharePath: '/s/yt/UijW9hGpnzc',
-    links: {
-      spotify: { url: 'https://open.spotify.com/track/x', found: true },
-      appleMusic: { url: 'https://music.apple.com/de/song/1', found: true },
-      youtubeMusic: { url: 'https://music.youtube.com/watch?v=UijW9hGpnzc', found: true },
-      deezer: { url: 'https://www.deezer.com/search/Savior', found: false },
-      tidal: { url: 'https://tidal.com/track/1', found: true },
-      amazonMusic: { url: 'https://music.amazon.de/search/RHCP%20Savior', found: false },
-    },
-  } }));
-  await page.locator('#song').fill('https://youtu.be/UijW9hGpnzc');
-  await page.locator('#song').press('Enter');
-  await expect(page.getByRole('heading', { name: 'Savior' })).toBeVisible();
   await page.getByRole('button', { name: /Spotify/ }).click();
   const message = await page.locator('pre').textContent();
   for (const [width, height] of [[1440, 900], [1024, 768], [640, 320], [320, 640]]) {

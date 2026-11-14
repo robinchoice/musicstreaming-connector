@@ -48,23 +48,19 @@ abstract class Messages {
   String get messageCopied;
   String get copyFailed;
   String get shareFailed;
-  String get backToInput;
-  String get headline;
-  String get intro;
   String get linkHint;
   String get paste;
   String get find;
   String get searching;
   String get linkFrom;
-  String get shareDirectTitle;
-  String get shareAndroid;
-  String get privacyNote;
+  String get quicker;
+  String get stepOpen;
+  String get stepShare;
+  String get stepPick;
+  String get howToSetUp;
   String kindFrom(String kind, String? service);
   String get otherApps;
   String get otherLink;
-  String get hintEveryone;
-  String hintOne(String service, bool withName);
-  String get hintSeveral;
   String get share;
   String get copy;
   String openIn(String service);
@@ -187,7 +183,7 @@ class De extends Messages {
   @override
   String get openGuide => 'Favoriten-Anleitung öffnen';
   @override
-  String get friendsAndInvite => 'Freunde und Einladung';
+  String get friendsAndInvite => 'Kontakte und Einladung';
   @override
   String get giveFeedback => 'Feedback geben';
   @override
@@ -234,14 +230,7 @@ class De extends Messages {
   String get shareFailed =>
       'Teilen nicht möglich. Kopiere stattdessen die Nachricht.';
   @override
-  String get backToInput => 'Zurück zum Musiklink';
-  @override
-  String get headline => 'Teil Musik. Jeder hört sie in seinem Dienst.';
-  @override
-  String get intro =>
-      'Funktioniert mit Spotify, Apple, YouTube Music, Deezer und TIDAL.';
-  @override
-  String get linkHint => 'Link zu Song, Album oder Podcast';
+  String get linkHint => 'Link aus Spotify & Co.';
   @override
   String get paste => 'Einfügen';
   @override
@@ -251,29 +240,22 @@ class De extends Messages {
   @override
   String get linkFrom => 'Link aus ';
   @override
-  String get shareDirectTitle => 'Nächstes Mal direkt teilen';
+  String get quicker => 'Noch schneller: direkt aus der Musik-App';
   @override
-  String get shareAndroid =>
-      'Direkt aus deiner Musik-App: Öffne bei einem Song das Teilen-Menü und wähle Songgate.';
+  String get stepOpen => 'Song öffnen';
   @override
-  String get privacyNote =>
-      'Ohne Konto. Freunde und Gruppen bleiben auf deinem Gerät.';
+  String get stepShare => 'Teilen tippen';
+  @override
+  String get stepPick => 'Songgate wählen';
+  @override
+  String get howToSetUp => 'So richtest du es ein';
   @override
   String kindFrom(String kind, String? service) =>
       '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Folge'}[kind] ?? 'Song'}${service == null ? '' : ' aus $service'}';
   @override
   String get otherApps => 'In anderen Podcast-Apps abonnieren';
   @override
-  String get otherLink => 'Anderen Link einfügen';
-  @override
-  String get hintEveryone =>
-      'Ein Link für alle. Jede und jeder wählt den eigenen Dienst, ideal für Gruppenchats.';
-  @override
-  String hintOne(String service, bool withName) =>
-      'Direktlink für $service${withName ? ', dazu der Link für alle mit deinem Namen' : ''}.';
-  @override
-  String get hintSeveral =>
-      'Eine Zeile pro Dienst, für alle anderen der Link für alle.';
+  String get otherLink => 'Anderer Link';
   @override
   String get share => 'Teilen';
   @override
@@ -307,13 +289,13 @@ class De extends Messages {
   @override
   String get welcomeTitle => 'Dein Song.\n';
   @override
-  String get welcomeTitleAccent => 'Ihr Lieblingsplayer.';
+  String get welcomeTitleAccent => 'In jedem Player.';
   @override
   String get setupIntro =>
       'Füge Songgate zu deinen Favoriten im iPhone-Teilen-Menü hinzu.';
   @override
   String get welcomeIntro =>
-      'Teile Musik in dem Dienst, den deine Freunde nutzen. Direkt aus deiner Musik-App.';
+      'Teile Musik so, dass sie bei allen im eigenen Dienst ankommt. Direkt aus deiner Musik-App.';
   @override
   List<(String, String, String)> get setupSteps => const [
     (
@@ -372,13 +354,13 @@ class De extends Messages {
   String get groupNameLabel => 'Name, z. B. WG';
   @override
   String get friendsEmpty =>
-      'Speichere, wer welchen Dienst hört. Dann bekommt jeder den Link für seinen Player.';
+      'Speichere, wer welchen Dienst hört. Dann bekommen alle den Link für ihren Player.';
   @override
   String get cancel => 'Abbrechen';
   @override
   String get save => 'Speichern';
   @override
-  String get addFriend => 'Freund hinzufügen';
+  String get addFriend => 'Kontakt hinzufügen';
   @override
   String get name => 'Name';
   @override
@@ -392,7 +374,7 @@ class De extends Messages {
   @override
   String get done => 'Fertig';
   @override
-  String get friends => 'Freunde';
+  String get friends => 'Kontakte';
   @override
   String get friendsIntro =>
       'Damit Songgate weiß, wohin deine Songs sollen. Alles bleibt auf diesem Handy.';
@@ -404,19 +386,19 @@ class De extends Messages {
   @override
   String get showInviteQr => 'Einladung als QR-Code zeigen';
   @override
-  String get addFriendManually => 'Freund von Hand hinzufügen';
+  String get addFriendManually => 'Kontakt von Hand hinzufügen';
   @override
   String get noFriends =>
-      'Noch keine Freunde. Schick deine Einladung, wer sie öffnet, kann dich speichern und dir seine zurückschicken.';
+      'Noch keine Kontakte. Schick deine Einladung: Wer sie öffnet, kann dich speichern und die eigene zurückschicken.';
   @override
-  String get editFriend => 'Freund bearbeiten';
+  String get editFriend => 'Kontakt bearbeiten';
   @override
   String remove(String name) => '$name entfernen';
   @override
   String get groups => 'Gruppen';
   @override
   String get groupsHint =>
-      'Gruppen legst du beim Teilen an: mehrere Freunde wählen, dann „Als Gruppe speichern“.';
+      'Gruppen legst du beim Teilen an: mehrere Kontakte wählen, dann „Als Gruppe speichern“.';
   @override
   String get invite => 'Einladung';
   @override
@@ -510,7 +492,7 @@ class En extends Messages {
   @override
   String get openGuide => 'Open the favourites guide';
   @override
-  String get friendsAndInvite => 'Friends and invite';
+  String get friendsAndInvite => 'Contacts and invite';
   @override
   String get giveFeedback => 'Give feedback';
   @override
@@ -555,14 +537,7 @@ class En extends Messages {
   @override
   String get shareFailed => 'Sharing isn’t possible. Copy the message instead.';
   @override
-  String get backToInput => 'Back to the music link';
-  @override
-  String get headline => 'Share music. Everyone hears it on their own service.';
-  @override
-  String get intro =>
-      'Works with Spotify, Apple, YouTube Music, Deezer and TIDAL.';
-  @override
-  String get linkHint => 'Link to a song, album or podcast';
+  String get linkHint => 'Link from Spotify & co.';
   @override
   String get paste => 'Paste';
   @override
@@ -572,29 +547,22 @@ class En extends Messages {
   @override
   String get linkFrom => 'Link from ';
   @override
-  String get shareDirectTitle => 'Share directly next time';
+  String get quicker => 'Even faster: straight from your music app';
   @override
-  String get shareAndroid =>
-      'Straight from your music app: open the share menu on a song and pick Songgate.';
+  String get stepOpen => 'Open a song';
   @override
-  String get privacyNote =>
-      'No account. Friends and groups stay on your device.';
+  String get stepShare => 'Tap Share';
+  @override
+  String get stepPick => 'Pick Songgate';
+  @override
+  String get howToSetUp => 'How to set it up';
   @override
   String kindFrom(String kind, String? service) =>
       '${const {'album': 'Album', 'podcast': 'Podcast', 'episode': 'Episode'}[kind] ?? 'Song'}${service == null ? '' : ' from $service'}';
   @override
   String get otherApps => 'Subscribe in other podcast apps';
   @override
-  String get otherLink => 'Paste another link';
-  @override
-  String get hintEveryone =>
-      'One link for everyone. Each person picks their own service, ideal for group chats.';
-  @override
-  String hintOne(String service, bool withName) =>
-      'Direct link for $service${withName ? ', plus the link for everyone with your name' : ''}.';
-  @override
-  String get hintSeveral =>
-      'One line per service, and the link for everyone for all the others.';
+  String get otherLink => 'Another link';
   @override
   String get share => 'Share';
   @override
@@ -628,13 +596,13 @@ class En extends Messages {
   @override
   String get welcomeTitle => 'Your song.\n';
   @override
-  String get welcomeTitleAccent => 'Their favourite player.';
+  String get welcomeTitleAccent => 'On every player.';
   @override
   String get setupIntro =>
       'Add Songgate to your favourites in the iPhone share menu.';
   @override
   String get welcomeIntro =>
-      'Share music on the service your friends use. Straight from your music app.';
+      'Share music so it reaches everyone on their own service. Straight from your music app.';
   @override
   List<(String, String, String)> get setupSteps => const [
     ('01', 'Open “More”', 'Swipe all the way right in the row of apps.'),
@@ -695,7 +663,7 @@ class En extends Messages {
   @override
   String get save => 'Save';
   @override
-  String get addFriend => 'Add friend';
+  String get addFriend => 'Add contact';
   @override
   String get name => 'Name';
   @override
@@ -709,7 +677,7 @@ class En extends Messages {
   @override
   String get done => 'Done';
   @override
-  String get friends => 'Friends';
+  String get friends => 'Contacts';
   @override
   String get friendsIntro =>
       'So Songgate knows where your songs should go. Everything stays on this phone.';
@@ -721,19 +689,19 @@ class En extends Messages {
   @override
   String get showInviteQr => 'Show invite as QR code';
   @override
-  String get addFriendManually => 'Add a friend by hand';
+  String get addFriendManually => 'Add a contact by hand';
   @override
   String get noFriends =>
-      'No friends yet. Send your invite: whoever opens it can save you and send theirs back.';
+      'No contacts yet. Send your invite: whoever opens it can save you and send theirs back.';
   @override
-  String get editFriend => 'Edit friend';
+  String get editFriend => 'Edit contact';
   @override
   String remove(String name) => 'Remove $name';
   @override
   String get groups => 'Groups';
   @override
   String get groupsHint =>
-      'You create groups while sharing: pick several friends, then “Save as group”.';
+      'You create groups while sharing: pick several contacts, then “Save as group”.';
   @override
   String get invite => 'Invite';
   @override

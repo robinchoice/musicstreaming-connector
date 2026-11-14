@@ -132,7 +132,8 @@ void main() {
   for (final locale in ['de', 'en']) {
     for (final device in devices.entries) {
       testWidgets('$locale ${device.key}', (tester) async {
-        debugDefaultTargetPlatformOverride = device.key != 'iphone' && device.key != 'ipad'
+        debugDefaultTargetPlatformOverride =
+            device.key != 'iphone' && device.key != 'ipad'
             ? TargetPlatform.android
             : TargetPlatform.iOS;
         tester.platformDispatcher.localesTestValue = [Locale(locale)];
@@ -243,13 +244,14 @@ void main() {
           await tester.tap(find.text(locale == 'de' ? 'Finden' : 'Find'));
         }
 
+        // Not a store picture (compose.py skips it), to look at the start screen
+        await capture('start');
         await convert(false);
         await capture('song');
         await tester.tap(find.byKey(const ValueKey('group-Bandprobe')));
         await tester.pumpAndSettle();
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -320));
         await capture('group');
-        await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+        await tester.tap(find.byKey(const ValueKey('other-link')));
         await tester.pumpAndSettle();
         await convert(true);
         await capture('album');

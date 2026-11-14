@@ -1,6 +1,6 @@
 # Songgate
 
-One link, everyone listens in their own service. Songgate takes a link to a song, album or podcast and finds it on Spotify, Apple Music, YouTube Music, Deezer and TIDAL, with a search link for Amazon Music. No sign-up; friends and groups stay on your device.
+One link, everyone listens in their own service. Songgate takes a link to a song, album or podcast and finds it on Spotify, Apple Music, YouTube Music, Deezer and TIDAL, with a search link for Amazon Music. No sign-up; contacts and groups stay on your device.
 
 **Live:** [songgate.app](https://songgate.app) · iOS (App Store, TestFlight) and Android (Google Play) apps with a share extension.
 
