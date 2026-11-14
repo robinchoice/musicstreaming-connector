@@ -4,19 +4,18 @@
 #
 #   python3 tool/store_screenshots/compose.py
 #
-# writes build/store_screenshots/out/<locale>/<device>-<n>.png. share-<device>.png
-# here is the iOS share sheet, which no Flutter test can render.
+# writes build/store_screenshots/out/<locale>/<device>-<n>.png. Picture 1, the iOS
+# share sheet, which no Flutter test can render, comes from share_sheet.py.
 import json
 from functools import cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from share_sheet import share_screen, status_bar
 
-HERE = Path(__file__).parent
 RAW = Path('build/store_screenshots')
 FONT = 'assets/fonts/BricolageGrotesque.ttf'
 EMOJI = '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf'
-STATUS_FONT = ImageFont.truetype('/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf', 1)
 
 BACKGROUND = (14, 13, 18)
 TEXT = (242, 240, 234)
@@ -38,9 +37,9 @@ CAPTIONS = {
     'de': {
         'share': ('Teilen wie immer.\nSonggate wählen.', 'Direkt aus deiner Musik-App'),
         'song': ('Derselbe Song,\nauf jedem Dienst.', 'Spotify, Apple Music, YouTube Music, Deezer'),
-        'group': ('Jeder bekommt\nseinen Link.', 'Für Freunde und ganze Gruppen'),
-        'album': ('Ganze Alben\ngehen genauso.', 'Mit Cover, Künstler und Titel'),
-        'friends': ('Freunde bleiben\nauf deinem Gerät.', 'Ohne Anmeldung, ohne Tracking'),
+        'group': ('Für alle\nder eigene Link.', 'Für Einzelne und ganze Gruppen'),
+        'album': ('Ganze Alben\ngehen genauso.', 'Mit Cover und Titel'),
+        'friends': ('Deine Kontakte\nbleiben bei dir.', 'Ohne Anmeldung, ohne Tracking'),
     },
     'en': {
         'share': ('Share as usual.\nChoose Songgate.', 'Directly from your music app'),
@@ -63,6 +62,8 @@ def paint_emoji(screen, boxes):
     """The test fonts have no emoji, so the 🎵 or 💿 in the message is drawn here."""
     draw = ImageDraw.Draw(screen)
     for kind, left, top, right, bottom in boxes:
+        if bottom > screen.height:  # below the screen's end
+            continue
         glyph = Image.new('RGBA', (136, 128))
         ImageDraw.Draw(glyph).text((0, 0), '🎵💿'[int(kind)], font=ImageFont.truetype(EMOJI, 109), embedded_color=True)
         glyph = glyph.crop(glyph.getbbox())
@@ -73,27 +74,6 @@ def paint_emoji(screen, boxes):
         draw.rectangle([left, top, right, bottom], fill=screen.getpixel((max(0, left - 4), top + height / 2)))
         scaled = glyph.resize((round(glyph.width * size / glyph.height), size), Image.LANCZOS)
         screen.alpha_composite(scaled, (round(left), round(top + (height - size) / 2)))
-
-
-def status_bar(screen, height, scale):
-    """9:41, signal, Wi-Fi and battery like an iPhone or iPad in the store pictures."""
-    draw = ImageDraw.Draw(screen)
-    middle = height * 0.55
-    clock = STATUS_FONT.font_variant(size=round(17 * scale))
-    draw.text((round(screen.width * 0.11), middle), '9:41', font=clock, fill=TEXT, anchor='mm')
-    right = screen.width * 0.9
-    unit = 4 * scale
-    battery = [right - 7 * unit, middle - 1.6 * unit, right, middle + 1.6 * unit]
-    draw.rounded_rectangle(battery, radius=unit, outline=TEXT, width=max(2, round(scale / 1.2)))
-    draw.rounded_rectangle([battery[0] + unit * 0.6, battery[1] + unit * 0.6, battery[2] - unit * 1.6, battery[3] - unit * 0.6], radius=unit / 2, fill=TEXT)
-    wifi = right - 10.5 * unit
-    for i, radius in enumerate([2.6, 1.8, 1.0]):
-        r = radius * unit
-        draw.arc([wifi - r, middle + unit - r, wifi + r, middle + unit + r], 225, 315, fill=TEXT, width=round(unit * 0.55))
-    for i in range(4):
-        x = right - (17 - i * 1.3) * unit
-        h = (0.9 + i * 0.6) * unit
-        draw.rounded_rectangle([x, middle + 1.4 * unit - h, x + unit * 0.9, middle + 1.4 * unit], radius=unit / 4, fill=TEXT)
 
 
 @cache
@@ -119,12 +99,13 @@ def compose(locale, device, slide, n):
 
     screen_w = spec['screen']
     if slide == 'share':
-        screen = Image.open(HERE / f'share-{device}.png').convert('RGBA')
+        screen = share_screen(locale, device, screen_w)
     else:
         raw = Image.open(RAW / f'{locale}-{device}-{slide}.png').convert('RGBA')
         boxes = RAW / f'{locale}-{device}-{slide}.json'
         paint_emoji(raw, json.loads(boxes.read_text()) if boxes.exists() else [])
-        status_bar(raw, spec['status'], raw.width / spec.get('logical', 1032 if device == 'ipad' else 440))
+        scale = raw.width / spec.get('logical', 1032 if device == 'ipad' else 440)
+        status_bar(raw, scale, spec['status'] * 0.55 / scale, device not in ('iphone', 'android'))
         screen = raw.resize((screen_w, round(raw.height * screen_w / raw.width)), Image.LANCZOS)
     left = (w - screen_w) // 2
     top = spec['top']
