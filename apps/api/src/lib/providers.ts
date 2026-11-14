@@ -22,6 +22,8 @@ export function recording(title: string, artists: string[]) {
     artists: [...new Set(credits.flatMap(artist => artist.split(/,| & | and /i)).map(normalize).filter(Boolean))].sort().join('|'),
   };
 }
+export const itunesResults = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results;
+export const deezerData = (body: unknown) => z.object({ data: z.array(z.unknown()) }).parse(body).data;
 export const https = (url?: string | null) => url?.startsWith('https://') ? url : null;
 // Apple's artwork URLs name their size, the iTunes API hands out 100×100
 export const appleArtwork600 = (url?: string | null) => url?.replace('/100x100bb.', '/600x600bb.');
@@ -37,11 +39,8 @@ export function appleUrl(link: string, keepSongId: boolean) {
 
 // Spotify has no open metadata API; its public pages, like TIDAL's, carry titles, artists and links as meta tags.
 export function pageMeta(html: string, name: string) {
-  return pageMetas(html, name)[0];
-}
-export function pageMetas(html: string, name: string) {
-  return [...html.matchAll(new RegExp(`<meta (?:property|name)="${name}" content="([^"]*)"`, 'g'))].map(match =>
-    match[1]!.replace(/&(amp|quot|lt|gt|#x27|#39);/g, (_, entity: string) => ({ amp: '&', quot: '"', lt: '<', gt: '>', '#x27': "'", '#39': "'" })[entity]!));
+  return html.match(new RegExp(`<meta (?:property|name)="${name}" content="([^"]*)"`))?.[1]!
+    .replace(/&(amp|quot|lt|gt|#x27|#39);/g, (_, entity: string) => ({ amp: '&', quot: '"', lt: '<', gt: '>', '#x27': "'", '#39': "'" })[entity]!);
 }
 
 export function session(requestSignal: AbortSignal | undefined, fetcher: Fetch) {

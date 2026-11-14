@@ -1,7 +1,7 @@
 import type { Conversion, Platform } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { appleArtwork600, appleCatalog, appleUrl, codeFailure, https, normalize, providerCall, recording, pageMeta, pageMetas, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, appleCatalog, appleUrl, codeFailure, deezerData, https, itunesResults, normalize, providerCall, recording, pageMeta, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
 import { tidalAlbums, tidalCatalog, tidalPageMeta, tidalSearch } from './tidal';
 
@@ -75,10 +75,10 @@ export function loadAlbum(link: MusicLink, current: Session, youtubeMusic: YouTu
         get('https://itunes.apple.com/lookup', { id: link.id, country: link.country, entity: 'song' }),
         appleCatalog(`${link.country.toLowerCase()}/albums/${link.id}`, {}, appleAlbum, current).then(albums => albums[0]?.attributes.upc, () => { codeFailure('UPC', 'appleMusic', signal); return undefined; }),
       ]);
-      const results = z.object({ results: z.array(z.unknown()) }).parse(body).results;
-      const collection = results.map(item => appleCollection.safeParse(item).data).find(item => String(item?.collectionId) === link.id);
+      const items = itunesResults(body);
+      const collection = items.map(item => appleCollection.safeParse(item).data).find(item => String(item?.collectionId) === link.id);
       if (!collection) throw new ResolutionError('SOURCE_UNAVAILABLE');
-      const firstTrack = results.values().map(item => appleTrack.safeParse(item).data).find(Boolean)?.trackName;
+      const firstTrack = items.values().map(item => appleTrack.safeParse(item).data).find(Boolean)?.trackName;
       album = {
         ...upcCode(upc), title: appleName(collection.collectionName), artist: collection.artistName, url: `https://music.apple.com/${link.country.toLowerCase()}/album/${link.id}`,
         artworkUrl: https(appleArtwork600(collection.artworkUrl100)), ...(firstTrack ? { firstTrack } : {}),
@@ -180,7 +180,7 @@ export function findAlbums(target: Platform, source: Album, country: string, cur
     const query = `${source.artist} ${withoutEdition(source.title) || source.title}`;
     let ranked: { rank: number; candidate: Candidates[number] }[];
     if (target === 'appleMusic') {
-      ranked = z.object({ results: z.array(z.unknown()) }).parse(await get('https://itunes.apple.com/search', { term: query, entity: 'album', country, limit: '25' })).results.flatMap(item => {
+      ranked = itunesResults(await get('https://itunes.apple.com/search', { term: query, entity: 'album', country, limit: '25' })).flatMap(item => {
         const album = appleCollection.safeParse(item);
         const rank = album.success ? score(appleName(album.data.collectionName), [album.data.artistName]) : 0;
         return album.success && rank ? appleCandidate(album.data.collectionViewUrl, album.data.collectionName, https(album.data.artworkUrl100)).map(candidate => ({ rank, candidate })) : [];
@@ -191,7 +191,7 @@ export function findAlbums(target: Platform, source: Album, country: string, cur
         return rank ? [{ rank, candidate: { title: album.title, url: `https://music.youtube.com/browse/${album.id}`, artworkUrl: https(album.artworkUrl) } }] : [];
       });
     } else if (target === 'deezer') {
-      ranked = z.object({ data: z.array(z.unknown()) }).parse(await get('https://api.deezer.com/search/album', { q: query, limit: '25' })).data.flatMap(item => {
+      ranked = deezerData(await get('https://api.deezer.com/search/album', { q: query, limit: '25' })).flatMap(item => {
         const album = deezerAlbum.safeParse(item);
         const rank = album.success && album.data.available !== false ? score(album.data.title, [album.data.artist.name]) : 0;
         return album.success && rank ? [{ rank, candidate: deezerCandidate(album.data) }] : [];

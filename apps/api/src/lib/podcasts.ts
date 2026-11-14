@@ -1,7 +1,7 @@
 import type { Conversion, Platform, PodcastApp } from '@app/shared';
 import { YTNodes } from 'youtubei.js';
 import { z } from 'zod';
-import { appleArtwork600, https, normalize, pageMeta, providerCall, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, deezerData, https, itunesResults, normalize, pageMeta, providerCall, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError } from './resolver';
 import { spotifyApi } from './spotify';
 
@@ -109,7 +109,6 @@ const spotifyShows = z.object({ shows: z.object({ items: z.array(z.object({
 const spotifyEpisodes = z.object({ items: z.array(z.object({
   id: z.string(), name: z.string(), release_date: z.string().optional(), images: z.array(z.object({ url: z.string() })).default([]),
 }).nullable()) });
-const results = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results;
 const parsed = <T extends z.ZodType>(schema: T, items: unknown[]): z.infer<T>[] => items.flatMap(item => {
   const result = schema.safeParse(item);
   return result.success ? [result.data] : [];
@@ -162,12 +161,12 @@ export function loadPodcast(link: MusicLink, current: Session, youtubeMusic: You
   return providerCall(link.platform, signal, async () => {
     let podcast: Podcast;
     if (link.platform === 'appleMusic' && link.kind === 'podcast') {
-      const show = parsed(appleShow, results(await get('https://itunes.apple.com/lookup', { id: link.id, country: link.country, entity: 'podcast' }))).find(item => String(item.collectionId) === link.id);
+      const show = parsed(appleShow, itunesResults(await get('https://itunes.apple.com/lookup', { id: link.id, country: link.country, entity: 'podcast' }))).find(item => String(item.collectionId) === link.id);
       if (!show) throw new ResolutionError('SOURCE_UNAVAILABLE');
       const feedUrl = feed(show.feedUrl);
       podcast = { title: show.collectionName, artist: show.artistName, show: show.collectionName, url: appleShowUrl(link.country, link.id), artworkUrl: appleArtwork(show), appleId: link.id, ...(feedUrl ? { feedUrl } : {}) };
     } else if (link.platform === 'appleMusic') {
-      const items = results(await get('https://itunes.apple.com/lookup', { id: link.show ?? '', country: link.country, entity: 'podcastEpisode', limit: '200' }));
+      const items = itunesResults(await get('https://itunes.apple.com/lookup', { id: link.show ?? '', country: link.country, entity: 'podcastEpisode', limit: '200' }));
       const episode = parsed(appleEpisode, items).find(item => String(item.trackId) === link.id);
       const feedUrl = feed(episode?.feedUrl ?? parsed(appleShow, items)[0]?.feedUrl);
       if (episode) {
@@ -258,7 +257,7 @@ export function episodeScore(source: Podcast) {
 export type AppleShow = { appleId?: string; feedUrl?: string };
 
 async function appleShows(source: Podcast, country: string, current: Session, found: AppleShow) {
-  const shows = byScore(parsed(appleShow, results(await current.get('https://itunes.apple.com/search', { term: source.show, entity: 'podcast', country, limit: '25' }))),
+  const shows = byScore(parsed(appleShow, itunesResults(await current.get('https://itunes.apple.com/search', { term: source.show, entity: 'podcast', country, limit: '25' }))),
     show => showScore(show.collectionName, source.show));
   const first = shows[0];
   if (first) Object.assign(found, { appleId: String(first.collectionId) }, feed(first.feedUrl) ? { feedUrl: feed(first.feedUrl) } : {});
@@ -270,7 +269,7 @@ async function findShows(target: Platform, source: Podcast, country: string, cur
     return (await appleShows(source, country, current, found)).map(show => ({ id: String(show.collectionId), title: show.collectionName, url: appleShowUrl(country, show.collectionId), artworkUrl: appleArtwork(show) }));
   }
   if (target === 'deezer') {
-    const items = z.object({ data: z.array(z.unknown()) }).parse(await current.get('https://api.deezer.com/search/podcast', { q: source.show, limit: '25' })).data;
+    const items = deezerData(await current.get('https://api.deezer.com/search/podcast', { q: source.show, limit: '25' }));
     return byScore(parsed(deezerShow, items), show => show.available === false ? 0 : showScore(show.title, source.show))
       .map(show => ({ id: String(show.id), title: show.title, url: `https://www.deezer.com/show/${show.id}`, artworkUrl: https(show.picture_medium) }));
   }
@@ -304,10 +303,10 @@ async function findEpisodes(target: Platform, source: Podcast, country: string, 
       appleShows(source, country, current, found),
     ]);
     const ids = new Set(shows.map(show => show.collectionId));
-    const search = parsed(appleEpisode, results(searched));
+    const search = parsed(appleEpisode, itunesResults(searched));
     let episodes = search.filter(episode => ids.has(episode.collectionId));
     if (!episodes.some(episode => score(episode.trackName, time(episode.releaseDate))) && shows[0]) {
-      episodes = parsed(appleEpisode, results(await current.get('https://itunes.apple.com/lookup', { id: String(shows[0].collectionId), country, entity: 'podcastEpisode', limit: '200' })));
+      episodes = parsed(appleEpisode, itunesResults(await current.get('https://itunes.apple.com/lookup', { id: String(shows[0].collectionId), country, entity: 'podcastEpisode', limit: '200' })));
     }
     ranked = episodes.flatMap(episode => {
       const rank = score(episode.trackName, time(episode.releaseDate));

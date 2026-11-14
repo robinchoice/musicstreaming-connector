@@ -2,7 +2,7 @@ import { isPodcast, platformSchema, type Conversion, type ConversionInput, type 
 import { z } from 'zod';
 import { findAlbums, loadAlbum, youtubeAlbums, type YouTubeAlbums } from './albums';
 import { findPodcasts, loadPodcast, podcastApps, youtubePodcasts, type AppleShow, type Podcast, type YouTubePodcasts } from './podcasts';
-import { appleArtwork600, appleCatalog, appleUrl, codeFailure, https, providerCall, recording, session, pageMeta, youtube, type MusicLink, type Session } from './providers';
+import { appleArtwork600, appleCatalog, appleUrl, codeFailure, deezerData, https, itunesResults, providerCall, recording, session, pageMeta, youtube, type MusicLink, type Session } from './providers';
 import { ResolutionError, searchUrl, spotifyCandidates, youtubeVideoId, YOUTUBE_HOSTS, type Fetch } from './resolver';
 import { tidalCatalog, tidalPageMeta, tidalSearch, tidalTracks } from './tidal';
 
@@ -152,7 +152,7 @@ async function isrcCandidates(target: Platform, isrc: string, country: string, c
   return [];
 }
 
-const appleTracks = (body: unknown) => z.object({ results: z.array(z.unknown()) }).parse(body).results.flatMap(item => {
+const appleTracks = (body: unknown) => itunesResults(body).flatMap(item => {
   const parsed = appleTrack.safeParse(item);
   return parsed.success ? [parsed.data] : [];
 });
@@ -221,7 +221,7 @@ function findCandidates(target: Platform, source: Track, country: string, curren
         .filter(track => /^[A-Za-z0-9_-]{11}$/.test(track.id) && matches(track.title, track.artists, track.durationSeconds))
         .map(track => ({ title: track.title, url: `https://music.youtube.com/watch?v=${track.id}`, ...(track.album === undefined ? {} : { album: track.album }), ...(track.durationSeconds === undefined ? {} : { durationSeconds: track.durationSeconds }), artworkUrl: https(track.artworkUrl) }));
     } else if (target === 'deezer') {
-      candidates = z.object({ data: z.array(z.unknown()) }).parse(await get('https://api.deezer.com/search', { q: query, limit: '25' })).data.flatMap(item => {
+      candidates = deezerData(await get('https://api.deezer.com/search', { q: query, limit: '25' })).flatMap(item => {
         const track = deezerTrack.safeParse(item);
         return !track.success || track.data.readable === false || !matches(track.data.title, [track.data.artist.name], track.data.duration) ? [] : [deezerCandidate(track.data)];
       });
