@@ -81,15 +81,22 @@ class Api {
             headers: _headers,
           )
           .timeout(const Duration(seconds: 25));
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       if (response.statusCode >= 400) {
         _noteError('/song', response.statusCode);
-        throw ApiException(
-          body['error'] as String? ?? locale.messages.serviceUnavailable,
-        );
+        String? error;
+        try {
+          error =
+              (jsonDecode(utf8.decode(response.bodyBytes))
+                      as Map<String, dynamic>)['error']
+                  as String?;
+        } on FormatException {
+          // Not from our API, e.g. a proxy page
+        }
+        throw ApiException(error ?? locale.messages.serviceUnavailable);
       }
-      return Song.fromJson(body);
+      return Song.fromJson(
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+      );
     } on ApiException {
       rethrow;
     } on TimeoutException {

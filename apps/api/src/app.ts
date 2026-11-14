@@ -74,6 +74,7 @@ export function createApp(resolver = resolve, db?: Database, resolveSong = resol
       if (cached && Date.now() - cached.at < 86_400_000) return c.json(cached.song);
       limit(c);
       const song = await resolveSong(parsed.data, c.req.raw.signal);
+      songs.delete(key);
       if (songs.size >= 1000) songs.delete(songs.keys().next().value!);
       songs.set(key, { at: Date.now(), song });
       return c.json(song);
